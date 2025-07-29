@@ -53,6 +53,7 @@ private:
     // Shader management
     bool CreateShaders();
     bool CreateCubeGeometry();
+    std::string LoadShaderSource(const std::string& filepath);
     unsigned int CompileShader(unsigned int type, const char* source);
     bool CheckShaderCompilation(unsigned int shader, const char* type);
     bool CheckProgramLinking(unsigned int program);

@@ -32,7 +32,7 @@ Game* Game::s_instance = nullptr;
 
 Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false),
                m_isHost(false), m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
-               m_deltaTime(0.0f), m_lastFrame(0.0f) {
+               m_deltaTime(0.0f), m_lastFrame(0.0f), m_showPauseMenu(false) {
     s_instance = this;
 }
 
@@ -217,8 +217,8 @@ void Game::Shutdown() {
 void Game::ProcessInput() {
     // ESC key handling is done in KeyCallback
     
-    // Player movement (only in game state)
-    if (m_currentState == GameState::GAME && m_player) {
+    // Player movement (only in game state and not paused)
+    if (m_currentState == GameState::GAME && m_player && !m_showPauseMenu) {
         m_player->ProcessInput(m_window, m_deltaTime);
     }
 }
@@ -227,6 +227,9 @@ void Game::SetState(GameState newState) {
     GameState oldState = m_currentState;
     m_currentState = newState;
     std::cout << "State changed to: " << (newState == GameState::MAIN_MENU ? "MAIN_MENU" : "GAME") << std::endl;
+    
+    // Reset pause menu when changing states
+    m_showPauseMenu = false;
     
     // Handle state transitions
     if (oldState == GameState::GAME && newState == GameState::MAIN_MENU) {
@@ -384,6 +387,12 @@ void Game::RenderGame() {
         m_renderer.EndFrame();
     }
     
+    // Show pause menu overlay if active
+    if (m_showPauseMenu) {
+        RenderPauseMenu();
+        return; // Don't show game UI when paused
+    }
+    
     // Show game UI
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_Always);
@@ -428,6 +437,57 @@ void Game::RenderGame() {
     ImGui::End();
 }
 
+void Game::RenderPauseMenu() {
+    // Create a semi-transparent background overlay
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(io.DisplaySize);
+    
+    // Create a translucent background window
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.5f));
+    if (ImGui::Begin("PauseBackground", nullptr, 
+                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | 
+                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus)) {
+        // Empty window just for background
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+    
+    // Create the actual pause menu in the center
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Always);
+    
+    if (ImGui::Begin("Game Paused", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
+        // Center the content
+        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Game Paused").x) * 0.5f);
+        ImGui::Text("Game Paused");
+        
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        // Center the buttons
+        float buttonWidth = 300.0f;
+        float windowWidth = ImGui::GetWindowWidth();
+        ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
+        
+        if (ImGui::Button("Resume Game", ImVec2(buttonWidth, 40))) {
+            m_showPauseMenu = false;
+            glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+        
+        ImGui::Spacing();
+        ImGui::SetCursorPosX((windowWidth - buttonWidth) * 0.5f);
+        
+        if (ImGui::Button("Back to Main Menu", ImVec2(buttonWidth, 40))) {
+            // Hide pause menu and use existing state transition logic
+            m_showPauseMenu = false;
+            SetState(GameState::MAIN_MENU);
+        }
+    }
+    ImGui::End();
+}
+
 std::unordered_map<uint32_t, PlayerPosition> Game::GetInterpolatedPlayerPositions() const {
     std::unordered_map<uint32_t, PlayerPosition> interpolatedPositions;
     
@@ -443,14 +503,22 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
     if (s_instance) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
             if (s_instance->m_currentState == GameState::GAME) {
-                s_instance->SetState(GameState::MAIN_MENU);
+                // Toggle pause menu instead of immediately going to main menu
+                s_instance->m_showPauseMenu = !s_instance->m_showPauseMenu;
+                
+                // Update cursor visibility based on pause state
+                if (s_instance->m_showPauseMenu) {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                } else {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                }
             }
         }
     }
 }
 
 void Game::MouseCallback(GLFWwindow* window, double xpos, double ypos) {
-    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player) {
+    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player && !s_instance->m_showPauseMenu) {
         if (s_instance->m_firstMouse) {
             s_instance->m_lastX = xpos;
             s_instance->m_lastY = ypos;

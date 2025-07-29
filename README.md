@@ -7,6 +7,9 @@ A cross-platform C++ game framework using ImGui for UI and OpenGL for rendering.
 - **Cross-platform**: Works on **Linux x86_64** and **Mac M1/M2** (Intel Macs and Windows support available)
 - **ImGui Integration**: Modern immediate mode GUI
 - **OpenGL Rendering**: Hardware-accelerated graphics with flexible OpenGL loading library support
+- **External Shader System**: GLSL shaders loaded from external files for easy customization
+- **3D Block Rendering**: Minecraft-style voxel world with white blocks and sky blue background
+- **Multiplayer Support**: Local network server discovery and smooth player interpolation
 - **State Management**: Clean separation between main menu and game states
 - **Input Handling**: ESC key to return from game to main menu
 - **Automated Dependency Management**: Smart detection and fallback for OpenGL loaders (epoxy, GLEW, system)
@@ -16,6 +19,7 @@ A cross-platform C++ game framework using ImGui for UI and OpenGL for rendering.
 ```
 ├── src/           # Source files
 ├── include/       # Header files  
+├── shaders/       # GLSL shader files
 ├── bin/           # Built executables
 ├── lib/           # Static libraries
 ├── third_party/   # External dependencies (ImGui)

@@ -3,6 +3,8 @@
 #include <iostream>
 #include <string>
 #include <cmath>
+#include <fstream>
+#include <sstream>
 
 Renderer::Renderer() : m_cubeVAO(0), m_cubeVBO(0), m_shaderProgram(0), 
                        m_triangleVAO(0), m_triangleVBO(0),
@@ -153,7 +155,7 @@ void Renderer::Shutdown() {
 }
 
 void Renderer::Clear() {
-    glClearColor(0.2f, 0.3f, 0.8f, 1.0f); // Sky blue background
+    glClearColor(0.529f, 0.808f, 0.922f, 1.0f); // Sky blue background (#87CEEB)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
     // Ensure depth testing is enabled
@@ -246,38 +248,42 @@ void Renderer::RenderTriangle() {
     glBindVertexArray(0);
 }
 
-bool Renderer::CreateShaders() {
-    // 3D Vertex shader
-    const char* vertexShaderSource = R"(
-        #version 330 core
-        layout (location = 0) in vec3 aPos;
-        
-        uniform mat4 model;
-        uniform mat4 view;
-        uniform mat4 projection;
-        
-        void main()
-        {
-            gl_Position = projection * view * model * vec4(aPos, 1.0);
-        }
-    )";
+std::string Renderer::LoadShaderSource(const std::string& filepath) {
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "Failed to open shader file: " << filepath << std::endl;
+        return "";
+    }
+    
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    file.close();
+    
+    std::string source = buffer.str();
+    std::cout << "Loaded shader from: " << filepath << std::endl;
+    return source;
+}
 
-    // Fragment shader
-    const char* fragmentShaderSource = R"(
-        #version 330 core
-        out vec4 FragColor;
-        
-        void main()
-        {
-            FragColor = vec4(0.6f, 0.3f, 0.1f, 1.0f); // Brown block color
-        }
-    )";
+bool Renderer::CreateShaders() {
+    // Load vertex shader source from file
+    std::string vertexShaderSource = LoadShaderSource("shaders/vertex.glsl");
+    if (vertexShaderSource.empty()) {
+        std::cerr << "Failed to load vertex shader" << std::endl;
+        return false;
+    }
+
+    // Load fragment shader source from file  
+    std::string fragmentShaderSource = LoadShaderSource("shaders/fragment.glsl");
+    if (fragmentShaderSource.empty()) {
+        std::cerr << "Failed to load fragment shader" << std::endl;
+        return false;
+    }
 
     // Compile shaders
-    unsigned int vertexShader = CompileShader(GL_VERTEX_SHADER, vertexShaderSource);
+    unsigned int vertexShader = CompileShader(GL_VERTEX_SHADER, vertexShaderSource.c_str());
     if (vertexShader == 0) return false;
 
-    unsigned int fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
+    unsigned int fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource.c_str());
     if (fragmentShader == 0) {
         glDeleteShader(vertexShader);
         return false;
@@ -302,6 +308,7 @@ bool Renderer::CreateShaders() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
+    std::cout << "Shaders loaded and compiled successfully!" << std::endl;
     return true;
 }
 

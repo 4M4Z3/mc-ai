@@ -108,6 +108,9 @@ private:
     // Timing
     float m_deltaTime;
     float m_lastFrame;
+    
+    // Pause menu
+    bool m_showPauseMenu;
 
     // State management
     void SetState(GameState newState);
@@ -115,6 +118,7 @@ private:
     void UpdateGame();
     void RenderMainMenu();
     void RenderGame();
+    void RenderPauseMenu();
     
     // Helper method to get current interpolated positions for rendering
     std::unordered_map<uint32_t, PlayerPosition> GetInterpolatedPlayerPositions() const;
