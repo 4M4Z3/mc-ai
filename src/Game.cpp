@@ -374,6 +374,13 @@ void Game::UpdateGame() {
         m_targetBlock = m_player->CastRay(m_world.get(), 5.0f);
     }
     
+    // Clean up old locally broken blocks periodically (every 5 seconds)
+    static float lastCleanup = 0.0f;
+    if (glfwGetTime() - lastCleanup > 5.0f) {
+        CleanupLocallyBrokenBlocks();
+        lastCleanup = glfwGetTime();
+    }
+    
     // Update local game time for smooth progression between server syncs
     if (m_gameTimeReceived) {
         static auto lastTimeUpdate = std::chrono::steady_clock::now();
@@ -831,7 +838,14 @@ void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int m
                 
                 std::cout << "Breaking block at (" << blockX << ", " << blockY << ", " << blockZ << ")" << std::endl;
                 
-                // Break the block immediately on client
+                // Track this block as locally broken to prevent double-processing
+                {
+                    std::lock_guard<std::mutex> lock(s_instance->m_locallyBrokenBlocksMutex);
+                    s_instance->m_locallyBrokenBlocks.insert(std::make_tuple(blockX, blockY, blockZ));
+                    std::cout << "[CLIENT] Tracking local block break at (" << blockX << ", " << blockY << ", " << blockZ << ")" << std::endl;
+                }
+                
+                // Break the block immediately on client (client prediction)
                 s_instance->m_world->SetBlock(blockX, blockY, blockZ, BlockType::AIR);
                 
                 // Regenerate affected chunk meshes
@@ -1295,6 +1309,21 @@ void Game::OnMyPlayerIdReceived(uint32_t myPlayerId) {
 void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z) {
     std::cout << "[CLIENT] Received block break from player " << playerId << " at (" << x << ", " << y << ", " << z << ")" << std::endl;
     
+    // Check if this block was broken locally by us - if so, ignore network update
+    {
+        std::lock_guard<std::mutex> lock(m_locallyBrokenBlocksMutex);
+        auto blockCoord = std::make_tuple(x, y, z);
+        if (m_locallyBrokenBlocks.find(blockCoord) != m_locallyBrokenBlocks.end()) {
+            std::cout << "[CLIENT] Ignoring network block break at (" << x << ", " << y << ", " << z << ") - already broken locally" << std::endl;
+            // Remove from tracking set since server confirmed it
+            m_locallyBrokenBlocks.erase(blockCoord);
+            return;
+        }
+    }
+    
+    // This is a block broken by another player - process it
+    std::cout << "[CLIENT] Processing network block break from other player " << playerId << std::endl;
+    
     // Queue the block break for processing on the main thread
     // (OpenGL operations must happen on the main thread)
     {
@@ -1316,6 +1345,24 @@ void Game::OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* bl
         // Copy the block data (16x256x16 = 65536 bytes)
         chunkData.blockData.assign(blockData, blockData + (16 * 256 * 16));
         m_pendingChunkData.push(std::move(chunkData));
+    }
+}
+
+void Game::CleanupLocallyBrokenBlocks() {
+    std::lock_guard<std::mutex> lock(m_locallyBrokenBlocksMutex);
+    
+    // For now, just clear all old entries after 10 seconds
+    // In a more sophisticated implementation, we'd track timestamps
+    static int cleanupCount = 0;
+    cleanupCount++;
+    
+    if (cleanupCount > 2) { // Clear after 10+ seconds (2 * 5 second intervals)
+        size_t oldSize = m_locallyBrokenBlocks.size();
+        m_locallyBrokenBlocks.clear();
+        if (oldSize > 0) {
+            std::cout << "[CLIENT] Cleaned up " << oldSize << " old locally broken blocks" << std::endl;
+        }
+        cleanupCount = 0;
     }
 }
 

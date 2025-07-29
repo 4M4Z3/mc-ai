@@ -361,7 +361,18 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                 }
                 
                 default:
-                    std::cerr << "[SERVER] Unknown message type: " << (int)message.type << std::endl;
+                    std::cerr << "[SERVER] Unknown message type: " << (int)message.type 
+                              << " from player " << playerId 
+                              << " (bytes received: " << bytesReceived 
+                              << ", expected: " << sizeof(NetworkMessage) << ")" << std::endl;
+                    
+                    // Print some raw bytes for debugging
+                    std::cerr << "[SERVER] Raw message bytes: ";
+                    const uint8_t* rawBytes = reinterpret_cast<const uint8_t*>(&message);
+                    for (int i = 0; i < std::min(16, (int)sizeof(NetworkMessage)); ++i) {
+                        std::cerr << std::hex << (int)rawBytes[i] << " ";
+                    }
+                    std::cerr << std::dec << std::endl;
                     break;
             }
         }

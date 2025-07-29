@@ -134,7 +134,7 @@ void NetworkClient::SendPlayerPosition(const PlayerPosition& position) {
         return;
     }
     
-    NetworkMessage message;
+    NetworkMessage message = {}; // Initialize to zero
     message.type = NetworkMessage::PLAYER_POSITION;
     message.playerId = 0; // Server will assign the correct player ID
     message.position = position;
@@ -147,12 +147,15 @@ void NetworkClient::SendBlockBreak(int32_t x, int32_t y, int32_t z) {
         return;
     }
     
-    NetworkMessage message;
+    NetworkMessage message = {}; // Initialize to zero
     message.type = NetworkMessage::BLOCK_BREAK;
     message.playerId = 0; // Server will assign the correct player ID
     message.blockPos.x = x;
     message.blockPos.y = y;
     message.blockPos.z = z;
+    
+    std::cout << "[CLIENT] Creating block break message - type: " << (int)message.type 
+              << ", coords: (" << x << ", " << y << ", " << z << ")" << std::endl;
     
     QueueMessage(message);
 }
@@ -163,7 +166,7 @@ void NetworkClient::RequestChunk(int32_t chunkX, int32_t chunkZ)
         return;
     }
     
-    NetworkMessage message;
+    NetworkMessage message = {}; // Initialize to zero
     message.type = NetworkMessage::CHUNK_REQUEST;
     message.playerId = 0; // Server will assign the correct player ID
     message.chunkData.chunkX = chunkX;
@@ -193,6 +196,15 @@ void NetworkClient::SendMessagesThread() {
         }
         
         if (hasMessage) {
+            // Validate message before sending
+            if (message.type == 0 || message.type > NetworkMessage::MY_PLAYER_ID) {
+                std::cerr << "[CLIENT] ERROR: Invalid message type " << (int)message.type 
+                          << " detected in send queue, skipping!" << std::endl;
+                continue; // Skip this corrupted message
+            }
+            
+            std::cout << "[CLIENT] Sending message type " << (int)message.type << std::endl;
+            
             // Send the message
             size_t messageSize = sizeof(NetworkMessage);
             size_t totalBytesSent = 0;
