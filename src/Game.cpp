@@ -1201,9 +1201,18 @@ void Game::OnPlayerLeave(uint32_t playerId) {
 }
 
 void Game::OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position) {
+    std::cout << "[GAME] Received position update for player " << playerId << " at (" << position.x << ", " << position.y << ", " << position.z << ") yaw=" << position.yaw << std::endl;
+    
     auto it = m_otherPlayers.find(playerId);
     if (it != m_otherPlayers.end()) {
+        std::cout << "[GAME] Updating existing player " << playerId << " position" << std::endl;
         it->second.UpdatePosition(position);
+    } else {
+        std::cout << "[GAME] ERROR: Player " << playerId << " not found in m_otherPlayers map!" << std::endl;
+        std::cout << "[GAME] Current m_otherPlayers size: " << m_otherPlayers.size() << std::endl;
+        for (const auto& pair : m_otherPlayers) {
+            std::cout << "[GAME]   - Player " << pair.first << " in map" << std::endl;
+        }
     }
 }
 
