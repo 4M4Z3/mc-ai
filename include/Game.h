@@ -154,6 +154,7 @@ private:
     void OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position);
     void OnWorldSeedReceived(int32_t worldSeed);
     void OnGameTimeReceived(float gameTime);
+    void OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z);
     
     // Time utility methods
     bool IsDay() const;

@@ -36,7 +36,8 @@ struct NetworkMessage {
         PLAYER_POSITION = 3,
         PLAYER_LIST = 4,
         WORLD_SEED = 5,
-        TIME_SYNC = 6
+        TIME_SYNC = 6,
+        BLOCK_BREAK = 7
     };
     
     uint8_t type;
@@ -44,6 +45,11 @@ struct NetworkMessage {
     PlayerPosition position;
     int32_t worldSeed; // Added for seed synchronization
     float gameTime; // Game time in seconds (0-900 for 15 minute cycle)
+    
+    // Block breaking data
+    struct {
+        int32_t x, y, z;
+    } blockPos;
 };
 
 // Server announcement for UDP broadcast discovery

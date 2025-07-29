@@ -21,12 +21,16 @@ public:
     // Send player position to server
     void SendPlayerPosition(const PlayerPosition& position);
     
+    // Send block break to server
+    void SendBlockBreak(int32_t x, int32_t y, int32_t z);
+    
     // Set callback for receiving other players' positions
     void SetPlayerJoinCallback(std::function<void(uint32_t playerId, const PlayerPosition&)> callback);
     void SetPlayerLeaveCallback(std::function<void(uint32_t playerId)> callback);
     void SetPlayerPositionCallback(std::function<void(uint32_t playerId, const PlayerPosition&)> callback);
     void SetWorldSeedCallback(std::function<void(int32_t worldSeed)> callback);
     void SetGameTimeCallback(std::function<void(float gameTime)> callback);
+    void SetBlockBreakCallback(std::function<void(uint32_t playerId, int32_t x, int32_t y, int32_t z)> callback);
     
     // Get other players
     std::unordered_map<uint32_t, PlayerPosition> GetOtherPlayers() const;
@@ -55,6 +59,7 @@ private:
     std::function<void(uint32_t, const PlayerPosition&)> m_onPlayerPosition;
     std::function<void(int32_t)> m_onWorldSeed;
     std::function<void(float)> m_onGameTime;
+    std::function<void(uint32_t, int32_t, int32_t, int32_t)> m_onBlockBreak;
     
     std::string m_serverIP;
     int m_serverPort;

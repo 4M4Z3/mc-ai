@@ -142,6 +142,24 @@ void NetworkClient::SendPlayerPosition(const PlayerPosition& position) {
     }
 }
 
+void NetworkClient::SendBlockBreak(int32_t x, int32_t y, int32_t z) {
+    if (!m_connected) {
+        return;
+    }
+    
+    NetworkMessage message;
+    message.type = NetworkMessage::BLOCK_BREAK;
+    message.playerId = 0; // Server will assign the correct player ID
+    message.blockPos.x = x;
+    message.blockPos.y = y;
+    message.blockPos.z = z;
+    
+    int bytesSent = send(m_socket, (const char*)&message, sizeof(NetworkMessage), 0);
+    if (bytesSent == SOCKET_ERROR) {
+        std::cerr << "Failed to send block break to server" << std::endl;
+    }
+}
+
 void NetworkClient::ReceiveMessages() {
     NetworkMessage message;
     
@@ -248,6 +266,17 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
             }
             break;
         }
+        
+        case NetworkMessage::BLOCK_BREAK:
+        {
+            std::cout << "Player " << message.playerId << " broke block at (" 
+                      << message.blockPos.x << ", " << message.blockPos.y << ", " << message.blockPos.z << ")" << std::endl;
+            
+            if (m_onBlockBreak) {
+                m_onBlockBreak(message.playerId, message.blockPos.x, message.blockPos.y, message.blockPos.z);
+            }
+            break;
+        }
     }
 }
 
@@ -269,6 +298,10 @@ void NetworkClient::SetWorldSeedCallback(std::function<void(int32_t)> callback) 
 
 void NetworkClient::SetGameTimeCallback(std::function<void(float)> callback) {
     m_onGameTime = callback;
+}
+
+void NetworkClient::SetBlockBreakCallback(std::function<void(uint32_t, int32_t, int32_t, int32_t)> callback) {
+    m_onBlockBreak = callback;
 }
 
 std::unordered_map<uint32_t, PlayerPosition> NetworkClient::GetOtherPlayers() const {

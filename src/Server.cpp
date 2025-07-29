@@ -270,21 +270,57 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
         }
         
         if (bytesReceived == sizeof(NetworkMessage)) {
-            // Update player position
-            {
-                std::lock_guard<std::mutex> lock(m_clientsMutex);
-                for (auto& client : m_clients) {
-                    if (client && client->playerId == playerId && client->active) {
-                        client->position = message.position;
-                        client->position.playerId = playerId; // Ensure correct player ID
-                        break;
+            // Handle different message types
+            switch (message.type) {
+                case NetworkMessage::PLAYER_POSITION:
+                {
+                    // Update player position
+                    {
+                        std::lock_guard<std::mutex> lock(m_clientsMutex);
+                        for (auto& client : m_clients) {
+                            if (client && client->playerId == playerId && client->active) {
+                                client->position = message.position;
+                                client->position.playerId = playerId; // Ensure correct player ID
+                                break;
+                            }
+                        }
                     }
+                    
+                    // Broadcast position update to all other clients
+                    message.playerId = playerId;
+                    BroadcastToAllClients(message, playerId);
+                    break;
                 }
+                
+                case NetworkMessage::BLOCK_BREAK:
+                {
+                    std::cout << "[SERVER] Player " << playerId << " broke block at (" 
+                              << message.blockPos.x << ", " << message.blockPos.y << ", " << message.blockPos.z << ")" << std::endl;
+                    
+                    // Apply block break to server world
+                    if (m_world) {
+                        m_world->SetBlock(message.blockPos.x, message.blockPos.y, message.blockPos.z, BlockType::AIR);
+                        
+                        // Regenerate affected chunk meshes on server (if needed for server-side logic)
+                        int chunkX, chunkZ, localX, localZ;
+                        m_world->WorldToChunkCoords(message.blockPos.x, message.blockPos.z, chunkX, chunkZ, localX, localZ);
+                        
+                        Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
+                        if (chunk) {
+                            chunk->GenerateMesh(m_world.get());
+                        }
+                    }
+                    
+                    // Broadcast block break to all clients (including the sender for confirmation)
+                    message.playerId = playerId;
+                    BroadcastToAllClients(message);
+                    break;
+                }
+                
+                default:
+                    std::cerr << "[SERVER] Unknown message type: " << (int)message.type << std::endl;
+                    break;
             }
-            
-            // Broadcast position update to all other clients
-            message.playerId = playerId;
-            BroadcastToAllClients(message, playerId);
         }
     }
     

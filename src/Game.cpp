@@ -728,7 +728,10 @@ void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int m
                     if (frontChunk) frontChunk->GenerateMesh(s_instance->m_world.get());
                 }
                 
-                // TODO: Send network message to server for synchronization
+                // Send network message to server for synchronization
+                if (s_instance->m_networkClient && s_instance->m_networkClient->IsConnected()) {
+                    s_instance->m_networkClient->SendBlockBreak(blockX, blockY, blockZ);
+                }
             }
         }
     }
@@ -787,6 +790,10 @@ void Game::StartHost() {
             OnGameTimeReceived(gameTime);
         });
         
+        m_networkClient->SetBlockBreakCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z) {
+            OnBlockBreakReceived(playerId, x, y, z);
+        });
+        
         if (m_networkClient->Connect("127.0.0.1", 8080)) {
             // Wait for world seed from server before creating world
             std::cout << "Connected to own server, waiting for world seed..." << std::endl;
@@ -843,6 +850,10 @@ void Game::JoinServer(const std::string& serverIP) {
     
     m_networkClient->SetGameTimeCallback([this](float gameTime) {
         OnGameTimeReceived(gameTime);
+    });
+    
+    m_networkClient->SetBlockBreakCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z) {
+        OnBlockBreakReceived(playerId, x, y, z);
     });
     
     if (m_networkClient->Connect(ip, port)) {
@@ -988,6 +999,48 @@ void Game::OnGameTimeReceived(float gameTime) {
         return &time;
     }();
     *lastTimeUpdate = std::chrono::steady_clock::now();
+}
+
+void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z) {
+    std::cout << "[CLIENT] Received block break from player " << playerId << " at (" << x << ", " << y << ", " << z << ")" << std::endl;
+    
+    // Apply block break to client world (if we have one)
+    if (m_world) {
+        m_world->SetBlock(x, y, z, BlockType::AIR);
+        
+        // Regenerate affected chunk meshes
+        int chunkX, chunkZ, localX, localZ;
+        m_world->WorldToChunkCoords(x, z, chunkX, chunkZ, localX, localZ);
+        
+        // Regenerate the chunk containing the broken block
+        Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
+        if (chunk) {
+            chunk->GenerateMesh(m_world.get());
+        }
+        
+        // Check if we need to regenerate neighboring chunks
+        // (if the broken block was on a chunk boundary)
+        if (localX == 0) {
+            // Block was on the left edge, regenerate left neighbor
+            Chunk* leftChunk = m_world->GetChunk(chunkX - 1, chunkZ);
+            if (leftChunk) leftChunk->GenerateMesh(m_world.get());
+        }
+        if (localX == 15) {
+            // Block was on the right edge, regenerate right neighbor
+            Chunk* rightChunk = m_world->GetChunk(chunkX + 1, chunkZ);
+            if (rightChunk) rightChunk->GenerateMesh(m_world.get());
+        }
+        if (localZ == 0) {
+            // Block was on the back edge, regenerate back neighbor
+            Chunk* backChunk = m_world->GetChunk(chunkX, chunkZ - 1);
+            if (backChunk) backChunk->GenerateMesh(m_world.get());
+        }
+        if (localZ == 15) {
+            // Block was on the front edge, regenerate front neighbor
+            Chunk* frontChunk = m_world->GetChunk(chunkX, chunkZ + 1);
+            if (frontChunk) frontChunk->GenerateMesh(m_world.get());
+        }
+    }
 }
 
 bool Game::IsDay() const {
