@@ -311,6 +311,15 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     break;
                 }
                 
+                case NetworkMessage::CHUNK_REQUEST:
+                {
+                    std::cout << "[SERVER] Player " << playerId << " requested chunk (" 
+                              << message.chunkData.chunkX << ", " << message.chunkData.chunkZ << ")" << std::endl;
+                    
+                    HandleChunkRequest(clientSocket, message.chunkData.chunkX, message.chunkData.chunkZ);
+                    break;
+                }
+                
                 default:
                     std::cerr << "[SERVER] Unknown message type: " << (int)message.type << std::endl;
                     break;
@@ -647,6 +656,55 @@ bool Server::IsDay() const {
 
 bool Server::IsNight() const {
     return m_gameTime >= 450.0f; // Last 7.5 minutes (450-900 seconds) is night
+}
+
+void Server::HandleChunkRequest(socket_t clientSocket, int32_t chunkX, int32_t chunkZ) {
+    if (!m_world) {
+        std::cerr << "[SERVER] No world available for chunk request" << std::endl;
+        return;
+    }
+    
+    // Send the chunk data to the requesting client
+    SendChunkData(clientSocket, chunkX, chunkZ);
+}
+
+void Server::SendChunkData(socket_t clientSocket, int32_t chunkX, int32_t chunkZ) {
+    if (!m_world) {
+        return;
+    }
+    
+    // Get or generate the chunk
+    Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
+    if (!chunk) {
+        std::cerr << "[SERVER] Failed to get/generate chunk (" << chunkX << ", " << chunkZ << ")" << std::endl;
+        return;
+    }
+    
+    // Create chunk data message
+    NetworkMessage message;
+    message.type = NetworkMessage::CHUNK_DATA;
+    message.playerId = 0; // Server message
+    message.chunkData.chunkX = chunkX;
+    message.chunkData.chunkZ = chunkZ;
+    
+    // Serialize chunk blocks to network message
+    for (int x = 0; x < 16; ++x) {
+        for (int y = 0; y < 64; ++y) {
+            for (int z = 0; z < 16; ++z) {
+                Block block = chunk->GetBlock(x, y, z);
+                int index = x + (y * 16) + (z * 16 * 64);
+                message.chunkData.blocks[index] = static_cast<uint8_t>(block.GetType());
+            }
+        }
+    }
+    
+    // Send chunk data to client
+    int bytesSent = send(clientSocket, (const char*)&message, sizeof(NetworkMessage), 0);
+    if (bytesSent == SOCKET_ERROR) {
+        std::cerr << "[SERVER] Failed to send chunk data to client" << std::endl;
+    } else {
+        std::cout << "[SERVER] Sent chunk data (" << chunkX << ", " << chunkZ << ") to client" << std::endl;
+    }
 }
 
 void Server::UpdateGameTime() {  

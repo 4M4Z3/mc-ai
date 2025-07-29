@@ -237,7 +237,7 @@ void Chunk::RenderMeshForBlockType(BlockType blockType) const {
     }
 }
 
-void Chunk::RenderGrassFace(GrassFaceType faceType) const {
+void Chunk::RenderGrassMesh(GrassFaceType faceType) const {
     auto it = m_grassFaceMeshes.find(faceType);
     if (it != m_grassFaceMeshes.end()) {
         const BlockMesh& mesh = it->second;
@@ -458,6 +458,27 @@ void Chunk::Generate(int seed) {
     
     // Mark mesh as needing regeneration
     m_meshGenerated = false;
+}
+
+void Chunk::ApplyServerData(const uint8_t* blockData) {
+    // Clear existing blocks
+    Clear();
+    
+    // Deserialize block data from server
+    for (int x = 0; x < CHUNK_WIDTH; ++x) {
+        for (int y = 0; y < CHUNK_HEIGHT; ++y) {
+            for (int z = 0; z < CHUNK_DEPTH; ++z) {
+                int index = x + (y * 16) + (z * 16 * 64);
+                BlockType blockType = static_cast<BlockType>(blockData[index]);
+                m_blocks[x][y][z].SetType(blockType);
+            }
+        }
+    }
+    
+    // Mark mesh as needing regeneration
+    m_meshGenerated = false;
+    
+    std::cout << "Applied server data to chunk (" << m_chunkX << ", " << m_chunkZ << ")" << std::endl;
 }
 
 // Perlin noise implementation

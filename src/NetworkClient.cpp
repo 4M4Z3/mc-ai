@@ -160,6 +160,25 @@ void NetworkClient::SendBlockBreak(int32_t x, int32_t y, int32_t z) {
     }
 }
 
+void NetworkClient::RequestChunk(int32_t chunkX, int32_t chunkZ) {
+    if (!m_connected) {
+        return;
+    }
+    
+    NetworkMessage message;
+    message.type = NetworkMessage::CHUNK_REQUEST;
+    message.playerId = 0; // Server will identify the client
+    message.chunkData.chunkX = chunkX;
+    message.chunkData.chunkZ = chunkZ;
+    
+    int bytesSent = send(m_socket, (const char*)&message, sizeof(NetworkMessage), 0);
+    if (bytesSent == SOCKET_ERROR) {
+        std::cerr << "Failed to send chunk request to server" << std::endl;
+    } else {
+        std::cout << "[CLIENT] Requested chunk (" << chunkX << ", " << chunkZ << ") from server" << std::endl;
+    }
+}
+
 void NetworkClient::ReceiveMessages() {
     NetworkMessage message;
     
@@ -277,6 +296,17 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
             }
             break;
         }
+        
+        case NetworkMessage::CHUNK_DATA:
+        {
+            std::cout << "[CLIENT] Received chunk data (" 
+                      << message.chunkData.chunkX << ", " << message.chunkData.chunkZ << ")" << std::endl;
+            
+            if (m_onChunkData) {
+                m_onChunkData(message.chunkData.chunkX, message.chunkData.chunkZ, message.chunkData.blocks);
+            }
+            break;
+        }
     }
 }
 
@@ -302,6 +332,10 @@ void NetworkClient::SetGameTimeCallback(std::function<void(float)> callback) {
 
 void NetworkClient::SetBlockBreakCallback(std::function<void(uint32_t, int32_t, int32_t, int32_t)> callback) {
     m_onBlockBreak = callback;
+}
+
+void NetworkClient::SetChunkDataCallback(std::function<void(int32_t, int32_t, const uint8_t*)> callback) {
+    m_onChunkData = callback;
 }
 
 std::unordered_map<uint32_t, PlayerPosition> NetworkClient::GetOtherPlayers() const {

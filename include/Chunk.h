@@ -51,11 +51,16 @@ public:
     // Generation
     void Generate(int seed);
     
-    // Mesh rendering
+    // Mesh generation and rendering
     void GenerateMesh(const World* world);
     void RenderMesh() const;
     void RenderMeshForBlockType(BlockType blockType) const;
-    void RenderGrassFace(GrassFaceType faceType) const;
+    void RenderGrassMesh(GrassFaceType faceType) const;
+    
+    // Apply chunk data received from server
+    void ApplyServerData(const uint8_t* blockData);
+    
+    // World generation
     std::vector<BlockType> GetBlockTypesInChunk() const;
     bool HasMesh() const { return !m_blockMeshes.empty() || !m_grassFaceMeshes.empty(); }
     void ClearMesh();

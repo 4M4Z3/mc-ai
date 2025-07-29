@@ -365,7 +365,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh()) {
-                        chunk->RenderGrassFace(Chunk::GRASS_TOP);
+                        chunk->RenderGrassMesh(Chunk::GRASS_TOP);
                     }
                 }
             }
@@ -379,7 +379,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh()) {
-                        chunk->RenderGrassFace(Chunk::GRASS_SIDE);
+                        chunk->RenderGrassMesh(Chunk::GRASS_SIDE);
                     }
                 }
             }
@@ -395,7 +395,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh()) {
-                        chunk->RenderGrassFace(Chunk::GRASS_SIDE);
+                        chunk->RenderGrassMesh(Chunk::GRASS_SIDE);
                     }
                 }
             }
@@ -410,7 +410,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh()) {
-                        chunk->RenderGrassFace(Chunk::GRASS_BOTTOM);
+                        chunk->RenderGrassMesh(Chunk::GRASS_BOTTOM);
                     }
                 }
             }

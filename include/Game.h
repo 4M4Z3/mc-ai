@@ -165,6 +165,7 @@ private:
     void OnWorldSeedReceived(int32_t worldSeed);
     void OnGameTimeReceived(float gameTime);
     void OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z);
+    void OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData);
     
     // Time utility methods
     bool IsDay() const;

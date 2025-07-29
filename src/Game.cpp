@@ -291,7 +291,7 @@ void Game::UpdateMainMenu() {
     if (m_worldSeedReceived && !m_world) {
         std::cout << "Creating world with seed " << m_worldSeed << " in main thread..." << std::endl;
         
-        // Create world with server-provided seed
+        // Create world with server-provided seed (will be overwritten by server data)
         m_world = std::make_unique<World>(m_worldSeed);
         std::cout << "World created successfully!" << std::endl;
         
@@ -303,9 +303,23 @@ void Game::UpdateMainMenu() {
             std::cout << "Player created at spawn position (0, " << spawnY << ", 0)" << std::endl;
         }
         
-        std::cout << "Setting state to GAME..." << std::endl;
-        SetState(GameState::GAME);
-        std::cout << "World created with server seed, entering game!" << std::endl;
+        // Request initial chunks around spawn position from server
+        if (m_networkClient && m_networkClient->IsConnected()) {
+            std::cout << "Requesting initial chunks from server..." << std::endl;
+            
+            // Request a 3x3 area of chunks around spawn (0,0)
+            for (int chunkX = -1; chunkX <= 1; ++chunkX) {
+                for (int chunkZ = -1; chunkZ <= 1; ++chunkZ) {
+                    m_networkClient->RequestChunk(chunkX, chunkZ);
+                }
+            }
+            
+            // For now, immediately change to game state
+            // TODO: Wait for chunks to load before changing state
+            std::cout << "Setting state to GAME..." << std::endl;
+            SetState(GameState::GAME);
+            std::cout << "World created with server chunks, entering game!" << std::endl;
+        }
     }
     
     // Main menu logic here
@@ -845,6 +859,10 @@ void Game::StartHost() {
             OnBlockBreakReceived(playerId, x, y, z);
         });
         
+        m_networkClient->SetChunkDataCallback([this](int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
+            OnChunkDataReceived(chunkX, chunkZ, blockData);
+        });
+        
         if (m_networkClient->Connect("127.0.0.1", 8080)) {
             // Wait for world seed from server before creating world
             std::cout << "Connected to own server, waiting for world seed..." << std::endl;
@@ -905,6 +923,10 @@ void Game::JoinServer(const std::string& serverIP) {
     
     m_networkClient->SetBlockBreakCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z) {
         OnBlockBreakReceived(playerId, x, y, z);
+    });
+    
+    m_networkClient->SetChunkDataCallback([this](int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
+        OnChunkDataReceived(chunkX, chunkZ, blockData);
     });
     
     if (m_networkClient->Connect(ip, port)) {
@@ -1060,6 +1082,26 @@ void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t
     {
         std::lock_guard<std::mutex> lock(m_pendingBlockBreaksMutex);
         m_pendingBlockBreaks.push({playerId, x, y, z});
+    }
+}
+
+void Game::OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
+    std::cout << "[CLIENT] Applying chunk data for (" << chunkX << ", " << chunkZ << ")" << std::endl;
+    
+    if (m_world) {
+        // Get or create the chunk
+        Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
+        if (chunk) {
+            // Apply server data to the chunk
+            chunk->ApplyServerData(blockData);
+            
+            // Generate mesh for the updated chunk
+            chunk->GenerateMesh(m_world.get());
+            
+            std::cout << "[CLIENT] Updated chunk (" << chunkX << ", " << chunkZ << ") with server data" << std::endl;
+        } else {
+            std::cerr << "[CLIENT] Failed to get chunk (" << chunkX << ", " << chunkZ << ")" << std::endl;
+        }
     }
 }
 

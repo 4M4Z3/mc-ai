@@ -24,6 +24,9 @@ public:
     // Send block break to server
     void SendBlockBreak(int32_t x, int32_t y, int32_t z);
     
+    // Send chunk request to server
+    void RequestChunk(int32_t chunkX, int32_t chunkZ);
+    
     // Set callback for receiving other players' positions
     void SetPlayerJoinCallback(std::function<void(uint32_t playerId, const PlayerPosition&)> callback);
     void SetPlayerLeaveCallback(std::function<void(uint32_t playerId)> callback);
@@ -31,6 +34,7 @@ public:
     void SetWorldSeedCallback(std::function<void(int32_t worldSeed)> callback);
     void SetGameTimeCallback(std::function<void(float gameTime)> callback);
     void SetBlockBreakCallback(std::function<void(uint32_t playerId, int32_t x, int32_t y, int32_t z)> callback);
+    void SetChunkDataCallback(std::function<void(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData)> callback);
     
     // Get other players
     std::unordered_map<uint32_t, PlayerPosition> GetOtherPlayers() const;
@@ -60,6 +64,7 @@ private:
     std::function<void(int32_t)> m_onWorldSeed;
     std::function<void(float)> m_onGameTime;
     std::function<void(uint32_t, int32_t, int32_t, int32_t)> m_onBlockBreak;
+    std::function<void(int32_t, int32_t, const uint8_t*)> m_onChunkData;
     
     std::string m_serverIP;
     int m_serverPort;

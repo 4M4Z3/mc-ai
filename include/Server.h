@@ -37,7 +37,9 @@ struct NetworkMessage {
         PLAYER_LIST = 4,
         WORLD_SEED = 5,
         TIME_SYNC = 6,
-        BLOCK_BREAK = 7
+        BLOCK_BREAK = 7,
+        CHUNK_REQUEST = 8,
+        CHUNK_DATA = 9
     };
     
     uint8_t type;
@@ -50,6 +52,12 @@ struct NetworkMessage {
     struct {
         int32_t x, y, z;
     } blockPos;
+    
+    // Chunk data
+    struct {
+        int32_t chunkX, chunkZ;
+        uint8_t blocks[16 * 64 * 16]; // 16x64x16 chunk, 1 byte per block type
+    } chunkData;
 };
 
 // Server announcement for UDP broadcast discovery
@@ -88,6 +96,10 @@ public:
     float GetGameTime() const { return m_gameTime; }
     bool IsDay() const;
     bool IsNight() const;
+    
+    // Chunk management
+    void SendChunkData(socket_t clientSocket, int32_t chunkX, int32_t chunkZ);
+    void HandleChunkRequest(socket_t clientSocket, int32_t chunkX, int32_t chunkZ);
 
 private:
     void AcceptClients();
