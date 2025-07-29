@@ -1,6 +1,6 @@
 #include "PlayerModel.h"
 #include <iostream>
-#include <cmath>
+#include <cmath>  // For M_PI and fmod
 
 PlayerModel::PlayerModel() : 
     m_headVAO(0), m_headVBO(0),
@@ -57,12 +57,18 @@ void PlayerModel::SetUniformLocations(int modelLoc, int viewLoc, int projLoc) {
 void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     if (m_shaderProgram == 0) return;
     
-    glUseProgram(m_shaderProgram);
+    // Don't switch shader programs - use the one set by Renderer
+    // glUseProgram(m_shaderProgram);
+    
+    // Normalize yaw to prevent accumulation issues
+    float normalizedYaw = fmod(yaw, 360.0f);
+    if (normalizedYaw < 0.0f) normalizedYaw += 360.0f;
     
     // Base transformation matrix for the entire player
-    Mat4 baseTransform = CreateTranslationMatrix(position.x, position.y, position.z);
-    Mat4 yawRotation = CreateRotationYMatrix(yaw * M_PI / 180.0f);
-    Mat4 playerTransform = MultiplyMatrices(baseTransform, yawRotation);
+    // Correct order: rotate around model center first, then translate to world position
+    Mat4 translation = CreateTranslationMatrix(position.x, position.y, position.z);
+    Mat4 yawRotation = CreateRotationYMatrix(normalizedYaw * M_PI / 180.0f);
+    Mat4 playerTransform = MultiplyMatrices(translation, yawRotation);
     
     // Render Head (0.5x0.5x0.5 blocks at top)
     {
