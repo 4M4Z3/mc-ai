@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include "World.h"
 #include "Chunk.h"
+#include "PlayerModel.h"
 #include <iostream>
 #include <string>
 #include <cmath>
@@ -12,6 +13,8 @@
 
 Renderer::Renderer() : m_cubeVAO(0), m_cubeVBO(0), m_shaderProgram(0), 
                        m_triangleVAO(0), m_triangleVBO(0),
+                       m_playerShaderProgram(0),
+                       m_playerModelLoc(-1), m_playerViewLoc(-1), m_playerProjLoc(-1),
                        m_viewportWidth(1280), m_viewportHeight(720) {
 }
 
@@ -51,11 +54,22 @@ bool Renderer::Initialize() {
         std::cerr << "Failed to create shaders" << std::endl;
         return false;
     }
+    
+    // Create player shaders
+    if (!CreatePlayerShaders()) {
+        std::cerr << "Failed to create player shaders" << std::endl;
+        return false;
+    }
 
-    // Get uniform locations
+    // Get uniform locations for block shaders
     m_modelLoc = glGetUniformLocation(m_shaderProgram, "model");
     m_viewLoc = glGetUniformLocation(m_shaderProgram, "view");
     m_projLoc = glGetUniformLocation(m_shaderProgram, "projection");
+    
+    // Get uniform locations for player shaders
+    m_playerModelLoc = glGetUniformLocation(m_playerShaderProgram, "model");
+    m_playerViewLoc = glGetUniformLocation(m_playerShaderProgram, "view");
+    m_playerProjLoc = glGetUniformLocation(m_playerShaderProgram, "projection");
 
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
@@ -74,6 +88,16 @@ bool Renderer::Initialize() {
     
     // Get texture uniform location after loading textures
     m_textureLoc = glGetUniformLocation(m_shaderProgram, "blockTexture");
+    
+    // Initialize player model
+    if (!m_playerModel.Initialize()) {
+        std::cerr << "Failed to initialize player model" << std::endl;
+        return false;
+    }
+    
+    // Set up player model with shader program and uniform locations
+    m_playerModel.UseShaderProgram(m_playerShaderProgram);
+    m_playerModel.SetUniformLocations(m_playerModelLoc, m_playerViewLoc, m_playerProjLoc);
     
     // Set initial viewport and projection
     SetViewport(m_viewportWidth, m_viewportHeight);
@@ -181,6 +205,13 @@ void Renderer::Shutdown() {
         glDeleteProgram(m_shaderProgram);
         m_shaderProgram = 0;
     }
+    if (m_playerShaderProgram) {
+        glDeleteProgram(m_playerShaderProgram);
+        m_playerShaderProgram = 0;
+    }
+    
+    // Clean up player model
+    m_playerModel.Shutdown();
     
     // Clean up textures
     for (unsigned int texture : m_blockTextures) {
@@ -220,9 +251,9 @@ void Renderer::BeginFrame(const Player& player) {
     
     glUseProgram(m_shaderProgram);
     
-    // Set view matrix
-    Mat4 viewMatrix = player.GetViewMatrix();
-    glUniformMatrix4fv(m_viewLoc, 1, GL_FALSE, viewMatrix.m);
+    // Set view matrix and store it for player rendering
+    m_viewMatrix = player.GetViewMatrix();
+    glUniformMatrix4fv(m_viewLoc, 1, GL_FALSE, m_viewMatrix.m);
     
     // Set projection matrix
     glUniformMatrix4fv(m_projLoc, 1, GL_FALSE, m_projectionMatrix.m);
@@ -380,6 +411,54 @@ bool Renderer::CreateShaders() {
     return true;
 }
 
+bool Renderer::CreatePlayerShaders() {
+    // Load player vertex shader source from file
+    std::string vertexShaderSource = LoadShaderSource("shaders/player_vertex.glsl");
+    if (vertexShaderSource.empty()) {
+        std::cerr << "Failed to load player vertex shader" << std::endl;
+        return false;
+    }
+
+    // Load player fragment shader source from file  
+    std::string fragmentShaderSource = LoadShaderSource("shaders/player_fragment.glsl");
+    if (fragmentShaderSource.empty()) {
+        std::cerr << "Failed to load player fragment shader" << std::endl;
+        return false;
+    }
+
+    // Compile player shaders
+    unsigned int vertexShader = CompileShader(GL_VERTEX_SHADER, vertexShaderSource.c_str());
+    if (vertexShader == 0) return false;
+
+    unsigned int fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource.c_str());
+    if (fragmentShader == 0) {
+        glDeleteShader(vertexShader);
+        return false;
+    }
+
+    // Create player shader program
+    m_playerShaderProgram = glCreateProgram();
+    glAttachShader(m_playerShaderProgram, vertexShader);
+    glAttachShader(m_playerShaderProgram, fragmentShader);
+    glLinkProgram(m_playerShaderProgram);
+
+    // Check for linking errors
+    if (!CheckProgramLinking(m_playerShaderProgram)) {
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+        glDeleteProgram(m_playerShaderProgram);
+        m_playerShaderProgram = 0;
+        return false;
+    }
+
+    // Clean up shaders
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    std::cout << "Player shaders loaded and compiled successfully!" << std::endl;
+    return true;
+}
+
 unsigned int Renderer::CompileShader(unsigned int type, const char* source) {
     unsigned int shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, nullptr);
@@ -441,13 +520,18 @@ Mat4 Renderer::CreateTranslationMatrix(float x, float y, float z) {
 }
 
 void Renderer::RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosition>& otherPlayers) {
-    // Render each other player as a colored cube at their position
+    // Set the view and projection matrices for player rendering
+    glUseProgram(m_playerShaderProgram);
+    glUniformMatrix4fv(m_playerViewLoc, 1, GL_FALSE, m_viewMatrix.m);
+    glUniformMatrix4fv(m_playerProjLoc, 1, GL_FALSE, m_projectionMatrix.m);
+    
+    // Render each other player with the Minecraft-like player model
     for (const auto& pair : otherPlayers) {
         const PlayerPosition& playerPos = pair.second;
         
-        // Render player as a slightly larger cube (1.8 blocks tall like Minecraft players)
-        // For now, render as a simple cube at their position
-        RenderCube(playerPos.x, playerPos.y + 0.9f, playerPos.z); // Offset Y to center on player
+        // Render player model at their position with their rotation
+        Vec3 position(playerPos.x, playerPos.y, playerPos.z);
+        m_playerModel.Render(position, playerPos.yaw, playerPos.pitch);
     }
 }
 

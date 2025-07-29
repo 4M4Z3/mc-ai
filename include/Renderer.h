@@ -13,6 +13,7 @@
 #include "Player.h"
 #include "Server.h" // For PlayerPosition
 #include "Block.h"
+#include "PlayerModel.h"
 
 class World;
 
@@ -47,6 +48,11 @@ private:
     unsigned int m_triangleVAO;
     unsigned int m_triangleVBO;
     
+    // Player model rendering
+    PlayerModel m_playerModel;
+    unsigned int m_playerShaderProgram;
+    int m_playerModelLoc, m_playerViewLoc, m_playerProjLoc;
+    
     // Texture management
     std::vector<unsigned int> m_blockTextures;
     unsigned int LoadTexture(const std::string& filepath);
@@ -54,6 +60,7 @@ private:
     
     // Projection matrix
     Mat4 m_projectionMatrix;
+    Mat4 m_viewMatrix;  // Store view matrix for player rendering
     int m_viewportWidth, m_viewportHeight;
     
     // Shader uniforms
@@ -62,6 +69,7 @@ private:
 
     // Shader management
     bool CreateShaders();
+    bool CreatePlayerShaders();
     bool CreateCubeGeometry();
     std::string LoadShaderSource(const std::string& filepath);
     unsigned int CompileShader(unsigned int type, const char* source);

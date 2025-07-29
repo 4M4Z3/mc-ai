@@ -100,6 +100,7 @@ set(SOURCES
     src/Chunk.cpp
     src/World.cpp
     src/Player.cpp
+    src/PlayerModel.cpp
     src/Server.cpp
     src/NetworkClient.cpp
     src/ServerDiscovery.cpp
@@ -113,6 +114,7 @@ set(HEADERS
     include/Chunk.h
     include/World.h
     include/Player.h
+    include/PlayerModel.h
     include/Server.h
     include/NetworkClient.h
     include/ServerDiscovery.h
@@ -176,5 +178,6 @@ else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-# Copy assets to build directory
-file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR}) 
+# Copy assets and shaders to build directory
+file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/shaders DESTINATION ${CMAKE_BINARY_DIR}) 
