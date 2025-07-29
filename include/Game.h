@@ -7,6 +7,7 @@
 #include "Player.h"
 #include "Server.h"
 #include "NetworkClient.h"
+#include "ServerDiscovery.h"
 #include <memory>
 #include <unordered_map>
 
@@ -42,6 +43,7 @@ private:
     // Networking
     std::unique_ptr<Server> m_server;
     std::unique_ptr<NetworkClient> m_networkClient;
+    std::unique_ptr<ServerDiscovery> m_serverDiscovery;
     bool m_isHost;
     std::unordered_map<uint32_t, PlayerPosition> m_otherPlayers;
     

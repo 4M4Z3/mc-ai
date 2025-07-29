@@ -4,11 +4,12 @@ A cross-platform C++ game framework using ImGui for UI and OpenGL for rendering.
 
 ## Features
 
-- **Cross-platform**: Works on Mac M1 and Windows x86_64
+- **Cross-platform**: Works on **Linux x86_64** and **Mac M1/M2** (Intel Macs and Windows support available)
 - **ImGui Integration**: Modern immediate mode GUI
-- **OpenGL Rendering**: Hardware-accelerated graphics
+- **OpenGL Rendering**: Hardware-accelerated graphics with flexible OpenGL loading library support
 - **State Management**: Clean separation between main menu and game states
 - **Input Handling**: ESC key to return from game to main menu
+- **Automated Dependency Management**: Smart detection and fallback for OpenGL loaders (epoxy, GLEW, system)
 
 ## Project Structure
 
@@ -19,101 +20,110 @@ A cross-platform C++ game framework using ImGui for UI and OpenGL for rendering.
 ├── lib/           # Static libraries
 ├── third_party/   # External dependencies (ImGui)
 ├── assets/        # Game assets
+├── Makefile       # Cross-platform build wrapper
 └── CMakeLists.txt # Build configuration
 ```
 
 ## Dependencies
 
+- **CMake**: Build system (version 3.15+)
 - **GLFW3**: Window management and input handling
 - **OpenGL**: Graphics rendering
+- **OpenGL Loading Library**: libepoxy (preferred), GLEW, or system OpenGL headers
 - **ImGui**: Immediate mode GUI (automatically downloaded during build)
 
-## Build Instructions
+## Quick Start
 
-### Prerequisites
+### 1. Install Dependencies
 
-#### Mac M1 (macOS)
+The Makefile can automatically install dependencies for your platform:
+
+```bash
+# Install dependencies (works on macOS, Ubuntu/Debian, Fedora/RHEL, Arch Linux)
+make install-deps
+```
+
+**Manual installation:**
+
+#### Mac M1/M2 (macOS)
 ```bash
 # Install Homebrew if not already installed
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install dependencies
-brew install cmake glfw
+brew install cmake glfw libepoxy pkg-config
 ```
 
-#### Windows x86_64
-1. Install [Visual Studio 2019/2022](https://visualstudio.microsoft.com/) with C++ development tools
-2. Install [CMake](https://cmake.org/download/)
-3. Install [vcpkg](https://github.com/Microsoft/vcpkg):
-   ```cmd
-   git clone https://github.com/Microsoft/vcpkg.git
-   cd vcpkg
-   .\bootstrap-vcpkg.bat
-   .\vcpkg.exe install glfw3:x64-windows
-   ```
+#### Linux x86_64
 
-### Building
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install -y cmake libglfw3-dev libepoxy-dev libgl1-mesa-dev libx11-dev libxrandr-dev libxi-dev pkg-config
+```
 
-#### Quick Start (Using Makefile)
+**Fedora/RHEL:**
+```bash
+sudo dnf install -y cmake glfw-devel libepoxy-devel mesa-libGL-devel libX11-devel libXrandr-devel libXi-devel pkgconf-pkg-config
+```
+
+**Arch Linux:**
+```bash
+sudo pacman -S --needed cmake glfw libepoxy mesa libx11 libxrandr libxi pkgconf
+```
+
+### 2. Build and Run
+
 ```bash
 # Clone the project
 git clone <your-repo-url>
-cd ImGuiOpenGLProject
+cd mc-ai
 
-# Build and run (works on Mac and Linux)
+# Build and run in one command
 make run
 
-# Or just build
-make
-
-# Clean build files
-make clean
-
-# See all available commands
-make help
+# Or build separately
+make build
 ```
 
-#### Mac M1 (Manual CMake)
+## Advanced Usage
+
+### Build Commands
+
 ```bash
-# Clone and build
-git clone <your-repo-url>
-cd ImGuiOpenGLProject
+make help           # Show all available commands
+make clean          # Clean build artifacts  
+make configure      # Configure CMake (automatically called by build)
+make build          # Build the project
+make run            # Build and run the executable
+make debug          # Build in debug mode
+make setup          # Download ImGui dependency
+make install-deps   # Install system dependencies
+```
 
-# Create build directory
+### Manual CMake Build
+
+If you prefer using CMake directly:
+
+```bash
 mkdir build && cd build
-
-# Configure and build
 cmake ..
 make -j$(nproc)
-
-# Run the executable
 ./bin/ImGuiOpenGLProject
 ```
 
-#### Windows x86_64
-```cmd
-REM Clone and build
-git clone <your-repo-url>
-cd ImGuiOpenGLProject
+## Cross-Platform Notes
 
-REM Create build directory
-mkdir build && cd build
+### OpenGL Loading Library Support
+The build system automatically detects and uses the best available OpenGL loading library:
+1. **libepoxy** (preferred) - Modern, cross-platform
+2. **GLEW** (fallback) - Widely supported
+3. **System OpenGL** (last resort) - Uses platform OpenGL headers
 
-REM Configure with vcpkg toolchain
-cmake .. -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake
-
-REM Build (or open the .sln file in Visual Studio)
-cmake --build . --config Release
-
-REM Run the executable
-.\bin\Release\ImGuiOpenGLProject.exe
-```
-
-### Alternative: Visual Studio Code
-1. Install the CMake Tools extension
-2. Open the project folder
-3. Select your kit (compiler)
-4. Press F7 to build or Ctrl+F5 to build and run
+### Platform-Specific Features
+- **macOS**: Automatic Homebrew path detection (supports both `/opt/homebrew` for M1/M2 and `/usr/local` for Intel)
+- **Linux**: Multi-distro package manager detection (apt, dnf, pacman)
+- **Windows**: vcpkg support for dependency management
 
 ## Usage
 
@@ -132,20 +142,54 @@ REM Run the executable
 
 ## Troubleshooting
 
-### Mac M1 Issues
-- If you get OpenGL deprecation warnings, they can be safely ignored
-- Make sure you have Xcode command line tools: `xcode-select --install`
+### Build Issues
 
-### Windows Issues
-- Ensure vcpkg is properly integrated: `.\vcpkg integrate install`
-- If GLFW is not found, verify the vcpkg toolchain path in CMake configuration
-- Use x64 architecture for consistency
+**"cmake: command not found"**
+- Run `make install-deps` to install CMake and other dependencies
+- On macOS, ensure Homebrew is installed and in your PATH
 
-### General Issues
+**"GLFW not found" or "OpenGL loader not found"**
+- Run `make install-deps` to install missing dependencies
+- Check that development packages are installed (e.g., `libglfw3-dev` not just `libglfw3`)
+
+**Linker errors with epoxy/GLEW**
+- The build system will automatically fall back to available libraries
+- Install libepoxy for best compatibility: `brew install libepoxy` (macOS) or `sudo apt install libepoxy-dev` (Ubuntu)
+
+### Runtime Issues
+
+**OpenGL context errors**
 - Make sure your graphics drivers support OpenGL 3.3+
-- ImGui is automatically downloaded during build - ensure you have internet access for first build
-- Check that CMake version is 3.15 or higher
-- If build fails, try `make clean` followed by `make setup` to re-download dependencies
+- Try running with software rendering: `LIBGL_ALWAYS_SOFTWARE=1 ./build/bin/ImGuiOpenGLProject` (Linux)
+
+**Window creation fails**
+- Ensure X11 is running (Linux)
+- Check display permissions if running via SSH
+
+### Platform-Specific Issues
+
+**macOS:**
+- OpenGL deprecation warnings can be safely ignored
+- Ensure Xcode command line tools are installed: `xcode-select --install`
+
+**Linux:**
+- Install graphics drivers for your GPU (nvidia, mesa, etc.)
+- Make sure you have X11 development libraries installed
+
+**General:**
+- ImGui is automatically downloaded - ensure internet access for first build
+- Try `make clean && make setup && make build` to refresh dependencies
+
+## Development
+
+### Adding Features
+1. Source files go in `src/` with headers in `include/`
+2. Update `CMakeLists.txt` to include new source files  
+3. Assets go in `assets/` directory (automatically copied to build)
+
+### Debugging
+- Use `make debug` for debug builds with symbols
+- Enable additional compiler warnings in `CMakeLists.txt`
 
 ## License
 

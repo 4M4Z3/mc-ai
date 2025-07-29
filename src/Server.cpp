@@ -2,12 +2,17 @@
 #include <iostream>
 #include <sstream>
 #include <cstring>
+#include <ctime>
+#include <chrono>
+#include <thread>
 
 Server::Server() 
     : m_serverSocket(INVALID_SOCKET)
     , m_running(false)
     , m_nextPlayerId(1)
     , m_port(8080)
+    , m_broadcastSocket(INVALID_SOCKET)
+    , m_broadcasting(false)
 #ifdef _WIN32
     , m_winsockInitialized(false)
 #endif
@@ -99,6 +104,9 @@ bool Server::Start(int port) {
     m_running = true;
     m_acceptThread = std::thread(&Server::AcceptClients, this);
     
+    // Start UDP broadcast for server discovery
+    StartBroadcast();
+    
     std::cout << "Server started on port " << port << std::endl;
     return true;
 }
@@ -109,6 +117,9 @@ void Server::Stop() {
     }
     
     m_running = false;
+    
+    // Stop UDP broadcast
+    StopBroadcast();
     
     // Close server socket to stop accepting new connections
     if (m_serverSocket != INVALID_SOCKET) {
@@ -346,4 +357,109 @@ std::string Server::GetLocalIPAddress() {
     inet_ntop(AF_INET, &local_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
     return std::string(ip_str);
 #endif
+}
+
+void Server::StartBroadcast() {
+    if (m_broadcasting) {
+        return;
+    }
+    
+    // Create UDP socket for broadcasting
+    m_broadcastSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (m_broadcastSocket == INVALID_SOCKET) {
+        std::cerr << "Failed to create broadcast socket" << std::endl;
+        return;
+    }
+    
+    // Enable broadcast on socket
+    int broadcast = 1;
+#ifdef _WIN32
+    if (setsockopt(m_broadcastSocket, SOL_SOCKET, SO_BROADCAST, (char*)&broadcast, sizeof(broadcast)) == SOCKET_ERROR) {
+#else
+    if (setsockopt(m_broadcastSocket, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast)) == -1) {
+#endif
+        std::cerr << "Failed to enable broadcast on socket" << std::endl;
+#ifdef _WIN32
+        closesocket(m_broadcastSocket);
+#else
+        close(m_broadcastSocket);
+#endif
+        m_broadcastSocket = INVALID_SOCKET;
+        return;
+    }
+    
+    m_broadcasting = true;
+    m_broadcastThread = std::thread(&Server::BroadcastServerPresence, this);
+    
+    std::cout << "Server broadcast started" << std::endl;
+}
+
+void Server::StopBroadcast() {
+    if (!m_broadcasting) {
+        return;
+    }
+    
+    m_broadcasting = false;
+    
+    // Close broadcast socket
+    if (m_broadcastSocket != INVALID_SOCKET) {
+#ifdef _WIN32
+        closesocket(m_broadcastSocket);
+#else
+        close(m_broadcastSocket);
+#endif
+        m_broadcastSocket = INVALID_SOCKET;
+    }
+    
+    // Wait for broadcast thread to finish
+    if (m_broadcastThread.joinable()) {
+        m_broadcastThread.join();
+    }
+    
+    std::cout << "Server broadcast stopped" << std::endl;
+}
+
+void Server::BroadcastServerPresence() {
+    const int BROADCAST_PORT = 8081; // Different port for discovery
+    const int BROADCAST_INTERVAL = 3; // Broadcast every 3 seconds
+    
+    while (m_broadcasting && m_running) {
+        // Create server announcement
+        ServerAnnouncement announcement;
+        std::strncpy(announcement.serverName, "Minecraft Clone Server", sizeof(announcement.serverName) - 1);
+        
+        std::string localIP = GetLocalIPAddress();
+        std::strncpy(announcement.serverIP, localIP.c_str(), sizeof(announcement.serverIP) - 1);
+        
+        announcement.serverPort = static_cast<uint16_t>(m_port);
+        announcement.playerCount = static_cast<uint16_t>(GetPlayerCount());
+        announcement.maxPlayers = 10; // Default max players
+        announcement.timestamp = static_cast<uint32_t>(std::time(nullptr));
+        
+        // Set up broadcast address
+        sockaddr_in broadcastAddr{};
+        broadcastAddr.sin_family = AF_INET;
+        broadcastAddr.sin_port = htons(BROADCAST_PORT);
+        broadcastAddr.sin_addr.s_addr = INADDR_BROADCAST;
+        
+        // Send broadcast
+        ssize_t bytesSent = sendto(m_broadcastSocket, 
+                                   reinterpret_cast<const char*>(&announcement), 
+                                   sizeof(announcement), 
+                                   0, 
+                                   reinterpret_cast<const sockaddr*>(&broadcastAddr), 
+                                   sizeof(broadcastAddr));
+        
+        if (bytesSent == -1) {
+            if (m_broadcasting) {
+                std::cerr << "Failed to send broadcast announcement" << std::endl;
+            }
+        } else {
+            std::cout << "Broadcasted server presence: " << localIP << ":" << m_port 
+                      << " (" << GetPlayerCount() << " players)" << std::endl;
+        }
+        
+        // Wait before next broadcast
+        std::this_thread::sleep_for(std::chrono::seconds(BROADCAST_INTERVAL));
+    }
 } 

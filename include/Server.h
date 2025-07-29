@@ -40,6 +40,17 @@ struct NetworkMessage {
     PlayerPosition position;
 };
 
+// Server announcement for UDP broadcast discovery
+struct ServerAnnouncement {
+    char magic[8] = {'M', 'C', '_', 'S', 'E', 'R', 'V', 'R'}; // Magic bytes to identify our packets
+    char serverName[64];
+    char serverIP[16];
+    uint16_t serverPort;
+    uint16_t playerCount;
+    uint16_t maxPlayers;
+    uint32_t timestamp; // For freshness checking
+};
+
 class Server {
 public:
     Server();
@@ -64,12 +75,22 @@ private:
     void BroadcastToAllClients(const NetworkMessage& message, uint32_t excludePlayerId = 0);
     void SendPlayerList(socket_t clientSocket);
     
+    // UDP Broadcast for server discovery
+    void StartBroadcast();
+    void StopBroadcast();
+    void BroadcastServerPresence();
+    
     bool InitializeWinsock();
     void CleanupWinsock();
     
     socket_t m_serverSocket;
     std::atomic<bool> m_running;
     std::thread m_acceptThread;
+    
+    // UDP Broadcast components
+    socket_t m_broadcastSocket;
+    std::atomic<bool> m_broadcasting;
+    std::thread m_broadcastThread;
     
     // Client management
     struct ClientInfo {

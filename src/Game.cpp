@@ -88,6 +88,13 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     // Create player
     m_player = std::make_unique<Player>(0.0f, 5.0f, 3.0f);
 
+    // Initialize server discovery
+    m_serverDiscovery = std::make_unique<ServerDiscovery>();
+    if (!m_serverDiscovery->Start()) {
+        std::cerr << "Warning: Failed to start server discovery" << std::endl;
+        // Don't fail completely, just continue without server discovery
+    }
+
     std::cout << "Game initialized successfully!" << std::endl;
     return true;
 }
@@ -139,6 +146,12 @@ void Game::Run() {
 }
 
 void Game::Shutdown() {
+    // Stop server discovery
+    if (m_serverDiscovery) {
+        m_serverDiscovery->Stop();
+        m_serverDiscovery.reset();
+    }
+    
     if (m_window) {
         // Cleanup ImGui
         ImGui_ImplOpenGL3_Shutdown();
@@ -195,32 +208,60 @@ void Game::UpdateGame() {
 }
 
 void Game::RenderMainMenu() {
-    // Create a centered window for the main menu
+    // Create a centered window for the main menu with increased size for server list
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(600, 500), ImGuiCond_Always);
     
     if (ImGui::Begin("Main Menu", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
         ImGui::Text("Minecraft Clone - Multiplayer");
         ImGui::Separator();
         
-        if (ImGui::Button("Host Game", ImVec2(380, 50))) {
+        if (ImGui::Button("Host Game", ImVec2(580, 50))) {
             StartHost();
         }
         
         ImGui::Separator();
         
+        // Available Servers Section
+        ImGui::Text("Available Servers:");
+        if (m_serverDiscovery) {
+            std::vector<DiscoveredServer> discoveredServers = m_serverDiscovery->GetDiscoveredServers();
+            
+            if (!discoveredServers.empty()) {
+                // Create a child window with scrolling for the server list
+                ImGui::BeginChild("ServerList", ImVec2(0, 120), true);
+                
+                for (const auto& server : discoveredServers) {
+                    std::string buttonLabel = server.GetDisplayName();
+                    if (ImGui::Button(buttonLabel.c_str(), ImVec2(-1, 30))) {
+                        JoinServer(server.ip + ":" + std::to_string(server.port));
+                    }
+                }
+                
+                ImGui::EndChild();
+            } else {
+                ImGui::Text("  No servers found on local network");
+                ImGui::Text("  Servers will appear here automatically");
+            }
+        } else {
+            ImGui::Text("  Server discovery not available");
+        }
+        
+        ImGui::Separator();
+        
+        // Manual server entry (kept as backup option)
         static char serverIP[128] = "127.0.0.1";
-        ImGui::Text("Join Server:");
+        ImGui::Text("Manual Server Entry:");
         ImGui::InputText("Server IP", serverIP, sizeof(serverIP));
         
-        if (ImGui::Button("Join Game", ImVec2(380, 50))) {
+        if (ImGui::Button("Join Manually", ImVec2(580, 50))) {
             JoinServer(std::string(serverIP));
         }
         
         ImGui::Separator();
         
-        if (ImGui::Button("Exit", ImVec2(380, 50))) {
+        if (ImGui::Button("Exit", ImVec2(580, 50))) {
             m_shouldClose = true;
         }
         
@@ -399,6 +440,25 @@ void Game::StartHost() {
 void Game::JoinServer(const std::string& serverIP) {
     m_networkClient = std::make_unique<NetworkClient>();
     
+    // Parse IP address and port
+    std::string ip = serverIP;
+    int port = 8080; // Default port
+    
+    // Check if port is specified in the format IP:PORT
+    size_t colonPos = serverIP.find(':');
+    if (colonPos != std::string::npos) {
+        ip = serverIP.substr(0, colonPos);
+        try {
+            port = std::stoi(serverIP.substr(colonPos + 1));
+        } catch (const std::exception&) {
+            std::cerr << "Invalid port number in: " << serverIP << std::endl;
+            std::cerr << "Using default port 8080" << std::endl;
+            port = 8080;
+        }
+    }
+    
+    std::cout << "Attempting to connect to " << ip << ":" << port << std::endl;
+    
     // Set up callbacks
     m_networkClient->SetPlayerJoinCallback([this](uint32_t playerId, const PlayerPosition& position) {
         OnPlayerJoin(playerId, position);
@@ -412,13 +472,17 @@ void Game::JoinServer(const std::string& serverIP) {
         OnPlayerPositionUpdate(playerId, position);
     });
     
-    if (m_networkClient->Connect(serverIP, 8080)) {
+    if (m_networkClient->Connect(ip, port)) {
         // Create world and enter game  
         m_world = std::make_unique<World>();
         SetState(GameState::GAME);
-        std::cout << "Joined server at " << serverIP << std::endl;
+        std::cout << "Joined server at " << ip << ":" << port << std::endl;
     } else {
-        std::cerr << "Failed to connect to server: " << serverIP << std::endl;
+        std::cerr << "Failed to connect to server: " << ip << ":" << port << std::endl;
+        std::cerr << "Make sure:" << std::endl;
+        std::cerr << "  1. The server is running on " << ip << std::endl;
+        std::cerr << "  2. Port " << port << " is not blocked by firewall" << std::endl;
+        std::cerr << "  3. You're on the same network" << std::endl;
         m_networkClient.reset();
     }
 }

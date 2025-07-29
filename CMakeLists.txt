@@ -102,6 +102,7 @@ set(SOURCES
     src/Player.cpp
     src/Server.cpp
     src/NetworkClient.cpp
+    src/ServerDiscovery.cpp
 )
 
 # Header files
@@ -114,6 +115,7 @@ set(HEADERS
     include/Player.h
     include/Server.h
     include/NetworkClient.h
+    include/ServerDiscovery.h
 )
 
 # Add ImGui source files
