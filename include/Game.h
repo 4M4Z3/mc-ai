@@ -12,6 +12,9 @@
 #include <unordered_map>
 #include <chrono>
 
+// Forward declare ImFont to avoid including the full ImGui header
+struct ImFont;
+
 enum class GameState {
     MAIN_MENU,
     GAME
@@ -112,6 +115,12 @@ private:
     // Timing
     float m_deltaTime;
     float m_lastFrame;
+    
+    // UI Fonts
+    ImFont* m_fontSmall;
+    ImFont* m_fontDefault;
+    ImFont* m_fontLarge;
+    ImFont* m_fontTitle;
     
     // Pause menu
     bool m_showPauseMenu;

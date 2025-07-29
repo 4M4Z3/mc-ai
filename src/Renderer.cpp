@@ -305,7 +305,7 @@ void Renderer::RenderChunks(const World& world) {
         // Handle grass blocks specially (different textures per face)
         if (blockType == BlockType::GRASS) {
             // Render grass top faces with purple tint
-            glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint
+            glUniform3f(m_colorTintLoc, 0.3f, 0.7f, 0.4f); // green
             glBindTexture(GL_TEXTURE_2D, m_grassTopTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -335,7 +335,7 @@ void Renderer::RenderChunks(const World& world) {
             // Render grass side overlay on top using polygon offset to avoid z-fighting
             glEnable(GL_POLYGON_OFFSET_FILL);
             glPolygonOffset(-1.0f, -1.0f); // Pull overlay slightly toward camera
-            glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint for overlay
+            glUniform3f(m_colorTintLoc, 0.3f, 0.7f, 0.4f); // grass mult
             glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {

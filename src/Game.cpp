@@ -33,7 +33,9 @@ Game* Game::s_instance = nullptr;
 Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false),
                m_isHost(false), m_worldSeed(0), m_worldSeedReceived(false),
                m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
-               m_deltaTime(0.0f), m_lastFrame(0.0f), m_showPauseMenu(false) {
+               m_deltaTime(0.0f), m_lastFrame(0.0f),
+               m_fontSmall(nullptr), m_fontDefault(nullptr), m_fontLarge(nullptr), m_fontTitle(nullptr),
+               m_showPauseMenu(false) {
     s_instance = this;
 }
 
@@ -103,6 +105,20 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+    // Load Minecraft font in multiple sizes
+    const char* fontPath = "assets/font/mc.otf";
+    m_fontSmall = io.Fonts->AddFontFromFileTTF(fontPath, 14.0f);
+    m_fontDefault = io.Fonts->AddFontFromFileTTF(fontPath, 16.0f);
+    m_fontLarge = io.Fonts->AddFontFromFileTTF(fontPath, 20.0f);
+    m_fontTitle = io.Fonts->AddFontFromFileTTF(fontPath, 24.0f);
+    
+    if (m_fontDefault == nullptr) {
+        std::cerr << "Warning: Failed to load Minecraft font from " << fontPath << ", using default font" << std::endl;
+    } else {
+        std::cout << "Successfully loaded Minecraft font in multiple sizes!" << std::endl;
+        io.FontDefault = m_fontDefault; // Set 16pt as default font
+    }
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -316,7 +332,14 @@ void Game::RenderMainMenu() {
     ImGui::SetNextWindowSize(ImVec2(600, 500), ImGuiCond_Always);
     
     if (ImGui::Begin("Main Menu", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
-        ImGui::Text("Minecraft Clone - Multiplayer");
+        // Use title font for the main heading
+        if (m_fontTitle) {
+            ImGui::PushFont(m_fontTitle);
+            ImGui::Text("Minecraft Clone - Multiplayer");
+            ImGui::PopFont();
+        } else {
+            ImGui::Text("Minecraft Clone - Multiplayer");
+        }
         ImGui::Separator();
         
         if (ImGui::Button("Host Game", ImVec2(580, 50))) {
@@ -325,8 +348,14 @@ void Game::RenderMainMenu() {
         
         ImGui::Separator();
         
-        // Available Servers Section
-        ImGui::Text("Available Servers:");
+        // Available Servers Section with large font header
+        if (m_fontLarge) {
+            ImGui::PushFont(m_fontLarge);
+            ImGui::Text("Available Servers");
+            ImGui::PopFont();
+        } else {
+            ImGui::Text("Available Servers:");
+        }
         if (m_serverDiscovery) {
             std::vector<DiscoveredServer> discoveredServers = m_serverDiscovery->GetDiscoveredServers();
             
@@ -354,7 +383,13 @@ void Game::RenderMainMenu() {
         
         // Manual server entry (kept as backup option)
         static char serverIP[128] = "127.0.0.1";
-        ImGui::Text("Manual Server Entry:");
+        if (m_fontLarge) {
+            ImGui::PushFont(m_fontLarge);
+            ImGui::Text("Manual Server Entry");
+            ImGui::PopFont();
+        } else {
+            ImGui::Text("Manual Server Entry:");
+        }
         ImGui::InputText("Server IP", serverIP, sizeof(serverIP));
         
         if (ImGui::Button("Join Manually", ImVec2(580, 50))) {
@@ -426,7 +461,14 @@ void Game::RenderGame() {
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_Always);
     
     if (ImGui::Begin("Minecraft Clone", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
-        ImGui::Text("3D Block Renderer");
+        // Use large font for the header
+        if (m_fontLarge) {
+            ImGui::PushFont(m_fontLarge);
+            ImGui::Text("3D Block Renderer");
+            ImGui::PopFont();
+        } else {
+            ImGui::Text("3D Block Renderer");
+        }
         ImGui::Separator();
         
         if (m_player) {
@@ -487,9 +529,17 @@ void Game::RenderPauseMenu() {
     ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Always);
     
     if (ImGui::Begin("Game Paused", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
-        // Center the content
-        ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize("Game Paused").x) * 0.5f);
-        ImGui::Text("Game Paused");
+        // Center the content with title font
+        const char* pausedText = "Game Paused";
+        if (m_fontTitle) {
+            ImGui::PushFont(m_fontTitle);
+            ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(pausedText).x) * 0.5f);
+            ImGui::Text("%s", pausedText);
+            ImGui::PopFont();
+        } else {
+            ImGui::SetCursorPosX((ImGui::GetWindowWidth() - ImGui::CalcTextSize(pausedText).x) * 0.5f);
+            ImGui::Text("%s", pausedText);
+        }
         
         ImGui::Separator();
         ImGui::Spacing();
