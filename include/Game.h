@@ -11,6 +11,8 @@
 #include <memory>
 #include <unordered_map>
 #include <chrono>
+#include <queue> // Added for thread-safe queue
+#include <mutex> // Added for mutex
 
 // Forward declare ImFont to avoid including the full ImGui header
 struct ImFont;
@@ -100,6 +102,14 @@ private:
     
     // Block targeting
     RaycastResult m_targetBlock;
+    
+    // Thread-safe queue for block breaks received from network
+    struct PendingBlockBreak {
+        uint32_t playerId;
+        int32_t x, y, z;
+    };
+    std::queue<PendingBlockBreak> m_pendingBlockBreaks;
+    std::mutex m_pendingBlockBreaksMutex;
     
     // Networking
     std::unique_ptr<Server> m_server;

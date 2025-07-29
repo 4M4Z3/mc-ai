@@ -348,6 +348,57 @@ void Game::UpdateGame() {
         SendPlayerPosition();
         lastPositionSend = glfwGetTime();
     }
+
+    // Process pending block breaks from network
+    {
+        std::lock_guard<std::mutex> lock(m_pendingBlockBreaksMutex);
+        while (!m_pendingBlockBreaks.empty()) {
+            auto& breakInfo = m_pendingBlockBreaks.front();
+            uint32_t playerId = breakInfo.playerId;
+            int32_t x = breakInfo.x;
+            int32_t y = breakInfo.y;
+            int32_t z = breakInfo.z;
+
+            // Apply block break to client world (if we have one)
+            if (m_world) {
+                m_world->SetBlock(x, y, z, BlockType::AIR);
+                
+                // Regenerate affected chunk meshes
+                int chunkX, chunkZ, localX, localZ;
+                m_world->WorldToChunkCoords(x, z, chunkX, chunkZ, localX, localZ);
+                
+                // Regenerate the chunk containing the broken block
+                Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
+                if (chunk) {
+                    chunk->GenerateMesh(m_world.get());
+                }
+                
+                // Check if we need to regenerate neighboring chunks
+                // (if the broken block was on a chunk boundary)
+                if (localX == 0) {
+                    // Block was on the left edge, regenerate left neighbor
+                    Chunk* leftChunk = m_world->GetChunk(chunkX - 1, chunkZ);
+                    if (leftChunk) leftChunk->GenerateMesh(m_world.get());
+                }
+                if (localX == 15) {
+                    // Block was on the right edge, regenerate right neighbor
+                    Chunk* rightChunk = m_world->GetChunk(chunkX + 1, chunkZ);
+                    if (rightChunk) rightChunk->GenerateMesh(m_world.get());
+                }
+                if (localZ == 0) {
+                    // Block was on the back edge, regenerate back neighbor
+                    Chunk* backChunk = m_world->GetChunk(chunkX, chunkZ - 1);
+                    if (backChunk) backChunk->GenerateMesh(m_world.get());
+                }
+                if (localZ == 15) {
+                    // Block was on the front edge, regenerate front neighbor
+                    Chunk* frontChunk = m_world->GetChunk(chunkX, chunkZ + 1);
+                    if (frontChunk) frontChunk->GenerateMesh(m_world.get());
+                }
+            }
+            m_pendingBlockBreaks.pop();
+        }
+    }
 }
 
 void Game::RenderMainMenu() {
@@ -1004,42 +1055,11 @@ void Game::OnGameTimeReceived(float gameTime) {
 void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z) {
     std::cout << "[CLIENT] Received block break from player " << playerId << " at (" << x << ", " << y << ", " << z << ")" << std::endl;
     
-    // Apply block break to client world (if we have one)
-    if (m_world) {
-        m_world->SetBlock(x, y, z, BlockType::AIR);
-        
-        // Regenerate affected chunk meshes
-        int chunkX, chunkZ, localX, localZ;
-        m_world->WorldToChunkCoords(x, z, chunkX, chunkZ, localX, localZ);
-        
-        // Regenerate the chunk containing the broken block
-        Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
-        if (chunk) {
-            chunk->GenerateMesh(m_world.get());
-        }
-        
-        // Check if we need to regenerate neighboring chunks
-        // (if the broken block was on a chunk boundary)
-        if (localX == 0) {
-            // Block was on the left edge, regenerate left neighbor
-            Chunk* leftChunk = m_world->GetChunk(chunkX - 1, chunkZ);
-            if (leftChunk) leftChunk->GenerateMesh(m_world.get());
-        }
-        if (localX == 15) {
-            // Block was on the right edge, regenerate right neighbor
-            Chunk* rightChunk = m_world->GetChunk(chunkX + 1, chunkZ);
-            if (rightChunk) rightChunk->GenerateMesh(m_world.get());
-        }
-        if (localZ == 0) {
-            // Block was on the back edge, regenerate back neighbor
-            Chunk* backChunk = m_world->GetChunk(chunkX, chunkZ - 1);
-            if (backChunk) backChunk->GenerateMesh(m_world.get());
-        }
-        if (localZ == 15) {
-            // Block was on the front edge, regenerate front neighbor
-            Chunk* frontChunk = m_world->GetChunk(chunkX, chunkZ + 1);
-            if (frontChunk) frontChunk->GenerateMesh(m_world.get());
-        }
+    // Queue the block break for processing on the main thread
+    // (OpenGL operations must happen on the main thread)
+    {
+        std::lock_guard<std::mutex> lock(m_pendingBlockBreaksMutex);
+        m_pendingBlockBreaks.push({playerId, x, y, z});
     }
 }
 
