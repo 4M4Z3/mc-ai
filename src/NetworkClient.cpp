@@ -89,7 +89,7 @@ bool NetworkClient::Connect(const std::string& serverIP, int port) {
     m_connected = true;
     m_receiveThread = std::thread(&NetworkClient::ReceiveMessages, this);
     
-    std::cout << "Connected to server " << serverIP << ":" << port << std::endl;
+    std::cout << "[CLIENT] Successfully connected to server " << serverIP << ":" << port << std::endl;
     return true;
 }
 
@@ -122,7 +122,7 @@ void NetworkClient::Disconnect() {
     }
     
     CleanupWinsock();
-    std::cout << "Disconnected from server" << std::endl;
+    std::cout << "[CLIENT] Disconnected from server " << m_serverIP << ":" << m_serverPort << std::endl;
 }
 
 void NetworkClient::SendPlayerPosition(const PlayerPosition& position) {
@@ -182,23 +182,43 @@ void NetworkClient::RequestChunk(int32_t chunkX, int32_t chunkZ) {
 void NetworkClient::ReceiveMessages() {
     NetworkMessage message;
     
+    std::cout << "[CLIENT] Starting message receive loop for " << m_serverIP << ":" << m_serverPort << std::endl;
+    
     while (m_connected) {
         int bytesReceived = recv(m_socket, (char*)&message, sizeof(NetworkMessage), 0);
         if (bytesReceived <= 0) {
             // Server disconnected or error
             if (m_connected) {
-                std::cerr << "Lost connection to server" << std::endl;
+                std::cerr << "[CLIENT] Lost connection to server " << m_serverIP << ":" << m_serverPort 
+                          << " (bytes received: " << bytesReceived << ")" << std::endl;
+                
+                // Print errno for debugging
+#ifdef _WIN32
+                int error = WSAGetLastError();
+                std::cerr << "[CLIENT] Winsock error: " << error << std::endl;
+#else
+                std::cerr << "[CLIENT] Socket error: " << strerror(errno) << " (" << errno << ")" << std::endl;
+#endif
                 m_connected = false;
             }
             break;
         }
         
         if (bytesReceived == sizeof(NetworkMessage)) {
-            ProcessMessage(message);
+            try {
+                ProcessMessage(message);
+            } catch (const std::exception& e) {
+                std::cerr << "[CLIENT] ERROR processing message: " << e.what() << std::endl;
+                // Don't disconnect on message processing errors, just log them
+            }
+        } else {
+            std::cerr << "[CLIENT] Received incomplete message: " << bytesReceived 
+                      << " bytes (expected " << sizeof(NetworkMessage) << ")" << std::endl;
         }
     }
     
     // If we get here, connection was lost
+    std::cout << "[CLIENT] Message receive loop ended for " << m_serverIP << ":" << m_serverPort << std::endl;
     m_connected = false;
 }
 

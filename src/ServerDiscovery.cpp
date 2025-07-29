@@ -196,13 +196,29 @@ void ServerDiscovery::ListenForBroadcasts() {
 void ServerDiscovery::ProcessServerAnnouncement(const ServerAnnouncement& announcement, const std::string& fromIP) {
     std::lock_guard<std::mutex> lock(m_serversMutex);
     
+    // Filter out our own server broadcasts
+    // Don't add servers from localhost or loopback addresses
+    std::string serverIP = std::string(announcement.serverIP);
+    if (serverIP == "127.0.0.1" || serverIP == "localhost" || fromIP == "127.0.0.1") {
+        std::cout << "ServerDiscovery: Ignoring localhost server broadcast from " << serverIP << std::endl;
+        return;
+    }
+    
+    // Also check if this is our own external IP by comparing with the fromIP
+    // If the server is announcing the same IP it's broadcasting from, it might be our own server
+    if (serverIP == fromIP) {
+        std::cout << "ServerDiscovery: Potentially ignoring own server broadcast (serverIP == fromIP: " << serverIP << ")" << std::endl;
+        // For now, let's allow external servers but add logging
+        // In a more sophisticated implementation, we'd track our own external IP
+    }
+    
     // Create server key (IP:PORT)
-    std::string serverKey = std::string(announcement.serverIP) + ":" + std::to_string(announcement.serverPort);
+    std::string serverKey = serverIP + ":" + std::to_string(announcement.serverPort);
     
     // Update or create server entry
     DiscoveredServer& server = m_discoveredServers[serverKey];
     server.name = std::string(announcement.serverName);
-    server.ip = std::string(announcement.serverIP);
+    server.ip = serverIP;
     server.port = announcement.serverPort;
     server.playerCount = announcement.playerCount;
     server.maxPlayers = announcement.maxPlayers;

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <algorithm>
 #include <csignal>
+#include <thread>
 #ifdef __APPLE__
     #define GL_SILENCE_DEPRECATION
     #include <OpenGL/gl3.h>
@@ -291,34 +292,56 @@ void Game::UpdateMainMenu() {
     if (m_worldSeedReceived && !m_world) {
         std::cout << "Creating world with seed " << m_worldSeed << " in main thread..." << std::endl;
         
-        // Create world with server-provided seed (will be overwritten by server data)
-        m_world = std::make_unique<World>(m_worldSeed);
-        std::cout << "World created successfully!" << std::endl;
-        
-        // Create player immediately after world creation
-        if (!m_player) {
-            std::cout << "Creating player at spawn position..." << std::endl;
-            float spawnY = static_cast<float>(m_world->FindHighestBlock(0, 0));
-            m_player = std::make_unique<Player>(0.0f, spawnY, 0.0f);
-            std::cout << "Player created at spawn position (0, " << spawnY << ", 0)" << std::endl;
-        }
-        
-        // Request initial chunks around spawn position from server
-        if (m_networkClient && m_networkClient->IsConnected()) {
-            std::cout << "Requesting initial chunks from server..." << std::endl;
+        try {
+            // Create world with server-provided seed (will be overwritten by server data)
+            m_world = std::make_unique<World>(m_worldSeed);
+            std::cout << "World created successfully!" << std::endl;
             
-            // Request a 3x3 area of chunks around spawn (0,0)
-            for (int chunkX = -1; chunkX <= 1; ++chunkX) {
-                for (int chunkZ = -1; chunkZ <= 1; ++chunkZ) {
-                    m_networkClient->RequestChunk(chunkX, chunkZ);
-                }
+            // Create player immediately after world creation
+            if (!m_player) {
+                std::cout << "Creating player at spawn position..." << std::endl;
+                float spawnY = static_cast<float>(m_world->FindHighestBlock(0, 0));
+                m_player = std::make_unique<Player>(0.0f, spawnY, 0.0f);
+                std::cout << "Player created at spawn position (0, " << spawnY << ", 0)" << std::endl;
             }
             
-            // For now, immediately change to game state
-            // TODO: Wait for chunks to load before changing state
-            std::cout << "Setting state to GAME..." << std::endl;
-            SetState(GameState::GAME);
-            std::cout << "World created with server chunks, entering game!" << std::endl;
+            // Request initial chunks around spawn position from server
+            if (m_networkClient && m_networkClient->IsConnected()) {
+                std::cout << "Requesting initial chunks from server..." << std::endl;
+                
+                // Request a 3x3 area of chunks around spawn (0,0)
+                for (int chunkX = -1; chunkX <= 1; ++chunkX) {
+                    for (int chunkZ = -1; chunkZ <= 1; ++chunkZ) {
+                        m_networkClient->RequestChunk(chunkX, chunkZ);
+                    }
+                }
+                
+                // For now, immediately change to game state
+                // TODO: Wait for chunks to load before changing state
+                std::cout << "Setting state to GAME..." << std::endl;
+                SetState(GameState::GAME);
+                std::cout << "World created with server chunks, entering game!" << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "ERROR: Failed to create world or player: " << e.what() << std::endl;
+            
+            // Reset flags to prevent infinite retry
+            m_worldSeedReceived = false;
+            
+            // Disconnect from server if connection failed during world creation
+            if (m_networkClient) {
+                std::cout << "Disconnecting due to world creation error..." << std::endl;
+                m_networkClient->Disconnect();
+                m_networkClient.reset();
+            }
+            
+            // Reset server if we were hosting
+            if (m_server && m_isHost) {
+                std::cout << "Stopping server due to world creation error..." << std::endl;
+                m_server->Stop();
+                m_server.reset();
+                m_isHost = false;
+            }
         }
     }
     
@@ -862,36 +885,68 @@ void Game::StartHost() {
     if (m_server->Start(8080)) {
         m_isHost = true;
         
+        // Give server time to fully initialize before client connects
+        std::cout << "Server started, waiting for initialization..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        
         // Also connect as a client to our own server
         m_networkClient = std::make_unique<NetworkClient>();
         
-        // Set up callbacks
+        // Set up callbacks with error handling
         m_networkClient->SetPlayerJoinCallback([this](uint32_t playerId, const PlayerPosition& position) {
-            OnPlayerJoin(playerId, position);
+            try {
+                OnPlayerJoin(playerId, position);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnPlayerJoin: " << e.what() << std::endl;
+            }
         });
         
         m_networkClient->SetPlayerLeaveCallback([this](uint32_t playerId) {
-            OnPlayerLeave(playerId);
+            try {
+                OnPlayerLeave(playerId);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnPlayerLeave: " << e.what() << std::endl;
+            }
         });
         
         m_networkClient->SetPlayerPositionCallback([this](uint32_t playerId, const PlayerPosition& position) {
-            OnPlayerPositionUpdate(playerId, position);
+            try {
+                OnPlayerPositionUpdate(playerId, position);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnPlayerPositionUpdate: " << e.what() << std::endl;
+            }
         });
 
         m_networkClient->SetWorldSeedCallback([this](int32_t worldSeed) {
-            OnWorldSeedReceived(worldSeed);
+            try {
+                OnWorldSeedReceived(worldSeed);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnWorldSeedReceived: " << e.what() << std::endl;
+            }
         });
         
         m_networkClient->SetGameTimeCallback([this](float gameTime) {
-            OnGameTimeReceived(gameTime);
+            try {
+                OnGameTimeReceived(gameTime);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnGameTimeReceived: " << e.what() << std::endl;
+            }
         });
         
         m_networkClient->SetBlockBreakCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z) {
-            OnBlockBreakReceived(playerId, x, y, z);
+            try {
+                OnBlockBreakReceived(playerId, x, y, z);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnBlockBreakReceived: " << e.what() << std::endl;
+            }
         });
         
         m_networkClient->SetChunkDataCallback([this](int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
-            OnChunkDataReceived(chunkX, chunkZ, blockData);
+            try {
+                OnChunkDataReceived(chunkX, chunkZ, blockData);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnChunkDataReceived: " << e.what() << std::endl;
+            }
         });
         
         if (m_networkClient->Connect("127.0.0.1", 8080)) {
@@ -899,6 +954,7 @@ void Game::StartHost() {
             std::cout << "Connected to own server, waiting for world seed..." << std::endl;
         } else {
             std::cerr << "Failed to connect to own server" << std::endl;
+            m_server->Stop();
             m_server.reset();
             m_networkClient.reset();
             m_isHost = false;
@@ -910,66 +966,101 @@ void Game::StartHost() {
 }
 
 void Game::JoinServer(const std::string& serverIP) {
-    m_networkClient = std::make_unique<NetworkClient>();
-    
-    // Parse IP address and port
-    std::string ip = serverIP;
-    int port = 8080; // Default port
-    
-    // Check if port is specified in the format IP:PORT
-    size_t colonPos = serverIP.find(':');
-    if (colonPos != std::string::npos) {
-        ip = serverIP.substr(0, colonPos);
-        try {
-            port = std::stoi(serverIP.substr(colonPos + 1));
-        } catch (const std::exception&) {
-            std::cerr << "Invalid port number in: " << serverIP << std::endl;
-            std::cerr << "Using default port 8080" << std::endl;
-            port = 8080;
+    try {
+        m_networkClient = std::make_unique<NetworkClient>();
+        
+        // Parse IP address and port
+        std::string ip = serverIP;
+        int port = 8080; // Default port
+        
+        // Check if port is specified in the format IP:PORT
+        size_t colonPos = serverIP.find(':');
+        if (colonPos != std::string::npos) {
+            ip = serverIP.substr(0, colonPos);
+            try {
+                port = std::stoi(serverIP.substr(colonPos + 1));
+            } catch (const std::exception&) {
+                std::cerr << "Invalid port number in: " << serverIP << std::endl;
+                std::cerr << "Using default port 8080" << std::endl;
+                port = 8080;
+            }
         }
-    }
-    
-    std::cout << "Attempting to connect to " << ip << ":" << port << std::endl;
-    
-    // Set up callbacks
-    m_networkClient->SetPlayerJoinCallback([this](uint32_t playerId, const PlayerPosition& position) {
-        OnPlayerJoin(playerId, position);
-    });
-    
-    m_networkClient->SetPlayerLeaveCallback([this](uint32_t playerId) {
-        OnPlayerLeave(playerId);
-    });
-    
-    m_networkClient->SetPlayerPositionCallback([this](uint32_t playerId, const PlayerPosition& position) {
-        OnPlayerPositionUpdate(playerId, position);
-    });
+        
+        std::cout << "Attempting to connect to " << ip << ":" << port << std::endl;
+        
+        // Set up callbacks with error handling
+        m_networkClient->SetPlayerJoinCallback([this](uint32_t playerId, const PlayerPosition& position) {
+            try {
+                OnPlayerJoin(playerId, position);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnPlayerJoin: " << e.what() << std::endl;
+            }
+        });
+        
+        m_networkClient->SetPlayerLeaveCallback([this](uint32_t playerId) {
+            try {
+                OnPlayerLeave(playerId);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnPlayerLeave: " << e.what() << std::endl;
+            }
+        });
+        
+        m_networkClient->SetPlayerPositionCallback([this](uint32_t playerId, const PlayerPosition& position) {
+            try {
+                OnPlayerPositionUpdate(playerId, position);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnPlayerPositionUpdate: " << e.what() << std::endl;
+            }
+        });
 
-    m_networkClient->SetWorldSeedCallback([this](int32_t worldSeed) {
-        OnWorldSeedReceived(worldSeed);
-    });
-    
-    m_networkClient->SetGameTimeCallback([this](float gameTime) {
-        OnGameTimeReceived(gameTime);
-    });
-    
-    m_networkClient->SetBlockBreakCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z) {
-        OnBlockBreakReceived(playerId, x, y, z);
-    });
-    
-    m_networkClient->SetChunkDataCallback([this](int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
-        OnChunkDataReceived(chunkX, chunkZ, blockData);
-    });
-    
-    if (m_networkClient->Connect(ip, port)) {
-        // Wait for world seed from server before creating world
-        std::cout << "Connected to server " << ip << ":" << port << ", waiting for world seed..." << std::endl;
-    } else {
-        std::cerr << "Failed to connect to server: " << ip << ":" << port << std::endl;
-        std::cerr << "Make sure:" << std::endl;
-        std::cerr << "  1. The server is running on " << ip << std::endl;
-        std::cerr << "  2. Port " << port << " is not blocked by firewall" << std::endl;
-        std::cerr << "  3. You're on the same network" << std::endl;
-        m_networkClient.reset();
+        m_networkClient->SetWorldSeedCallback([this](int32_t worldSeed) {
+            try {
+                OnWorldSeedReceived(worldSeed);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnWorldSeedReceived: " << e.what() << std::endl;
+            }
+        });
+        
+        m_networkClient->SetGameTimeCallback([this](float gameTime) {
+            try {
+                OnGameTimeReceived(gameTime);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnGameTimeReceived: " << e.what() << std::endl;
+            }
+        });
+        
+        m_networkClient->SetBlockBreakCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z) {
+            try {
+                OnBlockBreakReceived(playerId, x, y, z);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnBlockBreakReceived: " << e.what() << std::endl;
+            }
+        });
+        
+        m_networkClient->SetChunkDataCallback([this](int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
+            try {
+                OnChunkDataReceived(chunkX, chunkZ, blockData);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnChunkDataReceived: " << e.what() << std::endl;
+            }
+        });
+        
+        if (m_networkClient->Connect(ip, port)) {
+            // Wait for world seed from server before creating world
+            std::cout << "Connected to server " << ip << ":" << port << ", waiting for world seed..." << std::endl;
+        } else {
+            std::cerr << "Failed to connect to server: " << ip << ":" << port << std::endl;
+            std::cerr << "Make sure:" << std::endl;
+            std::cerr << "  1. The server is running on " << ip << std::endl;
+            std::cerr << "  2. Port " << port << " is not blocked by firewall" << std::endl;
+            std::cerr << "  3. You're on the same network" << std::endl;
+            m_networkClient.reset();
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "ERROR in JoinServer: " << e.what() << std::endl;
+        if (m_networkClient) {
+            m_networkClient.reset();
+        }
     }
 }
 

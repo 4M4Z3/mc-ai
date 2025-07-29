@@ -228,8 +228,8 @@ void Server::AcceptClients() {
         // Send player list to new client
         SendPlayerList(clientSocket);
         
-        // Small delay to ensure client's receive thread is ready
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // Small delay to ensure client's receive thread is ready (longer for network clients)
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
         
         // Send world seed to new client
         SendWorldSeed(clientSocket);
