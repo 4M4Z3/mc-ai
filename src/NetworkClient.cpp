@@ -403,6 +403,16 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
             }
             break;
         }
+        
+        case NetworkMessage::MY_PLAYER_ID:
+        {
+            std::cout << "[CLIENT] Received my player ID: " << message.playerId << std::endl;
+            
+            if (m_onMyPlayerId) {
+                m_onMyPlayerId(message.playerId);
+            }
+            break;
+        }
     }
 }
 
@@ -432,6 +442,10 @@ void NetworkClient::SetBlockBreakCallback(std::function<void(uint32_t, int32_t, 
 
 void NetworkClient::SetChunkDataCallback(std::function<void(int32_t, int32_t, const uint8_t*)> callback) {
     m_onChunkData = callback;
+}
+
+void NetworkClient::SetMyPlayerIdCallback(std::function<void(uint32_t)> callback) {
+    m_onMyPlayerId = callback;
 }
 
 std::unordered_map<uint32_t, PlayerPosition> NetworkClient::GetOtherPlayers() const {

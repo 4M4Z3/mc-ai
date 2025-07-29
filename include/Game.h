@@ -126,6 +126,7 @@ private:
     std::unique_ptr<ServerDiscovery> m_serverDiscovery;
     bool m_isHost;
     std::unordered_map<uint32_t, InterpolatedPlayer> m_otherPlayers;
+    uint32_t m_myPlayerId; // Store our own player ID to avoid self-rendering
     
     // World seed synchronization
     int32_t m_worldSeed;
@@ -179,6 +180,7 @@ private:
     void OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position);
     void OnWorldSeedReceived(int32_t worldSeed);
     void OnGameTimeReceived(float gameTime);
+    void OnMyPlayerIdReceived(uint32_t myPlayerId); // Handle receiving own player ID
     void OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z);
     void OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData);
     

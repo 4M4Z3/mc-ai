@@ -39,7 +39,8 @@ struct NetworkMessage {
         TIME_SYNC = 6,
         BLOCK_BREAK = 7,
         CHUNK_REQUEST = 8,
-        CHUNK_DATA = 9
+        CHUNK_DATA = 9,
+        MY_PLAYER_ID = 10 // New message type for client's own player ID
     };
     
     uint8_t type;
@@ -108,6 +109,7 @@ private:
     void SendPlayerList(socket_t clientSocket);
     void SendWorldSeed(socket_t clientSocket); // Send world seed to connecting client
     void SendGameTime(socket_t clientSocket); // Send current game time to connecting client
+    void SendMyPlayerId(socket_t clientSocket, uint32_t playerId); // Send client their own player ID
     void BroadcastGameTime(); // Broadcast time sync to all clients
     
     // Calculate proper spawn position

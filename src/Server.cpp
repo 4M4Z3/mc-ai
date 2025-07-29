@@ -6,6 +6,7 @@
 #include <ctime>
 #include <chrono>
 #include <thread>
+#include <cmath> // Added for M_PI and trigonometric functions
 
 Server::Server() 
     : m_serverSocket(INVALID_SOCKET)
@@ -228,6 +229,9 @@ void Server::AcceptClients() {
         // Send player list to new client
         SendPlayerList(clientSocket);
         
+        // Send the client their own player ID
+        SendMyPlayerId(clientSocket, client->playerId);
+        
         // Small delay to ensure client's receive thread is ready (longer for network clients)
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         
@@ -322,8 +326,8 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     if (shouldBroadcast) {
                         std::cout << "[SERVER] Broadcasting position for player " << playerId << " (" << message.position.x << ", " << message.position.y << ", " << message.position.z << ") yaw=" << message.position.yaw << std::endl;
                         message.playerId = playerId;
-                        // Don't exclude the sender for position updates - they need to see themselves in other clients' views
-                        BroadcastToAllClients(message);
+                        // Exclude the sender from position updates to prevent echo-back
+                        BroadcastToAllClients(message, playerId);
                     }
                     break;
                 }
@@ -341,9 +345,9 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                         // Mesh generation happens on each client when they receive the message
                     }
                     
-                    // Broadcast block break to all clients (including the sender for confirmation)
+                    // Broadcast block break to other clients (exclude sender to prevent echo-back)
                     message.playerId = playerId;
-                    BroadcastToAllClients(message);
+                    BroadcastToAllClients(message, playerId);
                     break;
                 }
                 
@@ -680,19 +684,32 @@ std::string Server::GetBroadcastAddress(const std::string& localIP) {
 
 PlayerPosition Server::CalculateSpawnPosition(uint32_t playerId) {
     PlayerPosition position;
-    position.x = 0.0f;
-    position.z = 0.0f;
+    
+    // Spread players out in a circular pattern around spawn
+    // Each player gets a different spawn position to avoid crowding
+    float angle = (playerId - 1) * (2.0f * M_PI / 8.0f); // 8 spawn positions max, then wrap
+    float spawnRadius = 5.0f; // 5 blocks from center
+    
+    position.x = spawnRadius * cos(angle);
+    position.z = spawnRadius * sin(angle);
+    
+    // If first player (playerId == 1), spawn at exact center
+    if (playerId == 1) {
+        position.x = 0.0f;
+        position.z = 0.0f;
+    }
+    
     position.yaw = 0.0f;
     position.pitch = 0.0f;
     position.playerId = playerId;
     
     // Calculate spawn Y position based on terrain
     if (m_world) {
-        position.y = static_cast<float>(m_world->FindHighestBlock(0, 0));
-        std::cout << "Calculated spawn position for player " << playerId << " at (0, " << position.y << ", 0)" << std::endl;
+        position.y = static_cast<float>(m_world->FindHighestBlock(static_cast<int>(position.x), static_cast<int>(position.z))) + 1.0f; // +1 to spawn above ground
+        std::cout << "[SERVER] Calculated spawn position for player " << playerId << " at (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
     } else {
-        position.y = 64.0f; // Fallback height
-        std::cout << "Using fallback spawn height for player " << playerId << std::endl;
+        position.y = 65.0f; // Fallback height (slightly above typical ground level)
+        std::cout << "[SERVER] Using fallback spawn height for player " << playerId << " at (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
     }
     
     return position;
@@ -727,6 +744,35 @@ void Server::SendGameTime(socket_t clientSocket) {
     
     std::cout << "[SERVER] Sent complete game time " << m_gameTime 
               << " to new client (" << totalBytesSent << " bytes)" << std::endl;
+}
+
+void Server::SendMyPlayerId(socket_t clientSocket, uint32_t playerId) {
+    NetworkMessage idMessage;
+    idMessage.type = NetworkMessage::MY_PLAYER_ID;
+    idMessage.playerId = playerId;
+    
+    // Send with fragmentation handling
+    size_t messageSize = sizeof(NetworkMessage);
+    size_t totalBytesSent = 0;
+    const char* messageBuffer = reinterpret_cast<const char*>(&idMessage);
+    
+    while (totalBytesSent < messageSize) {
+        int bytesSent = send(clientSocket, 
+                           messageBuffer + totalBytesSent, 
+                           messageSize - totalBytesSent, 
+                           0);
+        
+        if (bytesSent == SOCKET_ERROR) {
+            std::cerr << "[SERVER] Failed to send player ID to client (sent " 
+                      << totalBytesSent << "/" << messageSize << " bytes)" << std::endl;
+            return;
+        }
+        
+        totalBytesSent += bytesSent;
+    }
+    
+    std::cout << "[SERVER] Sent player ID " << playerId 
+              << " to client (" << totalBytesSent << " bytes)" << std::endl;
 }
 
 void Server::BroadcastGameTime() {

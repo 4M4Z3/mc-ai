@@ -31,14 +31,28 @@
 // Static instance for callbacks
 Game* Game::s_instance = nullptr;
 
-Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false),
-               m_isHost(false), m_worldSeed(0), m_worldSeedReceived(false),
-               m_gameTime(0.0f), m_gameTimeReceived(false),
-               m_hasLastSentPosition(false),
-               m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
-               m_deltaTime(0.0f), m_lastFrame(0.0f),
-               m_fontSmall(nullptr), m_fontDefault(nullptr), m_fontLarge(nullptr), m_fontTitle(nullptr),
-               m_showPauseMenu(false) {
+Game::Game() : 
+    m_window(nullptr),
+    m_currentState(GameState::MAIN_MENU),
+    m_shouldClose(false),
+    m_isHost(false),
+    m_myPlayerId(0), // Initialize own player ID
+    m_worldSeed(0),
+    m_worldSeedReceived(false),
+    m_gameTime(0.0f),
+    m_gameTimeReceived(false),
+    m_hasLastSentPosition(false),
+    m_firstMouse(true),
+    m_lastX(640.0),
+    m_lastY(360.0),
+    m_deltaTime(0.0f),
+    m_lastFrame(0.0f),
+    m_fontSmall(nullptr),
+    m_fontDefault(nullptr),
+    m_fontLarge(nullptr),
+    m_fontTitle(nullptr),
+    m_showPauseMenu(false)
+{
     s_instance = this;
 }
 
@@ -606,6 +620,11 @@ void Game::RenderGame() {
         // Render other players with interpolated positions
         if (m_networkClient && m_networkClient->IsConnected()) {
             auto interpolatedPositions = GetInterpolatedPlayerPositions();
+            static bool debugOnce = false;
+            if (!interpolatedPositions.empty() && !debugOnce) {
+                std::cout << "[RENDER] Starting to render " << interpolatedPositions.size() << " other players (my ID: " << m_myPlayerId << ")" << std::endl;
+                debugOnce = true;
+            }
             m_renderer.RenderOtherPlayers(interpolatedPositions);
         }
         
@@ -934,6 +953,14 @@ void Game::StartHost() {
             }
         });
         
+        m_networkClient->SetMyPlayerIdCallback([this](uint32_t myPlayerId) {
+            try {
+                OnMyPlayerIdReceived(myPlayerId);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnMyPlayerIdReceived: " << e.what() << std::endl;
+            }
+        });
+        
         m_networkClient->SetBlockBreakCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z) {
             try {
                 OnBlockBreakReceived(playerId, x, y, z);
@@ -1027,6 +1054,14 @@ void Game::JoinServer(const std::string& serverIP) {
                 OnGameTimeReceived(gameTime);
             } catch (const std::exception& e) {
                 std::cerr << "ERROR in OnGameTimeReceived: " << e.what() << std::endl;
+            }
+        });
+        
+        m_networkClient->SetMyPlayerIdCallback([this](uint32_t myPlayerId) {
+            try {
+                OnMyPlayerIdReceived(myPlayerId);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnMyPlayerIdReceived: " << e.what() << std::endl;
             }
         });
         
@@ -1185,6 +1220,12 @@ void Game::TestUDPConnectivity(const std::string& targetIP) {
 }
 
 void Game::OnPlayerJoin(uint32_t playerId, const PlayerPosition& position) {
+    // Don't add ourselves to the other players list
+    if (playerId == m_myPlayerId) {
+        std::cout << "[GAME] Ignoring own player join (ID: " << playerId << ")" << std::endl;
+        return;
+    }
+    
     // Create new interpolated player
     InterpolatedPlayer& player = m_otherPlayers[playerId];
     player.currentPos = position;
@@ -1192,7 +1233,7 @@ void Game::OnPlayerJoin(uint32_t playerId, const PlayerPosition& position) {
     player.lastUpdateTime = std::chrono::steady_clock::now();
     player.previousUpdateTime = player.lastUpdateTime;
     
-    std::cout << "Player " << playerId << " joined at (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+    std::cout << "[GAME] Player " << playerId << " joined at (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
 }
 
 void Game::OnPlayerLeave(uint32_t playerId) {
@@ -1201,6 +1242,11 @@ void Game::OnPlayerLeave(uint32_t playerId) {
 }
 
 void Game::OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position) {
+    // Don't process our own position updates (we already have our own position)
+    if (playerId == m_myPlayerId) {
+        return;
+    }
+    
     std::cout << "[GAME] Received position update for player " << playerId << " at (" << position.x << ", " << position.y << ", " << position.z << ") yaw=" << position.yaw << std::endl;
     
     auto it = m_otherPlayers.find(playerId);
@@ -1239,6 +1285,11 @@ void Game::OnGameTimeReceived(float gameTime) {
         return &time;
     }();
     *lastTimeUpdate = std::chrono::steady_clock::now();
+}
+
+void Game::OnMyPlayerIdReceived(uint32_t myPlayerId) {
+    std::cout << "Received my player ID from server: " << myPlayerId << std::endl;
+    m_myPlayerId = myPlayerId;
 }
 
 void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z) {
