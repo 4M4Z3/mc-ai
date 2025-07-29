@@ -341,4 +341,15 @@ Mat4 Renderer::CreateTranslationMatrix(float x, float y, float z) {
     trans.m[13] = y;
     trans.m[14] = z;
     return trans;
+}
+
+void Renderer::RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosition>& otherPlayers) {
+    // Render each other player as a colored cube at their position
+    for (const auto& pair : otherPlayers) {
+        const PlayerPosition& playerPos = pair.second;
+        
+        // Render player as a slightly larger cube (1.8 blocks tall like Minecraft players)
+        // For now, render as a simple cube at their position
+        RenderCube(playerPos.x, playerPos.y + 0.9f, playerPos.z); // Offset Y to center on player
+    }
 } 

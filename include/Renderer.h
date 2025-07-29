@@ -7,7 +7,9 @@
     #include <GL/gl.h>
 #endif
 #include <GLFW/glfw3.h>
+#include <unordered_map>
 #include "Player.h"
+#include "Server.h" // For PlayerPosition
 
 class World;
 
@@ -25,6 +27,7 @@ public:
     void BeginFrame(const Player& player);
     void RenderWorld(const World& world);
     void RenderCube(float x, float y, float z);
+    void RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosition>& otherPlayers);
     void EndFrame();
     
     // Legacy triangle rendering (for debugging)

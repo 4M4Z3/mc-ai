@@ -15,7 +15,8 @@
 Game* Game::s_instance = nullptr;
 
 Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false),
-               m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), m_deltaTime(0.0f), m_lastFrame(0.0f) {
+               m_isHost(false), m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
+               m_deltaTime(0.0f), m_lastFrame(0.0f) {
     s_instance = this;
 }
 
@@ -183,25 +184,60 @@ void Game::UpdateMainMenu() {
 }
 
 void Game::UpdateGame() {
-    // Game logic here
+    // Send player position updates to server
+    static float lastPositionSend = 0.0f;
+    const float positionSendInterval = 1.0f / 20.0f; // Send 20 times per second
+    
+    if (glfwGetTime() - lastPositionSend > positionSendInterval) {
+        SendPlayerPosition();
+        lastPositionSend = glfwGetTime();
+    }
 }
 
 void Game::RenderMainMenu() {
     // Create a centered window for the main menu
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Always);
     
     if (ImGui::Begin("Main Menu", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
-        ImGui::Text("ImGui OpenGL Game");
+        ImGui::Text("Minecraft Clone - Multiplayer");
         ImGui::Separator();
         
-        if (ImGui::Button("Start Game", ImVec2(280, 50))) {
-            SetState(GameState::GAME);
+        if (ImGui::Button("Host Game", ImVec2(380, 50))) {
+            StartHost();
         }
         
-        if (ImGui::Button("Exit", ImVec2(280, 50))) {
+        ImGui::Separator();
+        
+        static char serverIP[128] = "127.0.0.1";
+        ImGui::Text("Join Server:");
+        ImGui::InputText("Server IP", serverIP, sizeof(serverIP));
+        
+        if (ImGui::Button("Join Game", ImVec2(380, 50))) {
+            JoinServer(std::string(serverIP));
+        }
+        
+        ImGui::Separator();
+        
+        if (ImGui::Button("Exit", ImVec2(380, 50))) {
             m_shouldClose = true;
+        }
+        
+        // Show networking status
+        if (m_server && m_server->IsRunning()) {
+            ImGui::Separator();
+            ImGui::Text("Hosting Server:");
+            ImGui::Text("  %s", m_server->GetServerInfo().c_str());
+            ImGui::Text("  ");
+            ImGui::Text("Others can join using:");
+            ImGui::Text("  IP: %s", m_server->GetLocalIPAddress().c_str());
+            ImGui::Text("  Port: 8080");
+        }
+        
+        if (m_networkClient && m_networkClient->IsConnected()) {
+            ImGui::Separator();
+            ImGui::Text("Connected: %s", m_networkClient->GetConnectionInfo().c_str());
         }
     }
     ImGui::End();
@@ -212,6 +248,12 @@ void Game::RenderGame() {
     if (m_world && m_player) {
         m_renderer.BeginFrame(*m_player);
         m_renderer.RenderWorld(*m_world);
+        
+        // Render other players
+        if (m_networkClient && m_networkClient->IsConnected()) {
+            m_renderer.RenderOtherPlayers(m_otherPlayers);
+        }
+        
         m_renderer.EndFrame();
     }
     
@@ -246,6 +288,24 @@ void Game::RenderGame() {
             }
         } else {
             ImGui::Text("No world loaded");
+        }
+        
+        ImGui::Separator();
+        
+        // Multiplayer information
+        if (m_isHost && m_server) {
+            ImGui::Text("Hosting Server:");
+            ImGui::Text("  %s", m_server->GetServerInfo().c_str());
+            ImGui::Text("  Others join with: %s:8080", m_server->GetLocalIPAddress().c_str());
+        } else if (m_networkClient && m_networkClient->IsConnected()) {
+            ImGui::Text("Client Status:");
+            ImGui::Text("  %s", m_networkClient->GetConnectionInfo().c_str());
+        }
+        
+        ImGui::Text("Other Players: %d", (int)m_otherPlayers.size());
+        for (const auto& pair : m_otherPlayers) {
+            const PlayerPosition& pos = pair.second;
+            ImGui::Text("  Player %d: (%.1f, %.1f, %.1f)", pair.first, pos.x, pos.y, pos.z);
         }
         
         ImGui::Separator();
@@ -295,4 +355,99 @@ void Game::FramebufferSizeCallback(GLFWwindow* window, int width, int height) {
 
 void Game::ErrorCallback(int error, const char* description) {
     std::cerr << "GLFW Error " << error << ": " << description << std::endl;
+}
+
+// Networking methods
+void Game::StartHost() {
+    m_server = std::make_unique<Server>();
+    if (m_server->Start(8080)) {
+        m_isHost = true;
+        
+        // Also connect as a client to our own server
+        m_networkClient = std::make_unique<NetworkClient>();
+        
+        // Set up callbacks
+        m_networkClient->SetPlayerJoinCallback([this](uint32_t playerId, const PlayerPosition& position) {
+            OnPlayerJoin(playerId, position);
+        });
+        
+        m_networkClient->SetPlayerLeaveCallback([this](uint32_t playerId) {
+            OnPlayerLeave(playerId);
+        });
+        
+        m_networkClient->SetPlayerPositionCallback([this](uint32_t playerId, const PlayerPosition& position) {
+            OnPlayerPositionUpdate(playerId, position);
+        });
+        
+        if (m_networkClient->Connect("127.0.0.1", 8080)) {
+            // Create world and enter game
+            m_world = std::make_unique<World>();
+            SetState(GameState::GAME);
+            std::cout << "Hosting game on port 8080" << std::endl;
+        } else {
+            std::cerr << "Failed to connect to own server" << std::endl;
+            m_server.reset();
+            m_networkClient.reset();
+            m_isHost = false;
+        }
+    } else {
+        std::cerr << "Failed to start server" << std::endl;
+        m_server.reset();
+    }
+}
+
+void Game::JoinServer(const std::string& serverIP) {
+    m_networkClient = std::make_unique<NetworkClient>();
+    
+    // Set up callbacks
+    m_networkClient->SetPlayerJoinCallback([this](uint32_t playerId, const PlayerPosition& position) {
+        OnPlayerJoin(playerId, position);
+    });
+    
+    m_networkClient->SetPlayerLeaveCallback([this](uint32_t playerId) {
+        OnPlayerLeave(playerId);
+    });
+    
+    m_networkClient->SetPlayerPositionCallback([this](uint32_t playerId, const PlayerPosition& position) {
+        OnPlayerPositionUpdate(playerId, position);
+    });
+    
+    if (m_networkClient->Connect(serverIP, 8080)) {
+        // Create world and enter game  
+        m_world = std::make_unique<World>();
+        SetState(GameState::GAME);
+        std::cout << "Joined server at " << serverIP << std::endl;
+    } else {
+        std::cerr << "Failed to connect to server: " << serverIP << std::endl;
+        m_networkClient.reset();
+    }
+}
+
+void Game::SendPlayerPosition() {
+    if (m_networkClient && m_networkClient->IsConnected() && m_player) {
+        Vec3 pos = m_player->GetPosition();
+        PlayerPosition playerPos;
+        playerPos.x = pos.x;
+        playerPos.y = pos.y;
+        playerPos.z = pos.z;
+        playerPos.yaw = m_player->GetYaw();
+        playerPos.pitch = m_player->GetPitch();
+        playerPos.playerId = 0; // Server will assign
+        
+        m_networkClient->SendPlayerPosition(playerPos);
+    }
+}
+
+void Game::OnPlayerJoin(uint32_t playerId, const PlayerPosition& position) {
+    m_otherPlayers[playerId] = position;
+    std::cout << "Player " << playerId << " joined at (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+}
+
+void Game::OnPlayerLeave(uint32_t playerId) {
+    m_otherPlayers.erase(playerId);
+    std::cout << "Player " << playerId << " left the game" << std::endl;
+}
+
+void Game::OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position) {
+    m_otherPlayers[playerId] = position;
 } 

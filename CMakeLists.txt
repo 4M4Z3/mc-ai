@@ -33,6 +33,8 @@ set(SOURCES
     src/Chunk.cpp
     src/World.cpp
     src/Player.cpp
+    src/Server.cpp
+    src/NetworkClient.cpp
 )
 
 # Header files
@@ -43,6 +45,8 @@ set(HEADERS
     include/Chunk.h
     include/World.h
     include/Player.h
+    include/Server.h
+    include/NetworkClient.h
 )
 
 # Add ImGui source files
@@ -75,6 +79,7 @@ if(APPLE)
 elseif(WIN32)
     target_link_libraries(${PROJECT_NAME}
         opengl32
+        ws2_32
     )
 elseif(UNIX)
     target_link_libraries(${PROJECT_NAME}

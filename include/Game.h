@@ -4,7 +4,10 @@
 #include "Renderer.h"
 #include "World.h"
 #include "Player.h"
+#include "Server.h"
+#include "NetworkClient.h"
 #include <memory>
+#include <unordered_map>
 
 enum class GameState {
     MAIN_MENU,
@@ -35,6 +38,12 @@ private:
     std::unique_ptr<World> m_world;
     std::unique_ptr<Player> m_player;
     
+    // Networking
+    std::unique_ptr<Server> m_server;
+    std::unique_ptr<NetworkClient> m_networkClient;
+    bool m_isHost;
+    std::unordered_map<uint32_t, PlayerPosition> m_otherPlayers;
+    
     // Mouse input
     bool m_firstMouse;
     double m_lastX, m_lastY;
@@ -49,6 +58,14 @@ private:
     void UpdateGame();
     void RenderMainMenu();
     void RenderGame();
+    
+    // Networking
+    void StartHost();
+    void JoinServer(const std::string& serverIP);
+    void SendPlayerPosition();
+    void OnPlayerJoin(uint32_t playerId, const PlayerPosition& position);
+    void OnPlayerLeave(uint32_t playerId);
+    void OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position);
 
     // Window callbacks
     static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);

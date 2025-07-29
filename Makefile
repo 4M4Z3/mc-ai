@@ -6,15 +6,15 @@ PROJECT_NAME = ImGuiOpenGLProject
 BUILD_DIR = build
 BIN_DIR = $(BUILD_DIR)/bin
 
+# Detect platform first
+UNAME := $(shell uname)
+
 # Add homebrew to PATH for macOS
 ifeq ($(UNAME), Darwin)
     export PATH := /opt/homebrew/bin:$(PATH)
     export CC := /usr/bin/clang
     export CXX := /usr/bin/clang++
 endif
-
-# Detect platform
-UNAME := $(shell uname)
 ifeq ($(UNAME), Darwin)
     PLATFORM = macos
     EXECUTABLE = $(BIN_DIR)/$(PROJECT_NAME)
@@ -39,7 +39,7 @@ configure:
 	@echo "Configuring for $(PLATFORM)..."
 	@mkdir -p $(BUILD_DIR)
 ifeq ($(PLATFORM), macos)
-	@cd $(BUILD_DIR) && CC=/usr/bin/clang CXX=/usr/bin/clang++ cmake .. -G $(CMAKE_GENERATOR)
+	@cd $(BUILD_DIR) && PATH="/opt/homebrew/bin:$$PATH" CC=/usr/bin/clang CXX=/usr/bin/clang++ cmake .. -G $(CMAKE_GENERATOR)
 else
 	@cd $(BUILD_DIR) && cmake .. -G $(CMAKE_GENERATOR)
 endif
@@ -50,6 +50,8 @@ build: setup configure
 	@echo "Building $(PROJECT_NAME)..."
 ifeq ($(PLATFORM), windows)
 	@cd $(BUILD_DIR) && cmake --build . --config Release
+else ifeq ($(PLATFORM), macos)
+	@cd $(BUILD_DIR) && PATH="/opt/homebrew/bin:$$PATH" make -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 else
 	@cd $(BUILD_DIR) && make -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 endif
