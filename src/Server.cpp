@@ -436,30 +436,60 @@ void Server::BroadcastServerPresence() {
         announcement.maxPlayers = 10; // Default max players
         announcement.timestamp = static_cast<uint32_t>(std::time(nullptr));
         
+        // Calculate subnet broadcast address
+        std::string broadcastIP = GetBroadcastAddress(localIP);
+        
         // Set up broadcast address
         sockaddr_in broadcastAddr{};
         broadcastAddr.sin_family = AF_INET;
         broadcastAddr.sin_port = htons(BROADCAST_PORT);
-        broadcastAddr.sin_addr.s_addr = INADDR_BROADCAST;
         
-        // Send broadcast
-        ssize_t bytesSent = sendto(m_broadcastSocket, 
-                                   reinterpret_cast<const char*>(&announcement), 
-                                   sizeof(announcement), 
-                                   0, 
-                                   reinterpret_cast<const sockaddr*>(&broadcastAddr), 
-                                   sizeof(broadcastAddr));
+        // Try both general broadcast and subnet-specific broadcast
+        std::vector<std::string> broadcastAddresses = {
+            "255.255.255.255",  // General broadcast
+            broadcastIP          // Subnet broadcast
+        };
         
-        if (bytesSent == -1) {
-            if (m_broadcasting) {
-                std::cerr << "Failed to send broadcast announcement" << std::endl;
+        for (const std::string& addr : broadcastAddresses) {
+            if (inet_pton(AF_INET, addr.c_str(), &broadcastAddr.sin_addr) <= 0) {
+                continue;
             }
-        } else {
-            std::cout << "Broadcasted server presence: " << localIP << ":" << m_port 
-                      << " (" << GetPlayerCount() << " players)" << std::endl;
+            
+            // Send broadcast
+            ssize_t bytesSent = sendto(m_broadcastSocket, 
+                                       reinterpret_cast<const char*>(&announcement), 
+                                       sizeof(announcement), 
+                                       0, 
+                                       reinterpret_cast<const sockaddr*>(&broadcastAddr), 
+                                       sizeof(broadcastAddr));
+            
+            if (bytesSent == -1) {
+                if (m_broadcasting) {
+                    std::cerr << "Failed to send broadcast to " << addr << std::endl;
+                }
+            } else {
+                std::cout << "Broadcasted to " << addr << ":" << BROADCAST_PORT 
+                          << " - Server: " << localIP << ":" << m_port 
+                          << " (" << GetPlayerCount() << " players)" << std::endl;
+            }
         }
         
         // Wait before next broadcast
         std::this_thread::sleep_for(std::chrono::seconds(BROADCAST_INTERVAL));
     }
+}
+
+std::string Server::GetBroadcastAddress(const std::string& localIP) {
+    // Parse the local IP to determine the broadcast address
+    // For most home networks (192.168.x.x), use 192.168.x.255
+    // For 10.x.x.x networks, use 10.x.x.255 or 10.255.255.255
+    
+    size_t lastDot = localIP.find_last_of('.');
+    if (lastDot != std::string::npos) {
+        std::string networkPart = localIP.substr(0, lastDot);
+        return networkPart + ".255";
+    }
+    
+    // Fallback to general broadcast
+    return "255.255.255.255";
 } 

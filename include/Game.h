@@ -66,6 +66,7 @@ private:
     void StartHost();
     void JoinServer(const std::string& serverIP);
     void SendPlayerPosition();
+    void TestUDPConnectivity(const std::string& targetIP);
     void OnPlayerJoin(uint32_t playerId, const PlayerPosition& position);
     void OnPlayerLeave(uint32_t playerId);
     void OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position);

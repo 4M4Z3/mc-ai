@@ -79,6 +79,7 @@ private:
     void StartBroadcast();
     void StopBroadcast();
     void BroadcastServerPresence();
+    std::string GetBroadcastAddress(const std::string& localIP);
     
     bool InitializeWinsock();
     void CleanupWinsock();

@@ -135,6 +135,8 @@ void ServerDiscovery::ListenForBroadcasts() {
     const int CLEANUP_INTERVAL = 30; // Clean up old servers every 30 seconds
     auto lastCleanup = std::chrono::steady_clock::now();
     
+    std::cout << "ServerDiscovery: Listening for broadcasts on port 8081..." << std::endl;
+    
     while (m_running) {
         // Set socket timeout to avoid blocking indefinitely
         struct timeval timeout;
@@ -159,14 +161,24 @@ void ServerDiscovery::ListenForBroadcasts() {
                                         reinterpret_cast<sockaddr*>(&fromAddr), 
                                         &fromLen);
         
-        if (bytesReceived == sizeof(ServerAnnouncement)) {
-            // Verify magic bytes
-            if (std::memcmp(announcement.magic, "MC_SERVR", 8) == 0) {
-                // Get sender IP
-                char fromIP[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &fromAddr.sin_addr, fromIP, INET_ADDRSTRLEN);
-                
-                ProcessServerAnnouncement(announcement, std::string(fromIP));
+        if (bytesReceived > 0) {
+            char fromIP[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &fromAddr.sin_addr, fromIP, INET_ADDRSTRLEN);
+            
+            std::cout << "ServerDiscovery: Received " << bytesReceived 
+                      << " bytes from " << fromIP << std::endl;
+            
+            if (bytesReceived == sizeof(ServerAnnouncement)) {
+                // Verify magic bytes
+                if (std::memcmp(announcement.magic, "MC_SERVR", 8) == 0) {
+                    std::cout << "ServerDiscovery: Valid server announcement from " << fromIP << std::endl;
+                    ProcessServerAnnouncement(announcement, std::string(fromIP));
+                } else {
+                    std::cout << "ServerDiscovery: Invalid magic bytes in packet from " << fromIP << std::endl;
+                }
+            } else {
+                std::cout << "ServerDiscovery: Wrong packet size from " << fromIP 
+                          << " (expected " << sizeof(ServerAnnouncement) << ", got " << bytesReceived << ")" << std::endl;
             }
         }
         
@@ -177,6 +189,8 @@ void ServerDiscovery::ListenForBroadcasts() {
             lastCleanup = now;
         }
     }
+    
+    std::cout << "ServerDiscovery: Stopped listening for broadcasts" << std::endl;
 }
 
 void ServerDiscovery::ProcessServerAnnouncement(const ServerAnnouncement& announcement, const std::string& fromIP) {

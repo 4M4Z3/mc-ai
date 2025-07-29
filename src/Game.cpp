@@ -1,9 +1,22 @@
 #include "Game.h"
 #include <iostream>
 #include <ctime>
+#include <cstring>
 #ifdef __APPLE__
     #define GL_SILENCE_DEPRECATION
     #include <OpenGL/gl3.h>
+#endif
+
+#ifdef _WIN32
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    typedef SOCKET socket_t;
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <unistd.h>
+    typedef int socket_t;
 #endif
 
 // ImGui includes
@@ -259,6 +272,20 @@ void Game::RenderMainMenu() {
             JoinServer(std::string(serverIP));
         }
         
+        // Network debugging section
+        ImGui::Separator();
+        ImGui::Text("Network Debugging:");
+        
+        if (ImGui::Button("Test UDP to Server", ImVec2(280, 30))) {
+            TestUDPConnectivity(std::string(serverIP));
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Refresh Server List", ImVec2(280, 30))) {
+            if (m_serverDiscovery) {
+                m_serverDiscovery->CleanupOldServers();
+            }
+        }
+        
         ImGui::Separator();
         
         if (ImGui::Button("Exit", ImVec2(580, 50))) {
@@ -500,6 +527,77 @@ void Game::SendPlayerPosition() {
         
         m_networkClient->SendPlayerPosition(playerPos);
     }
+}
+
+void Game::TestUDPConnectivity(const std::string& targetIP) {
+    std::cout << "Testing UDP connectivity to " << targetIP << "..." << std::endl;
+    
+#ifdef _WIN32
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        std::cerr << "Failed to initialize Winsock for UDP test" << std::endl;
+        return;
+    }
+#endif
+    
+    // Create UDP socket
+    socket_t testSocket = socket(AF_INET, SOCK_DGRAM, 0);
+#ifdef _WIN32
+    if (testSocket == INVALID_SOCKET) {
+#else
+    if (testSocket == -1) {
+#define INVALID_SOCKET -1
+    if (testSocket == INVALID_SOCKET) {
+#endif
+        std::cerr << "Failed to create UDP test socket" << std::endl;
+#ifdef _WIN32
+        WSACleanup();
+#endif
+        return;
+    }
+    
+    // Set up target address
+    sockaddr_in targetAddr{};
+    targetAddr.sin_family = AF_INET;
+    targetAddr.sin_port = htons(8081); // Server discovery port
+    
+    if (inet_pton(AF_INET, targetIP.c_str(), &targetAddr.sin_addr) <= 0) {
+        std::cerr << "Invalid target IP address: " << targetIP << std::endl;
+#ifdef _WIN32
+        closesocket(testSocket);
+        WSACleanup();
+#else
+        close(testSocket);
+#endif
+        return;
+    }
+    
+    // Create test message
+    const char* testMessage = "UDP_TEST_MESSAGE";
+    
+    // Send test packet
+    ssize_t bytesSent = sendto(testSocket, 
+                              testMessage, 
+                              strlen(testMessage), 
+                              0, 
+                              reinterpret_cast<const sockaddr*>(&targetAddr), 
+                              sizeof(targetAddr));
+    
+    if (bytesSent == -1) {
+        std::cerr << "Failed to send UDP test packet to " << targetIP << std::endl;
+    } else {
+        std::cout << "Sent UDP test packet (" << bytesSent << " bytes) to " 
+                  << targetIP << ":8081" << std::endl;
+        std::cout << "Check the server console to see if it received the packet." << std::endl;
+    }
+    
+    // Clean up
+#ifdef _WIN32
+    closesocket(testSocket);
+    WSACleanup();
+#else
+    close(testSocket);
+#endif
 }
 
 void Game::OnPlayerJoin(uint32_t playerId, const PlayerPosition& position) {
