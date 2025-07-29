@@ -160,6 +160,25 @@ void NetworkClient::SendBlockBreak(int32_t x, int32_t y, int32_t z) {
     QueueMessage(message);
 }
 
+void NetworkClient::SendBlockUpdate(int32_t x, int32_t y, int32_t z, uint8_t blockType) {
+    if (!m_connected) {
+        return;
+    }
+    
+    NetworkMessage message = {}; // Initialize to zero
+    message.type = NetworkMessage::BLOCK_UPDATE;
+    message.playerId = 0; // Server will assign the correct player ID
+    message.blockUpdate.x = x;
+    message.blockUpdate.y = y;
+    message.blockUpdate.z = z;
+    message.blockUpdate.blockType = blockType;
+    
+    std::cout << "[CLIENT] Creating block update message - type: " << (int)message.type 
+              << ", coords: (" << x << ", " << y << ", " << z << "), blockType: " << (int)blockType << std::endl;
+    
+    QueueMessage(message);
+}
+
 void NetworkClient::RequestChunk(int32_t chunkX, int32_t chunkZ)
 {
     if (!m_connected) {
@@ -405,6 +424,18 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
             break;
         }
         
+        case NetworkMessage::BLOCK_UPDATE:
+        {
+            std::cout << "Player " << message.playerId << " updated block at (" 
+                      << message.blockUpdate.x << ", " << message.blockUpdate.y << ", " << message.blockUpdate.z 
+                      << ") to type " << (int)message.blockUpdate.blockType << std::endl;
+            
+            if (m_onBlockUpdate) {
+                m_onBlockUpdate(message.playerId, message.blockUpdate.x, message.blockUpdate.y, message.blockUpdate.z, message.blockUpdate.blockType);
+            }
+            break;
+        }
+        
         case NetworkMessage::CHUNK_DATA:
         {
             std::cout << "[CLIENT] Received chunk data (" 
@@ -450,6 +481,10 @@ void NetworkClient::SetGameTimeCallback(std::function<void(float)> callback) {
 
 void NetworkClient::SetBlockBreakCallback(std::function<void(uint32_t, int32_t, int32_t, int32_t)> callback) {
     m_onBlockBreak = callback;
+}
+
+void NetworkClient::SetBlockUpdateCallback(std::function<void(uint32_t, int32_t, int32_t, int32_t, uint8_t)> callback) {
+    m_onBlockUpdate = callback;
 }
 
 void NetworkClient::SetChunkDataCallback(std::function<void(int32_t, int32_t, const uint8_t*)> callback) {

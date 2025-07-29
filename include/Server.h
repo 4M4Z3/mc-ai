@@ -40,7 +40,8 @@ struct NetworkMessage {
         BLOCK_BREAK = 7,
         CHUNK_REQUEST = 8,
         CHUNK_DATA = 9,
-        MY_PLAYER_ID = 10 // New message type for client's own player ID
+        MY_PLAYER_ID = 10, // New message type for client's own player ID
+        BLOCK_UPDATE = 11  // Individual block update for streaming
     };
     
     uint8_t type;
@@ -53,6 +54,12 @@ struct NetworkMessage {
     struct {
         int32_t x, y, z;
     } blockPos;
+    
+    // Block update data
+    struct {
+        int32_t x, y, z;
+        uint8_t blockType; // New block type to set
+    } blockUpdate;
     
     // Chunk data
     struct {

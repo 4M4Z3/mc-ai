@@ -266,17 +266,36 @@ void Server::AcceptClients() {
 }
 
 void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
-    NetworkMessage message;
-    
     while (m_running) {
-        // Receive message from client
-        int bytesReceived = recv(clientSocket, (char*)&message, sizeof(NetworkMessage), 0);
-        if (bytesReceived <= 0) {
-            // Client disconnected or error
-            break;
+        NetworkMessage message;
+        size_t totalBytesReceived = 0;
+        size_t messageSize = sizeof(NetworkMessage);
+        char* messageBuffer = reinterpret_cast<char*>(&message);
+        
+        // Receive complete message by handling TCP fragmentation (like client does)
+        while (totalBytesReceived < messageSize && m_running) {
+            int bytesReceived = recv(clientSocket, 
+                                   messageBuffer + totalBytesReceived, 
+                                   messageSize - totalBytesReceived, 
+                                   0);
+            
+            if (bytesReceived <= 0) {
+                // Client disconnected or error
+                std::cout << "[SERVER] Client " << playerId << " disconnected" << std::endl;
+                goto cleanup; // Exit both loops
+            }
+            
+            totalBytesReceived += bytesReceived;
+            
+            // Log progress for large messages (like initial setup)
+            if (messageSize > 1000 && totalBytesReceived < messageSize) {
+                std::cout << "[SERVER] Receiving large message from client " << playerId 
+                          << ": " << totalBytesReceived << "/" << messageSize << " bytes" << std::endl;
+            }
         }
         
-        if (bytesReceived == sizeof(NetworkMessage)) {
+        // Process complete message
+        if (totalBytesReceived == messageSize) {
             // Handle different message types
             switch (message.type) {
                 case NetworkMessage::PLAYER_POSITION:
@@ -364,7 +383,7 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                 default:
                     std::cerr << "[SERVER] Unknown message type: " << (int)message.type 
                               << " from player " << playerId 
-                              << " (bytes received: " << bytesReceived 
+                              << " (bytes received: " << totalBytesReceived 
                               << ", expected: " << sizeof(NetworkMessage) << ")" << std::endl;
                     
                     // Print some raw bytes for debugging
@@ -376,9 +395,13 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     std::cerr << std::dec << std::endl;
                     break;
             }
+        } else {
+            std::cerr << "[SERVER] Failed to receive complete message from client " << playerId 
+                      << ": " << totalBytesReceived << "/" << messageSize << " bytes" << std::endl;
+            break; // Exit on incomplete message
         }
     }
-    
+cleanup:
     // Client disconnected - notify other clients and clean up
     NetworkMessage leaveMessage;
     leaveMessage.type = NetworkMessage::PLAYER_LEAVE;
