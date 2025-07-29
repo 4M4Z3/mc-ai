@@ -17,6 +17,9 @@ Server::Server()
     , m_winsockInitialized(false)
 #endif
 {
+    // Generate server-managed world seed
+    m_worldSeed = static_cast<int32_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    std::cout << "Server generated world seed: " << m_worldSeed << std::endl;
 }
 
 Server::~Server() {
@@ -207,6 +210,9 @@ void Server::AcceptClients() {
         // Send player list to new client
         SendPlayerList(clientSocket);
         
+        // Send world seed to new client
+        SendWorldSeed(clientSocket);
+        
         // Notify all clients about new player
         NetworkMessage joinMessage;
         joinMessage.type = NetworkMessage::PLAYER_JOIN;
@@ -309,6 +315,20 @@ void Server::SendPlayerList(socket_t clientSocket) {
             
             send(clientSocket, (const char*)&playerMessage, sizeof(NetworkMessage), 0);
         }
+    }
+}
+
+void Server::SendWorldSeed(socket_t clientSocket) {
+    NetworkMessage seedMessage;
+    seedMessage.type = NetworkMessage::WORLD_SEED;
+    seedMessage.playerId = 0; // Not relevant for seed message
+    seedMessage.worldSeed = m_worldSeed;
+    
+    int bytesSent = send(clientSocket, (const char*)&seedMessage, sizeof(NetworkMessage), 0);
+    if (bytesSent == SOCKET_ERROR) {
+        std::cerr << "Failed to send world seed to client" << std::endl;
+    } else {
+        std::cout << "Sent world seed " << m_worldSeed << " to client" << std::endl;
     }
 }
 

@@ -31,7 +31,8 @@
 Game* Game::s_instance = nullptr;
 
 Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false),
-               m_isHost(false), m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
+               m_isHost(false), m_worldSeed(0), m_worldSeedReceived(false),
+               m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
                m_deltaTime(0.0f), m_lastFrame(0.0f), m_showPauseMenu(false) {
     s_instance = this;
 }
@@ -259,14 +260,34 @@ void Game::SetState(GameState newState) {
     } else if (newState == GameState::GAME) {
         glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         
-        // Create world when entering game state
-        if (!m_world) {
-            m_world = std::make_unique<World>();
+        // Initialize player if we have a world but no player yet
+        if (m_world && !m_player) {
+            m_player = std::make_unique<Player>(0.0f, 10.0f, 0.0f);
         }
     }
 }
 
 void Game::UpdateMainMenu() {
+    // Check if we received a world seed and need to create the world
+    if (m_worldSeedReceived && !m_world) {
+        std::cout << "Creating world with seed " << m_worldSeed << " in main thread..." << std::endl;
+        
+        // Create world with server-provided seed
+        m_world = std::make_unique<World>(m_worldSeed);
+        std::cout << "World created successfully!" << std::endl;
+        
+        // Create player immediately after world creation
+        if (!m_player) {
+            std::cout << "Creating player at spawn position..." << std::endl;
+            m_player = std::make_unique<Player>(0.0f, 10.0f, 0.0f);
+            std::cout << "Player created at spawn position" << std::endl;
+        }
+        
+        std::cout << "Setting state to GAME..." << std::endl;
+        SetState(GameState::GAME);
+        std::cout << "World created with server seed, entering game!" << std::endl;
+    }
+    
     // Main menu logic here
 }
 
@@ -592,12 +613,14 @@ void Game::StartHost() {
         m_networkClient->SetPlayerPositionCallback([this](uint32_t playerId, const PlayerPosition& position) {
             OnPlayerPositionUpdate(playerId, position);
         });
+
+        m_networkClient->SetWorldSeedCallback([this](int32_t worldSeed) {
+            OnWorldSeedReceived(worldSeed);
+        });
         
         if (m_networkClient->Connect("127.0.0.1", 8080)) {
-            // Create world and enter game
-            m_world = std::make_unique<World>();
-            SetState(GameState::GAME);
-            std::cout << "Hosting game on port 8080" << std::endl;
+            // Wait for world seed from server before creating world
+            std::cout << "Connected to own server, waiting for world seed..." << std::endl;
         } else {
             std::cerr << "Failed to connect to own server" << std::endl;
             m_server.reset();
@@ -644,12 +667,14 @@ void Game::JoinServer(const std::string& serverIP) {
     m_networkClient->SetPlayerPositionCallback([this](uint32_t playerId, const PlayerPosition& position) {
         OnPlayerPositionUpdate(playerId, position);
     });
+
+    m_networkClient->SetWorldSeedCallback([this](int32_t worldSeed) {
+        OnWorldSeedReceived(worldSeed);
+    });
     
     if (m_networkClient->Connect(ip, port)) {
-        // Create world and enter game  
-        m_world = std::make_unique<World>();
-        SetState(GameState::GAME);
-        std::cout << "Joined server at " << ip << ":" << port << std::endl;
+        // Wait for world seed from server before creating world
+        std::cout << "Connected to server " << ip << ":" << port << ", waiting for world seed..." << std::endl;
     } else {
         std::cerr << "Failed to connect to server: " << ip << ":" << port << std::endl;
         std::cerr << "Make sure:" << std::endl;
@@ -763,10 +788,15 @@ void Game::OnPlayerLeave(uint32_t playerId) {
 void Game::OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position) {
     auto it = m_otherPlayers.find(playerId);
     if (it != m_otherPlayers.end()) {
-        // Update existing player with smooth interpolation
         it->second.UpdatePosition(position);
-    } else {
-        // Player doesn't exist yet, create them (shouldn't happen normally)
-        OnPlayerJoin(playerId, position);
     }
+}
+
+void Game::OnWorldSeedReceived(int32_t worldSeed) {
+    std::cout << "Received world seed from server: " << worldSeed << std::endl;
+    m_worldSeed = worldSeed;
+    m_worldSeedReceived = true;
+    
+    // Don't create world/player or change state from this thread!
+    // Just set the flag - the main thread will handle the rest
 } 

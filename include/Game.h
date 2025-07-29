@@ -101,6 +101,10 @@ private:
     bool m_isHost;
     std::unordered_map<uint32_t, InterpolatedPlayer> m_otherPlayers;
     
+    // World seed synchronization
+    int32_t m_worldSeed;
+    bool m_worldSeedReceived;
+    
     // Mouse input
     bool m_firstMouse;
     double m_lastX, m_lastY;
@@ -131,6 +135,7 @@ private:
     void OnPlayerJoin(uint32_t playerId, const PlayerPosition& position);
     void OnPlayerLeave(uint32_t playerId);
     void OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position);
+    void OnWorldSeedReceived(int32_t worldSeed);
 
     // Window callbacks
     static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);

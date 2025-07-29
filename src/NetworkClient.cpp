@@ -228,6 +228,16 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
             std::cout << "Existing player " << message.playerId << " in game" << std::endl;
             break;
         }
+        
+        case NetworkMessage::WORLD_SEED:
+        {
+            std::cout << "Received world seed: " << message.worldSeed << std::endl;
+            
+            if (m_onWorldSeed) {
+                m_onWorldSeed(message.worldSeed);
+            }
+            break;
+        }
     }
 }
 
@@ -241,6 +251,10 @@ void NetworkClient::SetPlayerLeaveCallback(std::function<void(uint32_t)> callbac
 
 void NetworkClient::SetPlayerPositionCallback(std::function<void(uint32_t, const PlayerPosition&)> callback) {
     m_onPlayerPosition = callback;
+}
+
+void NetworkClient::SetWorldSeedCallback(std::function<void(int32_t)> callback) {
+    m_onWorldSeed = callback;
 }
 
 std::unordered_map<uint32_t, PlayerPosition> NetworkClient::GetOtherPlayers() const {

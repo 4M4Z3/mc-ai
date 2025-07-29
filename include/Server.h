@@ -32,12 +32,14 @@ struct NetworkMessage {
         PLAYER_JOIN = 1,
         PLAYER_LEAVE = 2,
         PLAYER_POSITION = 3,
-        PLAYER_LIST = 4
+        PLAYER_LIST = 4,
+        WORLD_SEED = 5
     };
     
     uint8_t type;
     uint32_t playerId;
     PlayerPosition position;
+    int32_t worldSeed; // Added for seed synchronization
 };
 
 // Server announcement for UDP broadcast discovery
@@ -69,11 +71,15 @@ public:
     // Get local network IP address
     std::string GetLocalIPAddress();
 
+    // World seed management
+    int32_t GetWorldSeed() const { return m_worldSeed; }
+
 private:
     void AcceptClients();
     void HandleClient(socket_t clientSocket, uint32_t playerId);
     void BroadcastToAllClients(const NetworkMessage& message, uint32_t excludePlayerId = 0);
     void SendPlayerList(socket_t clientSocket);
+    void SendWorldSeed(socket_t clientSocket); // Send world seed to connecting client
     
     // UDP Broadcast for server discovery
     void StartBroadcast();
@@ -107,6 +113,7 @@ private:
     
     uint32_t m_nextPlayerId;
     int m_port;
+    int32_t m_worldSeed; // Server-managed world seed
     
 #ifdef _WIN32
     bool m_winsockInitialized;
