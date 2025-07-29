@@ -155,9 +155,15 @@ void Renderer::Shutdown() {
 void Renderer::Clear() {
     glClearColor(0.2f, 0.3f, 0.8f, 1.0f); // Sky blue background
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // Ensure depth testing is enabled
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
 }
 
 void Renderer::SetViewport(int width, int height) {
+    std::cout << "Setting viewport to: " << width << "x" << height << std::endl;
+    
     m_viewportWidth = width;
     m_viewportHeight = height;
     glViewport(0, 0, width, height);
@@ -165,9 +171,14 @@ void Renderer::SetViewport(int width, int height) {
     // Update projection matrix
     float aspect = (float)width / (float)height;
     m_projectionMatrix = CreateProjectionMatrix(45.0f, aspect, 0.1f, 100.0f);
+    
+    std::cout << "Aspect ratio: " << aspect << std::endl;
 }
 
 void Renderer::BeginFrame(const Player& player) {
+    // Ensure viewport is correct (in case ImGui or other code changed it)
+    glViewport(0, 0, m_viewportWidth, m_viewportHeight);
+    
     glUseProgram(m_shaderProgram);
     
     // Set view matrix
@@ -203,10 +214,21 @@ void Renderer::RenderCube(float x, float y, float z) {
     glBindVertexArray(m_cubeVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
+    
+    // Check for OpenGL errors (only for debugging)
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        std::cerr << "OpenGL error in RenderCube: " << error << std::endl;
+    }
 }
 
 void Renderer::EndFrame() {
-    // Nothing needed here for now
+    // Ensure OpenGL state is properly reset after rendering
+    glBindVertexArray(0);
+    glUseProgram(0);
+    
+    // Restore viewport in case ImGui changed it
+    glViewport(0, 0, m_viewportWidth, m_viewportHeight);
 }
 
 void Renderer::RenderTriangle() {

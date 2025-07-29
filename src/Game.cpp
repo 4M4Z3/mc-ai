@@ -81,6 +81,14 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
         std::cerr << "Failed to initialize renderer" << std::endl;
         return false;
     }
+    
+    // Get actual framebuffer size (important for Retina displays on macOS)
+    int framebufferWidth, framebufferHeight;
+    glfwGetFramebufferSize(m_window, &framebufferWidth, &framebufferHeight);
+    m_renderer.SetViewport(framebufferWidth, framebufferHeight);
+    
+    std::cout << "Window size: " << windowWidth << "x" << windowHeight << std::endl;
+    std::cout << "Framebuffer size: " << framebufferWidth << "x" << framebufferHeight << std::endl;
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -359,7 +367,7 @@ void Game::RenderGame() {
                 // Show interpolation debug info
                 auto now = std::chrono::steady_clock::now();
                 auto timeSinceUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(now - player.lastUpdateTime).count();
-                ImGui::Text("  Last update: %ldms ago", timeSinceUpdate);
+                ImGui::Text("  Last update: %ldms ago", static_cast<long>(timeSinceUpdate));
             }
         } else {
             ImGui::Text("Single Player Mode");
