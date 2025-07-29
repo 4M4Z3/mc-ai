@@ -546,8 +546,6 @@ void Game::TestUDPConnectivity(const std::string& targetIP) {
     if (testSocket == INVALID_SOCKET) {
 #else
     if (testSocket == -1) {
-#define INVALID_SOCKET -1
-    if (testSocket == INVALID_SOCKET) {
 #endif
         std::cerr << "Failed to create UDP test socket" << std::endl;
 #ifdef _WIN32
