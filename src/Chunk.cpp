@@ -585,13 +585,28 @@ float Chunk::CalculateVertexAO(int x, int y, int z, int faceDirection, int verte
         return 0.25f;  // Fully occluded - but not completely black
     }
     
-    // Count number of occluding blocks and use more reasonable AO values
+    // Count number of occluding blocks and get base AO value
     int occluded = (s1 ? 1 : 0) + (s2 ? 1 : 0) + (c ? 1 : 0);
+    float baseAO;
     switch (occluded) {
-        case 0: return 1.0f;   // No occlusion - full brightness
-        case 1: return 0.8f;   // Light occlusion
-        case 2: return 0.6f;   // Medium occlusion  
-        case 3: return 0.4f;   // Heavy occlusion
-        default: return 1.0f;
+        case 0: baseAO = 1.0f; break;   // No occlusion - full brightness
+        case 1: baseAO = 0.8f; break;   // Light occlusion
+        case 2: baseAO = 0.6f; break;   // Medium occlusion  
+        case 3: baseAO = 0.4f; break;   // Heavy occlusion
+        default: baseAO = 1.0f; break;
     }
+    
+    // Apply Minecraft-style directional face multipliers
+    float faceMultiplier;
+    switch (faceDirection) {
+        case FACE_TOP:    faceMultiplier = 1.0f; break;  // 100% - brightest (sky exposure)
+        case FACE_FRONT:  // North face
+        case FACE_BACK:   faceMultiplier = 0.8f; break;  // 80% - N/S faces  
+        case FACE_LEFT:   // West face
+        case FACE_RIGHT:  faceMultiplier = 0.6f; break;  // 60% - E/W faces
+        case FACE_BOTTOM: faceMultiplier = 0.5f; break;  // 50% - darkest (no sky)
+        default: faceMultiplier = 1.0f; break;
+    }
+    
+    return baseAO * faceMultiplier;
 } 
