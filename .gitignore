@@ -4,6 +4,9 @@ bin/
 lib/
 *.build/
 
+# ImGui generated files
+imgui.ini
+
 # Third-party dependencies (can be re-downloaded)
 third_party/
 

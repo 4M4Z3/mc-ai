@@ -1,8 +1,12 @@
 #include "Renderer.h"
+#include "World.h"
 #include <iostream>
 #include <string>
+#include <cmath>
 
-Renderer::Renderer() : m_VAO(0), m_VBO(0), m_shaderProgram(0) {
+Renderer::Renderer() : m_cubeVAO(0), m_cubeVBO(0), m_shaderProgram(0), 
+                       m_triangleVAO(0), m_triangleVBO(0),
+                       m_viewportWidth(1280), m_viewportHeight(720) {
 }
 
 Renderer::~Renderer() {
@@ -10,27 +14,29 @@ Renderer::~Renderer() {
 }
 
 bool Renderer::Initialize() {
-    // Triangle vertices (normalized device coordinates)
-    float vertices[] = {
-        -0.5f, -0.5f, 0.0f,  // Bottom left
-         0.5f, -0.5f, 0.0f,  // Bottom right
-         0.0f,  0.5f, 0.0f   // Top center
+    // Create cube geometry
+    if (!CreateCubeGeometry()) {
+        std::cerr << "Failed to create cube geometry" << std::endl;
+        return false;
+    }
+    
+    // Create triangle geometry (legacy)
+    float triangleVertices[] = {
+        -0.5f, -0.5f, 0.0f,
+         0.5f, -0.5f, 0.0f,
+         0.0f,  0.5f, 0.0f
     };
 
-    // Generate and bind Vertex Array Object
-    glGenVertexArrays(1, &m_VAO);
-    glBindVertexArray(m_VAO);
+    glGenVertexArrays(1, &m_triangleVAO);
+    glBindVertexArray(m_triangleVAO);
 
-    // Generate and bind Vertex Buffer Object
-    glGenBuffers(1, &m_VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glGenBuffers(1, &m_triangleVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, GL_STATIC_DRAW);
 
-    // Configure vertex attributes
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Unbind
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
@@ -40,23 +46,105 @@ bool Renderer::Initialize() {
         return false;
     }
 
-    // Set initial viewport
-    int width, height;
-    glfwGetFramebufferSize(glfwGetCurrentContext(), &width, &height);
-    SetViewport(width, height);
+    // Get uniform locations
+    m_modelLoc = glGetUniformLocation(m_shaderProgram, "model");
+    m_viewLoc = glGetUniformLocation(m_shaderProgram, "view");
+    m_projLoc = glGetUniformLocation(m_shaderProgram, "projection");
 
-    std::cout << "Renderer initialized successfully!" << std::endl;
+    // Enable depth testing
+    glEnable(GL_DEPTH_TEST);
+    
+    // Set initial viewport and projection
+    SetViewport(m_viewportWidth, m_viewportHeight);
+
+    std::cout << "3D Renderer initialized successfully!" << std::endl;
+    return true;
+}
+
+bool Renderer::CreateCubeGeometry() {
+    // Cube vertices (positions only)
+    float cubeVertices[] = {
+        // Front face
+        -0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+
+        // Back face
+        -0.5f, -0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        // Left face
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+
+        // Right face
+         0.5f,  0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f,  0.5f,
+
+        // Bottom face
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        // Top face
+        -0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f
+    };
+
+    glGenVertexArrays(1, &m_cubeVAO);
+    glBindVertexArray(m_cubeVAO);
+
+    glGenBuffers(1, &m_cubeVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
     return true;
 }
 
 void Renderer::Shutdown() {
-    if (m_VAO) {
-        glDeleteVertexArrays(1, &m_VAO);
-        m_VAO = 0;
+    if (m_cubeVAO) {
+        glDeleteVertexArrays(1, &m_cubeVAO);
+        m_cubeVAO = 0;
     }
-    if (m_VBO) {
-        glDeleteBuffers(1, &m_VBO);
-        m_VBO = 0;
+    if (m_cubeVBO) {
+        glDeleteBuffers(1, &m_cubeVBO);
+        m_cubeVBO = 0;
+    }
+    if (m_triangleVAO) {
+        glDeleteVertexArrays(1, &m_triangleVAO);
+        m_triangleVAO = 0;
+    }
+    if (m_triangleVBO) {
+        glDeleteBuffers(1, &m_triangleVBO);
+        m_triangleVBO = 0;
     }
     if (m_shaderProgram) {
         glDeleteProgram(m_shaderProgram);
@@ -65,52 +153,108 @@ void Renderer::Shutdown() {
 }
 
 void Renderer::Clear() {
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0.2f, 0.3f, 0.8f, 1.0f); // Sky blue background
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
 void Renderer::SetViewport(int width, int height) {
+    m_viewportWidth = width;
+    m_viewportHeight = height;
     glViewport(0, 0, width, height);
+    
+    // Update projection matrix
+    float aspect = (float)width / (float)height;
+    m_projectionMatrix = CreateProjectionMatrix(45.0f, aspect, 0.1f, 100.0f);
+}
+
+void Renderer::BeginFrame(const Player& player) {
+    glUseProgram(m_shaderProgram);
+    
+    // Set view matrix
+    Mat4 viewMatrix = player.GetViewMatrix();
+    glUniformMatrix4fv(m_viewLoc, 1, GL_FALSE, viewMatrix.m);
+    
+    // Set projection matrix
+    glUniformMatrix4fv(m_projLoc, 1, GL_FALSE, m_projectionMatrix.m);
+}
+
+void Renderer::RenderWorld(const World& world) {
+    // Simple approach: check all possible positions in our small world
+    for (int x = -16; x < 16; x++) {
+        for (int y = 0; y < 10; y++) { // Only check lower part of world for performance
+            for (int z = -16; z < 16; z++) {
+                Block block = world.GetBlock(x, y, z);
+                if (!block.IsAir()) {
+                    RenderCube(x, y, z);
+                }
+            }
+        }
+    }
+}
+
+void Renderer::RenderCube(float x, float y, float z) {
+    // Create translation matrix for this cube
+    Mat4 modelMatrix = CreateTranslationMatrix(x, y, z);
+    
+    // Set model matrix uniform
+    glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
+    
+    // Render cube
+    glBindVertexArray(m_cubeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glBindVertexArray(0);
+}
+
+void Renderer::EndFrame() {
+    // Nothing needed here for now
 }
 
 void Renderer::RenderTriangle() {
-    // Use our shader program
+    // Legacy triangle rendering
     glUseProgram(m_shaderProgram);
     
-    // Bind vertex array and draw
-    glBindVertexArray(m_VAO);
+    // Use identity matrices for 2D triangle
+    Mat4 identity;
+    glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, identity.m);
+    glUniformMatrix4fv(m_viewLoc, 1, GL_FALSE, identity.m);
+    glUniformMatrix4fv(m_projLoc, 1, GL_FALSE, identity.m);
+    
+    glBindVertexArray(m_triangleVAO);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glBindVertexArray(0);
 }
 
 bool Renderer::CreateShaders() {
-    // Vertex shader source
+    // 3D Vertex shader
     const char* vertexShaderSource = R"(
         #version 330 core
         layout (location = 0) in vec3 aPos;
         
+        uniform mat4 model;
+        uniform mat4 view;
+        uniform mat4 projection;
+        
         void main()
         {
-            gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+            gl_Position = projection * view * model * vec4(aPos, 1.0);
         }
     )";
 
-    // Fragment shader source
+    // Fragment shader
     const char* fragmentShaderSource = R"(
         #version 330 core
         out vec4 FragColor;
         
         void main()
         {
-            FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+            FragColor = vec4(0.6f, 0.3f, 0.1f, 1.0f); // Brown block color
         }
     )";
 
-    // Compile vertex shader
+    // Compile shaders
     unsigned int vertexShader = CompileShader(GL_VERTEX_SHADER, vertexShaderSource);
     if (vertexShader == 0) return false;
 
-    // Compile fragment shader
     unsigned int fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
     if (fragmentShader == 0) {
         glDeleteShader(vertexShader);
@@ -132,7 +276,7 @@ bool Renderer::CreateShaders() {
         return false;
     }
 
-    // Clean up individual shaders
+    // Clean up shaders
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
@@ -174,4 +318,27 @@ bool Renderer::CheckProgramLinking(unsigned int program) {
         return false;
     }
     return true;
+}
+
+Mat4 Renderer::CreateProjectionMatrix(float fov, float aspect, float near, float far) {
+    Mat4 proj;
+    
+    float tanFov = tan(fov * M_PI / 360.0f); // fov/2 in radians
+    
+    proj.m[0] = 1.0f / (aspect * tanFov);
+    proj.m[5] = 1.0f / tanFov;
+    proj.m[10] = -(far + near) / (far - near);
+    proj.m[11] = -1.0f;
+    proj.m[14] = -(2.0f * far * near) / (far - near);
+    proj.m[15] = 0.0f;
+    
+    return proj;
+}
+
+Mat4 Renderer::CreateTranslationMatrix(float x, float y, float z) {
+    Mat4 trans;
+    trans.m[12] = x;
+    trans.m[13] = y;
+    trans.m[14] = z;
+    return trans;
 } 

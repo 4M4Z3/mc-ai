@@ -29,12 +29,20 @@ set(SOURCES
     src/main.cpp
     src/Game.cpp
     src/Renderer.cpp
+    src/Block.cpp
+    src/Chunk.cpp
+    src/World.cpp
+    src/Player.cpp
 )
 
 # Header files
 set(HEADERS
     include/Game.h
     include/Renderer.h
+    include/Block.h
+    include/Chunk.h
+    include/World.h
+    include/Player.h
 )
 
 # Add ImGui source files

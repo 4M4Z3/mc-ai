@@ -7,6 +7,9 @@
     #include <GL/gl.h>
 #endif
 #include <GLFW/glfw3.h>
+#include "Player.h"
+
+class World;
 
 class Renderer {
 public:
@@ -18,18 +21,40 @@ public:
     void Clear();
     void SetViewport(int width, int height);
     
-    // Triangle rendering
+    // 3D rendering
+    void BeginFrame(const Player& player);
+    void RenderWorld(const World& world);
+    void RenderCube(float x, float y, float z);
+    void EndFrame();
+    
+    // Legacy triangle rendering (for debugging)
     void RenderTriangle();
 
 private:
-    // Triangle data
-    unsigned int m_VAO;  // Vertex Array Object
-    unsigned int m_VBO;  // Vertex Buffer Object
+    // Cube rendering data
+    unsigned int m_cubeVAO;
+    unsigned int m_cubeVBO;
     unsigned int m_shaderProgram;
+    
+    // Triangle data (legacy)
+    unsigned int m_triangleVAO;
+    unsigned int m_triangleVBO;
+    
+    // Projection matrix
+    Mat4 m_projectionMatrix;
+    int m_viewportWidth, m_viewportHeight;
+    
+    // Shader uniforms
+    int m_modelLoc, m_viewLoc, m_projLoc;
 
     // Shader management
     bool CreateShaders();
+    bool CreateCubeGeometry();
     unsigned int CompileShader(unsigned int type, const char* source);
     bool CheckShaderCompilation(unsigned int shader, const char* type);
     bool CheckProgramLinking(unsigned int program);
+    
+    // Matrix operations
+    Mat4 CreateProjectionMatrix(float fov, float aspect, float near, float far);
+    Mat4 CreateTranslationMatrix(float x, float y, float z);
 }; 

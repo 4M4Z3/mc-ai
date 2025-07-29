@@ -2,6 +2,9 @@
 
 #include <GLFW/glfw3.h>
 #include "Renderer.h"
+#include "World.h"
+#include "Player.h"
+#include <memory>
 
 enum class GameState {
     MAIN_MENU,
@@ -20,12 +23,25 @@ public:
     // Input handling
     void ProcessInput();
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    static void MouseCallback(GLFWwindow* window, double xpos, double ypos);
 
 private:
     GLFWwindow* m_window;
     Renderer m_renderer;
     GameState m_currentState;
     bool m_shouldClose;
+    
+    // Minecraft world and player
+    std::unique_ptr<World> m_world;
+    std::unique_ptr<Player> m_player;
+    
+    // Mouse input
+    bool m_firstMouse;
+    double m_lastX, m_lastY;
+    
+    // Timing
+    float m_deltaTime;
+    float m_lastFrame;
 
     // State management
     void SetState(GameState newState);

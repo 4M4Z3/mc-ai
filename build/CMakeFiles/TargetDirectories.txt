@@ -1,3 +1,0 @@
-/Users/robertlongo/Desktop/mc-ai/build/CMakeFiles/ImGuiOpenGLProject.dir
-/Users/robertlongo/Desktop/mc-ai/build/CMakeFiles/edit_cache.dir
-/Users/robertlongo/Desktop/mc-ai/build/CMakeFiles/rebuild_cache.dir

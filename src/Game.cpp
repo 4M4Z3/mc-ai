@@ -1,5 +1,6 @@
 #include "Game.h"
 #include <iostream>
+#include <ctime>
 #ifdef __APPLE__
     #define GL_SILENCE_DEPRECATION
     #include <OpenGL/gl3.h>
@@ -13,7 +14,8 @@
 // Static instance for callbacks
 Game* Game::s_instance = nullptr;
 
-Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false) {
+Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false),
+               m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), m_deltaTime(0.0f), m_lastFrame(0.0f) {
     s_instance = this;
 }
 
@@ -50,6 +52,10 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     glfwMakeContextCurrent(m_window);
     glfwSetFramebufferSizeCallback(m_window, FramebufferSizeCallback);
     glfwSetKeyCallback(m_window, KeyCallback);
+    glfwSetCursorPosCallback(m_window, MouseCallback);
+    
+    // Start with normal cursor since we begin in main menu
+    glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     
     // Enable vsync
     glfwSwapInterval(1);
@@ -78,12 +84,20 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+    // Create player
+    m_player = std::make_unique<Player>(0.0f, 5.0f, 3.0f);
+
     std::cout << "Game initialized successfully!" << std::endl;
     return true;
 }
 
 void Game::Run() {
     while (!glfwWindowShouldClose(m_window) && !m_shouldClose) {
+        // Calculate delta time
+        float currentFrame = glfwGetTime();
+        m_deltaTime = currentFrame - m_lastFrame;
+        m_lastFrame = currentFrame;
+        
         glfwPollEvents();
 
         // Start the Dear ImGui frame
@@ -139,11 +153,29 @@ void Game::Shutdown() {
 
 void Game::ProcessInput() {
     // ESC key handling is done in KeyCallback
+    
+    // Player movement (only in game state)
+    if (m_currentState == GameState::GAME && m_player) {
+        m_player->ProcessInput(m_window, m_deltaTime);
+    }
 }
 
 void Game::SetState(GameState newState) {
     m_currentState = newState;
     std::cout << "State changed to: " << (newState == GameState::MAIN_MENU ? "MAIN_MENU" : "GAME") << std::endl;
+    
+    // Handle cursor visibility and mouse capture
+    if (newState == GameState::MAIN_MENU) {
+        glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        m_firstMouse = true; // Reset mouse for when we return to game
+    } else if (newState == GameState::GAME) {
+        glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        
+        // Create world when entering game state
+        if (!m_world) {
+            m_world = std::make_unique<World>();
+        }
+    }
 }
 
 void Game::UpdateMainMenu() {
@@ -176,16 +208,52 @@ void Game::RenderMainMenu() {
 }
 
 void Game::RenderGame() {
-    // Render the triangle
-    m_renderer.RenderTriangle();
+    // 3D world rendering
+    if (m_world && m_player) {
+        m_renderer.BeginFrame(*m_player);
+        m_renderer.RenderWorld(*m_world);
+        m_renderer.EndFrame();
+    }
     
     // Show game UI
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_Always);
     
-    if (ImGui::Begin("Game", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
-        ImGui::Text("Triangle Renderer");
-        ImGui::Text("Press ESC to return to menu");
+    if (ImGui::Begin("Minecraft Clone", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
+        ImGui::Text("3D Block Renderer");
+        ImGui::Separator();
+        
+        if (m_player) {
+            Vec3 pos = m_player->GetPosition();
+            ImGui::Text("Player Position:");
+            ImGui::Text("  X: %.1f, Y: %.1f, Z: %.1f", pos.x, pos.y, pos.z);
+            ImGui::Text("Yaw: %.1f, Pitch: %.1f", m_player->GetYaw(), m_player->GetPitch());
+        }
+        
+        ImGui::Separator();
+        
+        if (m_world) {
+            ImGui::Text("World Information:");
+            ImGui::Text("Seed: %d", m_world->GetSeed());
+            ImGui::Text("Single block at (0,0,0)");
+            
+            // Check if block exists
+            Block testBlock = m_world->GetBlock(0, 0, 0);
+            ImGui::Text("Block at (0,0,0): %s", testBlock.IsAir() ? "Air" : "Solid");
+            
+            if (ImGui::Button("Regenerate World")) {
+                m_world->RegenerateWithSeed(static_cast<int>(std::time(nullptr)));
+            }
+        } else {
+            ImGui::Text("No world loaded");
+        }
+        
+        ImGui::Separator();
+        ImGui::Text("Controls:");
+        ImGui::Text("WASD - Move");
+        ImGui::Text("Space/Shift - Up/Down");
+        ImGui::Text("Mouse - Look around");
+        ImGui::Text("ESC - Return to menu");
     }
     ImGui::End();
 }
@@ -198,6 +266,24 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
                 s_instance->SetState(GameState::MAIN_MENU);
             }
         }
+    }
+}
+
+void Game::MouseCallback(GLFWwindow* window, double xpos, double ypos) {
+    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player) {
+        if (s_instance->m_firstMouse) {
+            s_instance->m_lastX = xpos;
+            s_instance->m_lastY = ypos;
+            s_instance->m_firstMouse = false;
+        }
+        
+        double xoffset = xpos - s_instance->m_lastX;
+        double yoffset = s_instance->m_lastY - ypos; // Reversed since y-coordinates go from bottom to top
+        
+        s_instance->m_lastX = xpos;
+        s_instance->m_lastY = ypos;
+        
+        s_instance->m_player->ProcessMouseMovement(xoffset, yoffset);
     }
 }
 
