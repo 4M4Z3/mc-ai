@@ -2,12 +2,13 @@
 #include "World.h"
 #include <cmath>
 #include <iostream>
+#include <unordered_map>
 
-Chunk::Chunk() : m_chunkX(0), m_chunkZ(0), m_VAO(0), m_VBO(0), m_vertexCount(0), m_meshGenerated(false) {
+Chunk::Chunk() : m_chunkX(0), m_chunkZ(0), m_meshGenerated(false) {
     Clear();
 }
 
-Chunk::Chunk(int chunkX, int chunkZ) : m_chunkX(chunkX), m_chunkZ(chunkZ), m_VAO(0), m_VBO(0), m_vertexCount(0), m_meshGenerated(false) {
+Chunk::Chunk(int chunkX, int chunkZ) : m_chunkX(chunkX), m_chunkZ(chunkZ), m_meshGenerated(false) {
     Clear();
 }
 
@@ -62,34 +63,40 @@ void Chunk::Clear() {
 }
 
 void Chunk::ClearMesh() {
-    if (m_VAO) {
-        glDeleteVertexArrays(1, &m_VAO);
-        m_VAO = 0;
+    for (auto& pair : m_blockMeshes) {
+        BlockMesh& mesh = pair.second;
+        if (mesh.VAO) {
+            glDeleteVertexArrays(1, &mesh.VAO);
+            mesh.VAO = 0;
+        }
+        if (mesh.VBO) {
+            glDeleteBuffers(1, &mesh.VBO);
+            mesh.VBO = 0;
+        }
+        mesh.vertexCount = 0;
     }
-    if (m_VBO) {
-        glDeleteBuffers(1, &m_VBO);
-        m_VBO = 0;
-    }
-    m_vertexCount = 0;
+    m_blockMeshes.clear();
     m_meshGenerated = false;
 }
 
 void Chunk::GenerateMesh(const World* world) {
-    // Clear existing mesh
+    // Clear existing meshes
     ClearMesh();
     
-    std::vector<float> vertices;
-    vertices.reserve(CHUNK_WIDTH * CHUNK_HEIGHT * CHUNK_DEPTH * 6 * 6 * 3); // Worst case: all faces visible
+    // Group vertices by block type
+    std::unordered_map<BlockType, std::vector<float>> blockVertices;
     
-    // Generate mesh for all non-air blocks
+    // Generate mesh data for all non-air blocks, grouped by type
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int y = 0; y < CHUNK_HEIGHT; ++y) {
             for (int z = 0; z < CHUNK_DEPTH; ++z) {
-                if (!m_blocks[x][y][z].IsAir()) {
+                BlockType blockType = m_blocks[x][y][z].GetType();
+                if (blockType != BlockType::AIR) {
                     // Check each face for visibility
                     for (int face = 0; face < 6; ++face) {
                         if (ShouldRenderFace(x, y, z, face, world)) {
-                            AddFaceToMesh(vertices, x, y, z, face, world);
+                            // Add face vertices to the appropriate block type group
+                            AddFaceToMesh(blockVertices[blockType], x, y, z, face, world);
                         }
                     }
                 }
@@ -97,44 +104,78 @@ void Chunk::GenerateMesh(const World* world) {
         }
     }
     
-    // If no vertices, don't create mesh
-    if (vertices.empty()) {
-        m_vertexCount = 0;
-        m_meshGenerated = true;
-        return;
+    // Create OpenGL meshes for each block type that has vertices
+    for (auto& pair : blockVertices) {
+        BlockType blockType = pair.first;
+        std::vector<float>& vertices = pair.second;
+        
+        if (vertices.empty()) {
+            continue;
+        }
+        
+        BlockMesh& mesh = m_blockMeshes[blockType];
+        
+        // Create OpenGL mesh
+        glGenVertexArrays(1, &mesh.VAO);
+        glBindVertexArray(mesh.VAO);
+        
+        glGenBuffers(1, &mesh.VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+        
+        // Position attribute (x, y, z) - location 0
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        
+        // Ambient occlusion attribute (ao) - location 1
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+        
+        // Texture coordinate attribute (u, v) - location 2
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(4 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        
+        mesh.vertexCount = vertices.size() / 6; // 6 floats per vertex
     }
     
-    // Create OpenGL mesh
-    glGenVertexArrays(1, &m_VAO);
-    glBindVertexArray(m_VAO);
-    
-    glGenBuffers(1, &m_VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
-    
-    // Position attribute (x, y, z)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    
-    // Ambient occlusion attribute (ao)
-    glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    
-    m_vertexCount = vertices.size() / 4;
     m_meshGenerated = true;
 }
 
 void Chunk::RenderMesh() const {
-    if (!HasMesh() || m_VAO == 0) {
-        return;
+    // This method now renders all block types - but we'll change this approach
+    for (const auto& pair : m_blockMeshes) {
+        const BlockMesh& mesh = pair.second;
+        if (mesh.VAO != 0 && mesh.vertexCount > 0) {
+            glBindVertexArray(mesh.VAO);
+            glDrawArrays(GL_TRIANGLES, 0, mesh.vertexCount);
+            glBindVertexArray(0);
+        }
     }
-    
-    glBindVertexArray(m_VAO);
-    glDrawArrays(GL_TRIANGLES, 0, m_vertexCount);
-    glBindVertexArray(0);
+}
+
+void Chunk::RenderMeshForBlockType(BlockType blockType) const {
+    auto it = m_blockMeshes.find(blockType);
+    if (it != m_blockMeshes.end()) {
+        const BlockMesh& mesh = it->second;
+        if (mesh.VAO != 0 && mesh.vertexCount > 0) {
+            glBindVertexArray(mesh.VAO);
+            glDrawArrays(GL_TRIANGLES, 0, mesh.vertexCount);
+            glBindVertexArray(0);
+        }
+    }
+}
+
+std::vector<BlockType> Chunk::GetBlockTypesInChunk() const {
+    std::vector<BlockType> blockTypes;
+    for (const auto& pair : m_blockMeshes) {
+        if (pair.second.vertexCount > 0) {
+            blockTypes.push_back(pair.first);
+        }
+    }
+    return blockTypes;
 }
 
 bool Chunk::ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world) const {
@@ -181,8 +222,8 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
     float worldY = static_cast<float>(y);
     float worldZ = static_cast<float>(m_chunkZ * CHUNK_DEPTH + z);
     
-    // Face vertices (relative to block center) - now includes AO values
-    // Each vertex: x, y, z, ao_value (4 floats per vertex)
+    // Face vertices with position (3), AO (1), and texture coordinates (2) 
+    // Each vertex: x, y, z, ao_value, u, v (6 floats per vertex)
     
     switch (faceDirection) {
         case FACE_FRONT: { // +Z face
@@ -193,16 +234,16 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao3 = CalculateVertexAO(x, y, z, FACE_FRONT, 3, world); // Top-left
             
             float frontVertices[] = {
-                // Triangle 1
-                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0, // Bottom-left
-                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, // Bottom-right
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, // Top-right
+                // Triangle 1: x, y, z, ao, u, v
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0, 0.0f, 0.0f, // Bottom-left
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, 1.0f, 0.0f, // Bottom-right
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f, // Top-right
                 // Triangle 2  
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, // Top-right
-                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao3, // Top-left
-                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0  // Bottom-left
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f, // Top-right
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao3, 0.0f, 1.0f, // Top-left
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0, 0.0f, 0.0f  // Bottom-left
             };
-            vertices.insert(vertices.end(), frontVertices, frontVertices + 24);
+            vertices.insert(vertices.end(), frontVertices, frontVertices + 36);
             break;
         }
         case FACE_BACK: { // -Z face
@@ -212,14 +253,14 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao3 = CalculateVertexAO(x, y, z, FACE_BACK, 3, world);
             
             float backVertices[] = {
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0,
-                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3,
-                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2,
-                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2,
-                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao1,
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, 0.0f,
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3, 1.0f, 1.0f,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2, 0.0f, 1.0f,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2, 0.0f, 1.0f,
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao1, 0.0f, 0.0f,
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, 0.0f
             };
-            vertices.insert(vertices.end(), backVertices, backVertices + 24);
+            vertices.insert(vertices.end(), backVertices, backVertices + 36);
             break;
         }
         case FACE_LEFT: { // -X face
@@ -229,14 +270,14 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao3 = CalculateVertexAO(x, y, z, FACE_LEFT, 3, world);
             
             float leftVertices[] = {
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0,
-                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1,
-                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
-                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
-                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3,
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f,
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, 1.0f, 0.0f,
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3, 0.0f, 1.0f,
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f
             };
-            vertices.insert(vertices.end(), leftVertices, leftVertices + 24);
+            vertices.insert(vertices.end(), leftVertices, leftVertices + 36);
             break;
         }
         case FACE_RIGHT: { // +X face
@@ -246,14 +287,14 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao3 = CalculateVertexAO(x, y, z, FACE_RIGHT, 3, world);
             
             float rightVertices[] = {
-                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0,
-                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3,
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
-                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1,
-                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, 0.0f,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3, 1.0f, 1.0f,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 0.0f, 1.0f,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 0.0f, 1.0f,
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, 0.0f, 0.0f,
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, 0.0f
             };
-            vertices.insert(vertices.end(), rightVertices, rightVertices + 24);
+            vertices.insert(vertices.end(), rightVertices, rightVertices + 36);
             break;
         }
         case FACE_BOTTOM: { // -Y face
@@ -263,14 +304,14 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao3 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 3, world);
             
             float bottomVertices[] = {
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0,
-                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao1,
-                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao2,
-                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao2,
-                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao3,
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f,
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao1, 1.0f, 0.0f,
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao3, 0.0f, 1.0f,
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f
             };
-            vertices.insert(vertices.end(), bottomVertices, bottomVertices + 24);
+            vertices.insert(vertices.end(), bottomVertices, bottomVertices + 36);
             break;
         }
         case FACE_TOP: { // +Y face
@@ -280,14 +321,14 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao3 = CalculateVertexAO(x, y, z, FACE_TOP, 3, world);
             
             float topVertices[] = {
-                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao0,
-                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao3,
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
-                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao1,
-                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao0
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f,
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao3, 1.0f, 0.0f,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao1, 0.0f, 1.0f,
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f
             };
-            vertices.insert(vertices.end(), topVertices, topVertices + 24);
+            vertices.insert(vertices.end(), topVertices, topVertices + 36);
             break;
         }
     }
@@ -317,14 +358,14 @@ void Chunk::Generate(int seed) {
             // Fill blocks from bottom up to terrain height
             for (int y = 0; y <= terrainHeight; ++y) {
                 if (y == terrainHeight) {
-                    // Top layer: grass/surface
-                    m_blocks[x][y][z].SetType(BlockType::BLOCK);
+                    // Top layer: grass/surface - use dirt for now
+                    m_blocks[x][y][z].SetType(BlockType::DIRT);
                 } else if (y >= terrainHeight - 3) {
                     // Dirt layer (3 blocks deep)
-                    m_blocks[x][y][z].SetType(BlockType::BLOCK);
+                    m_blocks[x][y][z].SetType(BlockType::DIRT);
                 } else {
                     // Stone layer below
-                    m_blocks[x][y][z].SetType(BlockType::BLOCK);
+                    m_blocks[x][y][z].SetType(BlockType::STONE);
                 }
             }
         }

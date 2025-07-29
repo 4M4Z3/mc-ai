@@ -8,8 +8,11 @@
 #endif
 #include <GLFW/glfw3.h>
 #include <unordered_map>
+#include <vector>
+#include <string>
 #include "Player.h"
 #include "Server.h" // For PlayerPosition
+#include "Block.h"
 
 class World;
 
@@ -44,12 +47,18 @@ private:
     unsigned int m_triangleVAO;
     unsigned int m_triangleVBO;
     
+    // Texture management
+    std::vector<unsigned int> m_blockTextures;
+    unsigned int LoadTexture(const std::string& filepath);
+    bool LoadBlockTextures();
+    
     // Projection matrix
     Mat4 m_projectionMatrix;
     int m_viewportWidth, m_viewportHeight;
     
     // Shader uniforms
     int m_modelLoc, m_viewLoc, m_projLoc;
+    int m_textureLoc;
 
     // Shader management
     bool CreateShaders();

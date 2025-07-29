@@ -4,6 +4,7 @@
 #include <array>
 #include <random>
 #include <vector>
+#include <unordered_map> // Added for unordered_map
 
 #ifdef __APPLE__
     #define GL_SILENCE_DEPRECATION
@@ -46,7 +47,9 @@ public:
     // Mesh rendering
     void GenerateMesh(const World* world);
     void RenderMesh() const;
-    bool HasMesh() const { return m_vertexCount > 0; }
+    void RenderMeshForBlockType(BlockType blockType) const;
+    std::vector<BlockType> GetBlockTypesInChunk() const;
+    bool HasMesh() const { return !m_blockMeshes.empty(); }
     void ClearMesh();
 
 private:
@@ -56,10 +59,13 @@ private:
     int m_chunkX;
     int m_chunkZ;
     
-    // Mesh data
-    GLuint m_VAO;
-    GLuint m_VBO;
-    int m_vertexCount;
+    // Mesh data per block type
+    struct BlockMesh {
+        GLuint VAO = 0;
+        GLuint VBO = 0;
+        int vertexCount = 0;
+    };
+    std::unordered_map<BlockType, BlockMesh> m_blockMeshes;
     bool m_meshGenerated;
     
     // Face culling helpers

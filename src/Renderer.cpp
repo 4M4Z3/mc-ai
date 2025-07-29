@@ -7,6 +7,9 @@
 #include <fstream>
 #include <sstream>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../third_party/stb_image.h"
+
 Renderer::Renderer() : m_cubeVAO(0), m_cubeVBO(0), m_shaderProgram(0), 
                        m_triangleVAO(0), m_triangleVBO(0),
                        m_viewportWidth(1280), m_viewportHeight(720) {
@@ -63,6 +66,15 @@ bool Renderer::Initialize() {
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW); // Counter-clockwise winding for front faces
     
+    // Load block textures AFTER ambient occlusion shaders
+    if (!LoadBlockTextures()) {
+        std::cerr << "Failed to load block textures" << std::endl;
+        return false;
+    }
+    
+    // Get texture uniform location after loading textures
+    m_textureLoc = glGetUniformLocation(m_shaderProgram, "blockTexture");
+    
     // Set initial viewport and projection
     SetViewport(m_viewportWidth, m_viewportHeight);
 
@@ -71,55 +83,56 @@ bool Renderer::Initialize() {
 }
 
 bool Renderer::CreateCubeGeometry() {
-    // Cube vertices (positions only)
+    // Cube vertices with position (3), AO (1), and texture coordinates (2)  
+    // Format: x, y, z, ao, u, v
     float cubeVertices[] = {
         // Front face
-        -0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,  // bottom-left
+         0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.0f,  // bottom-right
+         0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f,  // top-right
+         0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f,  // top-right
+        -0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,  // top-left
+        -0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,  // bottom-left
 
         // Back face
-        -0.5f, -0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,  // bottom-left
+        -0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f,  // top-left
+         0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 1.0f,  // top-right
+         0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 1.0f,  // top-right
+         0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,  // bottom-right
+        -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,  // bottom-left
 
         // Left face
-        -0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f,  // top-right
+        -0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 1.0f,  // top-left
+        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,  // bottom-left
+        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,  // bottom-left
+        -0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.0f,  // bottom-right
+        -0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f,  // top-right
 
         // Right face
-         0.5f,  0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,  // top-left
+         0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,  // bottom-left
+         0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,  // bottom-right
+         0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 0.0f,  // bottom-right
+         0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f,  // top-right
+         0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,  // top-left
 
         // Bottom face
-        -0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 1.0f,  // top-left
+         0.5f, -0.5f, -0.5f, 1.0f, 1.0f, 1.0f,  // top-right
+         0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.0f,  // bottom-right
+         0.5f, -0.5f,  0.5f, 1.0f, 1.0f, 0.0f,  // bottom-right
+        -0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 0.0f,  // bottom-left
+        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 1.0f,  // top-left
 
         // Top face
-        -0.5f,  0.5f, -0.5f,
-        -0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f
+        -0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 0.0f,  // bottom-left
+        -0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,  // top-left
+         0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f,  // top-right
+         0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f,  // top-right  
+         0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 0.0f,  // bottom-right
+        -0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 0.0f   // bottom-left
     };
 
     glGenVertexArrays(1, &m_cubeVAO);
@@ -129,8 +142,17 @@ bool Renderer::CreateCubeGeometry() {
     glBindBuffer(GL_ARRAY_BUFFER, m_cubeVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Position attribute (location = 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    
+    // AO attribute (location = 1)
+    glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    // Texture coordinate attribute (location = 2)
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(4 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -159,6 +181,14 @@ void Renderer::Shutdown() {
         glDeleteProgram(m_shaderProgram);
         m_shaderProgram = 0;
     }
+    
+    // Clean up textures
+    for (unsigned int texture : m_blockTextures) {
+        if (texture != 0) {
+            glDeleteTextures(1, &texture);
+        }
+    }
+    m_blockTextures.clear();
 }
 
 void Renderer::Clear() {
@@ -208,21 +238,38 @@ void Renderer::RenderChunks(const World& world) {
     Mat4 modelMatrix;  // Identity matrix
     glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
     
-    // Render all chunks using their pre-generated meshes
-    for (int x = 0; x < WORLD_SIZE; ++x) {
-        for (int z = 0; z < WORLD_SIZE; ++z) {
-            const Chunk* chunk = nullptr;
+    // Enable texture unit 0
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(m_textureLoc, 0);
+    
+    // Define the block types we want to render in order
+    std::vector<BlockType> blockTypesToRender = {BlockType::STONE, BlockType::DIRT};
+    
+    // Render each block type separately with its texture
+    for (BlockType blockType : blockTypesToRender) {
+        // Skip AIR blocks
+        if (blockType == BlockType::AIR) {
+            continue;
+        }
+        
+        // Bind the appropriate texture for this block type
+        if (static_cast<size_t>(blockType) < m_blockTextures.size() && m_blockTextures[static_cast<int>(blockType)] != 0) {
+            glBindTexture(GL_TEXTURE_2D, m_blockTextures[static_cast<int>(blockType)]);
             
-            // Chunk coordinates now directly correspond to array indices
-            int chunkX = x;
-            int chunkZ = z;
-            
-            chunk = world.GetChunk(chunkX, chunkZ);
-            if (chunk && chunk->HasMesh()) {
-                chunk->RenderMesh();
+            // Render all chunks for this block type
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    const Chunk* chunk = world.GetChunk(x, z);
+                    if (chunk && chunk->HasMesh()) {
+                        chunk->RenderMeshForBlockType(blockType);
+                    }
+                }
             }
         }
     }
+    
+    // Unbind texture
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Renderer::RenderCube(float x, float y, float z) {
@@ -402,4 +449,56 @@ void Renderer::RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosit
         // For now, render as a simple cube at their position
         RenderCube(playerPos.x, playerPos.y + 0.9f, playerPos.z); // Offset Y to center on player
     }
+}
+
+unsigned int Renderer::LoadTexture(const std::string& filepath) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    
+    // Load image
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(filepath.c_str(), &width, &height, &nrChannels, 0);
+    
+    if (data) {
+        GLenum format = GL_RGB;
+        if (nrChannels == 4) {
+            format = GL_RGBA;
+        }
+        
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        
+        std::cout << "Loaded texture: " << filepath << " (" << width << "x" << height << ", " << nrChannels << " channels)" << std::endl;
+    } else {
+        std::cerr << "Failed to load texture: " << filepath << std::endl;
+        std::cerr << "STB Error: " << stbi_failure_reason() << std::endl;
+    }
+    
+    stbi_image_free(data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    return textureID;
+}
+
+bool Renderer::LoadBlockTextures() {
+    // Initialize texture array with size for our block types
+    m_blockTextures.resize(3); // AIR, STONE, DIRT
+    
+    // Load stone texture (BlockType::STONE = 1)
+    m_blockTextures[1] = LoadTexture("assets/block/stone.png");
+    
+    // Load dirt texture (BlockType::DIRT = 2)  
+    m_blockTextures[2] = LoadTexture("assets/block/dirt.png");
+    
+    // AIR doesn't need a texture (index 0 can remain 0)
+    m_blockTextures[0] = 0;
+    
+    return true;
 } 
