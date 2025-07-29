@@ -272,8 +272,8 @@ void Game::UpdateMainMenu() {
 
 void Game::UpdateGame() {
     // Update player physics (gravity, etc.)
-    if (m_player) {
-        m_player->Update(m_deltaTime);
+    if (m_player && m_world) {
+        m_player->Update(m_deltaTime, m_world.get());
     }
     
     // Send player position updates to server

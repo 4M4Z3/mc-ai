@@ -45,6 +45,7 @@ public:
     
     // Position and rotation
     Vec3 GetPosition() const { return m_position; }
+    Vec3 GetCameraPosition() const; // Eye level position for camera
     void SetPosition(const Vec3& position) { m_position = position; }
     void SetPosition(float x, float y, float z) { m_position = Vec3(x, y, z); }
     
@@ -70,11 +71,13 @@ public:
     
     // Physics for survival mode
     void ApplyGravity(float deltaTime);
-    void Update(float deltaTime);
+    void Update(float deltaTime, class World* world);
     
     // Collision detection
     bool CheckCollision(const Vec3& newPosition, class World* world) const;
+    bool CheckGroundCollision(const Vec3& position, class World* world) const;
     Vec3 HandleCollision(const Vec3& newPosition, class World* world);
+    float FindGroundLevel(const Vec3& position, class World* world) const;
     
     // Player dimensions
     float GetPlayerHeight() const { return 2.0f; }  // 2 blocks tall
@@ -96,7 +99,7 @@ public:
     bool IsOnGround(class World* world) const;
 
 private:
-    Vec3 m_position;
+    Vec3 m_position;  // Player position at CENTER of feet level (ground level)
     float m_yaw;    // Rotation around Y axis
     float m_pitch;  // Rotation around X axis
     
@@ -111,6 +114,13 @@ private:
     // Physics constants
     static constexpr float GRAVITY = 32.0f;        // blocks per second squared
     static constexpr float TERMINAL_VELOCITY = 78.4f; // Maximum fall speed
+    
+    // Player positioning:
+    // - m_position represents the CENTER of the player at GROUND LEVEL (feet)
+    // - Camera is at m_position.y + 1.62 (eye level)
+    // - Collision detection uses m_position as center for both bottom and top blocks
+    // - Bottom block: from m_position.y to m_position.y + 1.0
+    // - Top block: from m_position.y + 1.0 to m_position.y + 2.0
     
     // Helper functions
     void UpdateVectors();

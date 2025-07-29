@@ -3,8 +3,9 @@
 #include <cmath>
 #include <algorithm>
 #include <iostream> // Added for std::cout
+#include <vector> // Added for std::vector
 
-Player::Player() : m_position(0.0f, 5.0f, 3.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
+Player::Player() : m_position(0.0f, 40.0f, 3.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
                    m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false) {
     UpdateVectors();
 }
@@ -96,17 +97,31 @@ void Player::ApplyGravity(float deltaTime) {
     }
 }
 
-void Player::Update(float deltaTime) {
-    if (!m_isSurvivalMode) return;
+void Player::Update(float deltaTime, World* world) {
+    if (!m_isSurvivalMode || !world) return;
     
     ApplyGravity(deltaTime);
     
     // Apply vertical movement from gravity
     if (std::abs(m_verticalVelocity) > 0.001f) {
-        Vec3 newPosition = Vec3(m_position.x, m_position.y + m_verticalVelocity * deltaTime, m_position.z);
+        Vec3 gravityPosition = Vec3(m_position.x, m_position.y + m_verticalVelocity * deltaTime, m_position.z);
         
-        // For now, we'll handle ground collision in ProcessInput where we have access to world
-        m_position.y = newPosition.y;
+        // Handle gravity collision
+        Vec3 result = HandleCollision(gravityPosition, world);
+        
+        // If we hit the ground while falling, stop gravity
+        if (m_verticalVelocity < 0 && result.y >= m_position.y) {
+            // We hit the ground
+            m_verticalVelocity = 0.0f;
+            m_isOnGround = true;
+        } else {
+            m_isOnGround = false;
+        }
+        
+        m_position.y = result.y;
+    } else {
+        // Check if we're still on ground even without vertical velocity
+        m_isOnGround = IsOnGround(world);
     }
 }
 
@@ -114,66 +129,139 @@ bool Player::CheckCollision(const Vec3& newPosition, World* world) const {
     if (!world) return false;
     
     float playerWidth = GetPlayerWidth();
-    float playerHeight = GetPlayerHeight();
     
-    // Check collision at player's feet, middle, and head
-    for (float yOffset = 0.0f; yOffset < playerHeight; yOffset += 0.5f) {
-        for (float xOffset = -playerWidth/2; xOffset <= playerWidth/2; xOffset += playerWidth/2) {
-            for (float zOffset = -playerWidth/2; zOffset <= playerWidth/2; zOffset += playerWidth/2) {
-                int blockX = static_cast<int>(std::floor(newPosition.x + xOffset));
-                int blockY = static_cast<int>(std::floor(newPosition.y + yOffset));
-                int blockZ = static_cast<int>(std::floor(newPosition.z + zOffset));
-                
-                Block block = world->GetBlock(blockX, blockY, blockZ);
-                if (block.IsSolid()) {
-                    return true; // Collision detected
-                }
+    // Check collision for a 2-block tall player
+    // Bottom block (feet/legs): y to y+1
+    // Top block (torso/head): y+1 to y+2
+    
+    for (int blockLevel = 0; blockLevel < 2; ++blockLevel) { // 2 blocks tall
+        float yCheck = newPosition.y + blockLevel; // Check at y+0 and y+1
+        
+        // Check the 4 corners of the player's horizontal footprint
+        std::vector<std::pair<float, float>> corners = {
+            {-playerWidth/2, -playerWidth/2}, // Bottom-left
+            {playerWidth/2, -playerWidth/2},  // Bottom-right  
+            {playerWidth/2, playerWidth/2},   // Top-right
+            {-playerWidth/2, playerWidth/2}   // Top-left
+        };
+        
+        for (const auto& corner : corners) {
+            int blockX = static_cast<int>(std::floor(newPosition.x + corner.first));
+            int blockY = static_cast<int>(std::floor(yCheck));
+            int blockZ = static_cast<int>(std::floor(newPosition.z + corner.second));
+            
+            Block block = world->GetBlock(blockX, blockY, blockZ);
+            if (block.IsSolid()) {
+                return true; // Collision detected
             }
+        }
+        
+        // Also check center points for more accurate collision
+        int blockX = static_cast<int>(std::floor(newPosition.x));
+        int blockY = static_cast<int>(std::floor(yCheck));
+        int blockZ = static_cast<int>(std::floor(newPosition.z));
+        
+        Block block = world->GetBlock(blockX, blockY, blockZ);
+        if (block.IsSolid()) {
+            return true; // Collision detected
         }
     }
     
     return false; // No collision
 }
 
-Vec3 Player::HandleCollision(const Vec3& newPosition, World* world) {
-    if (!world) return newPosition;
+bool Player::CheckGroundCollision(const Vec3& position, World* world) const {
+    if (!world) return false;
     
-    Vec3 result = newPosition;
+    float playerWidth = GetPlayerWidth();
     
-    // Check X-axis collision
-    Vec3 testX = Vec3(newPosition.x, m_position.y, m_position.z);
-    if (CheckCollision(testX, world)) {
-        result.x = m_position.x; // Revert X movement
-    }
+    // Check only the bottom block of the player (feet level)
+    // Check the 4 corners of the player's feet
+    std::vector<std::pair<float, float>> corners = {
+        {-playerWidth/2, -playerWidth/2}, // Bottom-left
+        {playerWidth/2, -playerWidth/2},  // Bottom-right  
+        {playerWidth/2, playerWidth/2},   // Top-right
+        {-playerWidth/2, playerWidth/2}   // Top-left
+    };
     
-    // Check Z-axis collision
-    Vec3 testZ = Vec3(result.x, m_position.y, newPosition.z);
-    if (CheckCollision(testZ, world)) {
-        result.z = m_position.z; // Revert Z movement
-    }
-    
-    // Check Y-axis collision (gravity/vertical movement)
-    Vec3 testY = Vec3(result.x, newPosition.y, result.z);
-    if (CheckCollision(testY, world)) {
-        if (newPosition.y < m_position.y) {
-            // Falling down and hit ground
-            result.y = std::ceil(m_position.y); // Snap to block surface
-            // Note: Ground collision handling will be done in Update() method
-        } else {
-            // Moving up and hit ceiling
-            result.y = m_position.y; // Revert Y movement
+    for (const auto& corner : corners) {
+        int blockX = static_cast<int>(std::floor(position.x + corner.first));
+        int blockY = static_cast<int>(std::floor(position.y));
+        int blockZ = static_cast<int>(std::floor(position.z + corner.second));
+        
+        Block block = world->GetBlock(blockX, blockY, blockZ);
+        if (block.IsSolid()) {
+            return true; // Ground collision detected
         }
     }
     
+    // Also check center point
+    int blockX = static_cast<int>(std::floor(position.x));
+    int blockY = static_cast<int>(std::floor(position.y));
+    int blockZ = static_cast<int>(std::floor(position.z));
+    
+    Block block = world->GetBlock(blockX, blockY, blockZ);
+    return block.IsSolid();
+}
+
+Vec3 Player::HandleCollision(const Vec3& newPosition, World* world) {
+    if (!world) return newPosition;
+    
+    Vec3 result = m_position; // Start with current position
+    
+    // Handle horizontal movement (X and Z axes) - test each axis independently
+    // Test X movement
+    Vec3 testX = Vec3(newPosition.x, m_position.y, m_position.z);
+    if (!CheckCollision(testX, world)) {
+        result.x = newPosition.x; // X movement is safe
+    }
+    
+    // Test Z movement
+    Vec3 testZ = Vec3(result.x, m_position.y, newPosition.z);
+    if (!CheckCollision(testZ, world)) {
+        result.z = newPosition.z; // Z movement is safe
+    }
+    
+    // Handle vertical movement (Y axis) - this is for gravity/jumping
+    Vec3 testY = Vec3(result.x, newPosition.y, result.z);
+    if (!CheckCollision(testY, world)) {
+        result.y = newPosition.y; // Y movement is safe
+    } else if (newPosition.y < m_position.y) {
+        // We're falling and hit the ground
+        // Find the exact ground level and place player on top
+        float groundLevel = FindGroundLevel(Vec3(result.x, newPosition.y, result.z), world);
+        result.y = groundLevel;
+    }
+    // If moving up and hit ceiling, just keep current Y position (result.y = m_position.y)
+    
     return result;
+}
+
+float Player::FindGroundLevel(const Vec3& position, World* world) const {
+    if (!world) return position.y;
+    
+    // Start from current falling position and work upward to find the ground surface
+    int startY = static_cast<int>(std::floor(position.y));
+    
+    // Look for the highest solid block below the player
+    for (int y = startY; y >= 0; y--) {
+        Vec3 testPos = Vec3(position.x, static_cast<float>(y), position.z);
+        if (CheckGroundCollision(testPos, world)) {
+            // Found solid ground, player should stand on top of this block
+            return static_cast<float>(y + 1);
+        }
+    }
+    
+    // No ground found, return original position
+    return position.y;
 }
 
 bool Player::IsOnGround(World* world) const {
     if (!world) return false;
     
-    // Check slightly below the player's feet
-    Vec3 testPos = Vec3(m_position.x, m_position.y - 0.1f, m_position.z);
-    return CheckCollision(testPos, world);
+    // Check slightly below the player's feet (bottom block only)
+    Vec3 testPos = Vec3(m_position.x, m_position.y - 0.01f, m_position.z);
+    return CheckGroundCollision(testPos, world);
 }
 
 void Player::ProcessMouseMovement(float xOffset, float yOffset, float sensitivity) {
@@ -192,7 +280,7 @@ void Player::ProcessMouseMovement(float xOffset, float yOffset, float sensitivit
 
 void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world) {
     float velocity = m_movementSpeed * deltaTime;
-    Vec3 newPosition = m_position;
+    Vec3 intendedPosition = m_position;
     
     // Handle movement input
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -203,10 +291,10 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world) {
             if (length > 0.001f) {
                 horizontalFront.x /= length;
                 horizontalFront.z /= length;
-                newPosition = newPosition + horizontalFront * velocity;
+                intendedPosition = intendedPosition + horizontalFront * velocity;
             }
         } else {
-            newPosition = newPosition + m_front * velocity;
+            intendedPosition = intendedPosition + m_front * velocity;
         }
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
@@ -216,58 +304,62 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world) {
             if (length > 0.001f) {
                 horizontalFront.x /= length;
                 horizontalFront.z /= length;
-                newPosition = newPosition - horizontalFront * velocity;
+                intendedPosition = intendedPosition - horizontalFront * velocity;
             }
         } else {
-            newPosition = newPosition - m_front * velocity;
+            intendedPosition = intendedPosition - m_front * velocity;
         }
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        newPosition = newPosition - m_right * velocity;
+        intendedPosition = intendedPosition - m_right * velocity;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        newPosition = newPosition + m_right * velocity;
+        intendedPosition = intendedPosition + m_right * velocity;
     }
     
     // Vertical movement only in creative mode
     if (!m_isSurvivalMode) {
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-            newPosition.y += velocity;
+            intendedPosition.y += velocity;
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-            newPosition.y -= velocity;
+            intendedPosition.y -= velocity;
     }
     
-    // Apply collision detection in survival mode
+    // Apply collision detection
     if (m_isSurvivalMode && world) {
-        // Handle horizontal movement collision
-        Vec3 horizontalPosition = HandleCollision(newPosition, world);
-        m_position.x = horizontalPosition.x;
-        m_position.z = horizontalPosition.z;
+        // For survival mode, apply gravity in Update() method
+        // Here we only handle player input movement with collision
+        Vec3 movementResult = HandleCollision(intendedPosition, world);
         
-        // Handle vertical collision (ground detection)
-        Vec3 testGroundPos = Vec3(m_position.x, m_position.y, m_position.z);
-        if (CheckCollision(testGroundPos, world)) {
-            // We're intersecting with ground, snap to surface and stop falling
-            m_position.y = std::floor(m_position.y) + 1.0f; // Snap to top of block
+        // Only update horizontal position from input, gravity handles vertical
+        m_position.x = movementResult.x;
+        m_position.z = movementResult.z;
+        
+        // Update ground state
+        m_isOnGround = IsOnGround(world);
+        
+        // If we just landed on ground, stop falling
+        if (m_isOnGround && m_verticalVelocity < 0) {
             m_verticalVelocity = 0.0f;
-            m_isOnGround = true;
-        } else {
-            m_isOnGround = false;
         }
     } else {
-        m_position = newPosition;
+        // Creative mode - free movement
+        m_position = intendedPosition;
     }
 }
 
 Mat4 Player::GetViewMatrix() const {
     Mat4 view;
     
+    // Get camera position at eye level (1.62 blocks above feet)
+    Vec3 cameraPos = GetCameraPosition();
+    
     // Create look-at matrix manually
-    Vec3 target = m_position + m_front;
+    Vec3 target = cameraPos + m_front;
     Vec3 up = Vec3(0.0f, 1.0f, 0.0f);
     
     // Calculate camera coordinate system
-    Vec3 f = Vec3(target.x - m_position.x, target.y - m_position.y, target.z - m_position.z);
+    Vec3 f = Vec3(target.x - cameraPos.x, target.y - cameraPos.y, target.z - cameraPos.z);
     float f_len = sqrt(f.x*f.x + f.y*f.y + f.z*f.z);
     f.x /= f_len; f.y /= f_len; f.z /= f_len;
     
@@ -277,21 +369,21 @@ Mat4 Player::GetViewMatrix() const {
     
     Vec3 u = Vec3(s.y*f.z - s.z*f.y, s.z*f.x - s.x*f.z, s.x*f.y - s.y*f.x);
     
-    // Build view matrix
+    // Build view matrix using camera position instead of player position
     view.m[0] = s.x;
     view.m[4] = s.y;
     view.m[8] = s.z;
-    view.m[12] = -(s.x * m_position.x + s.y * m_position.y + s.z * m_position.z);
+    view.m[12] = -(s.x * cameraPos.x + s.y * cameraPos.y + s.z * cameraPos.z);
     
     view.m[1] = u.x;
     view.m[5] = u.y;
     view.m[9] = u.z;
-    view.m[13] = -(u.x * m_position.x + u.y * m_position.y + u.z * m_position.z);
+    view.m[13] = -(u.x * cameraPos.x + u.y * cameraPos.y + u.z * cameraPos.z);
     
     view.m[2] = -f.x;
     view.m[6] = -f.y;
     view.m[10] = -f.z;
-    view.m[14] = f.x * m_position.x + f.y * m_position.y + f.z * m_position.z;
+    view.m[14] = f.x * cameraPos.x + f.y * cameraPos.y + f.z * cameraPos.z;
     
     view.m[3] = 0.0f;
     view.m[7] = 0.0f;
@@ -311,6 +403,13 @@ Vec3 Player::GetRightVector() const {
 
 Vec3 Player::GetUpVector() const {
     return m_up;
+}
+
+Vec3 Player::GetCameraPosition() const {
+    // Camera should be at eye level, which is 1.62 blocks above the feet
+    // Since m_position represents the center bottom of the player (feet level),
+    // we add the eye height offset
+    return Vec3(m_position.x, m_position.y + 1.62f, m_position.z);
 }
 
 void Player::UpdateVectors() {

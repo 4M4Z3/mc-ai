@@ -93,8 +93,8 @@ private:
     double Lerp(double t, double a, double b) const;
     double Grad(int hash, double x, double z) const;
     
-    // Terrain generation parameters
-    static constexpr double NOISE_SCALE = 0.05;  // Controls hill frequency
-    static constexpr int BASE_HEIGHT = 64;       // Base terrain height
-    static constexpr int MAX_HEIGHT_VARIATION = 16; // Maximum hill height above base
+    // Terrain generation constants
+    static constexpr double NOISE_SCALE = 0.03;         // Scale for Perlin noise sampling
+    static constexpr int BASE_HEIGHT = 24;              // Base terrain height (lowered from 64)
+    static constexpr int MAX_HEIGHT_VARIATION = 12;     // Maximum hill height above base (lowered from 16)
 }; 
