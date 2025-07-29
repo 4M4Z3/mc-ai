@@ -23,16 +23,17 @@ World::World(int seed) : m_seed(seed) {
 }
 
 void World::InitializeChunks() {
-    // Initialize 2x2 grid of chunks adjacent to each other
-    // Array index [0][0] = chunk (0, 0)
-    // Array index [0][1] = chunk (0, 1)  
-    // Array index [1][0] = chunk (1, 0)
-    // Array index [1][1] = chunk (1, 1)
+    // Initialize 6x6 grid of chunks centered around origin
+    // Array index [0][0] = chunk (-3, -3)
+    // Array index [3][3] = chunk (0, 0)  
+    // Array index [5][5] = chunk (2, 2)
     
     for (int x = 0; x < WORLD_SIZE; ++x) {
         for (int z = 0; z < WORLD_SIZE; ++z) {
-            int chunkX = x;
-            int chunkZ = z;
+            // Convert array index to chunk coordinates
+            // Array indices 0-5 map to chunk coordinates -3 to +2
+            int chunkX = x - 3;
+            int chunkZ = z - 3;
             
             m_chunks[x][z] = std::make_unique<Chunk>(chunkX, chunkZ);
         }
@@ -149,12 +150,12 @@ bool World::IsValidWorldPosition(int worldX, int worldY, int worldZ) const {
         return false;
     }
     
-    // Check if position is within our 2x2 chunk world
+    // Check if position is within our 6x6 chunk world
     int chunkX, chunkZ, localX, localZ;
     WorldToChunkCoords(worldX, worldZ, chunkX, chunkZ, localX, localZ);
     
-    // Valid chunk coordinates are 0 and 1 for both X and Z
-    return (chunkX >= 0 && chunkX < WORLD_SIZE) && (chunkZ >= 0 && chunkZ < WORLD_SIZE);
+    // Valid chunk coordinates are -3 to +2 for both X and Z
+    return (chunkX >= -3 && chunkX <= 2) && (chunkZ >= -3 && chunkZ <= 2);
 }
 
 void World::WorldToChunkCoords(int worldX, int worldZ, int& chunkX, int& chunkZ, int& localX, int& localZ) const {
@@ -185,7 +186,20 @@ bool World::IsValidChunkIndex(int x, int z) const {
 
 void World::ChunkCoordsToArrayIndex(int chunkX, int chunkZ, int& arrayX, int& arrayZ) const {
     // Convert chunk coordinates to array indices
-    // Now chunk coordinates directly map to array indices
-    arrayX = chunkX;
-    arrayZ = chunkZ;
+    // Chunk coordinates -3 to +2 map to array indices 0 to 5
+    arrayX = chunkX + 3;
+    arrayZ = chunkZ + 3;
+} 
+
+int World::FindHighestBlock(int worldX, int worldZ) const {
+    // Start from the top and work down to find the highest non-air block
+    for (int y = CHUNK_HEIGHT - 1; y >= 0; y--) {
+        Block block = GetBlock(worldX, y, worldZ);
+        if (block.GetType() != BlockType::AIR) {
+            return y + 1; // Return the Y position above the highest block (where player should spawn)
+        }
+    }
+    
+    // If no blocks found, return a default height
+    return 64; // Default spawn height if no terrain found
 } 

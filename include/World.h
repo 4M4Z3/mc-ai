@@ -6,8 +6,8 @@
 #include <memory>
 #include <random>
 
-// World dimensions (2x2 chunks around origin)
-constexpr int WORLD_SIZE = 2;
+// World dimensions (6x6 chunks centered around origin)
+constexpr int WORLD_SIZE = 6;
 
 class World {
 public:
@@ -38,9 +38,12 @@ public:
     bool IsValidWorldPosition(int worldX, int worldY, int worldZ) const;
     void WorldToChunkCoords(int worldX, int worldZ, int& chunkX, int& chunkZ, int& localX, int& localZ) const;
     
+    // Find highest non-air block at given world coordinates
+    int FindHighestBlock(int worldX, int worldZ) const;
+
 private:
-    // 2x2 grid of chunks: [x][z] where x,z are 0 or 1
-    // Maps to chunk coordinates: (-1,-1), (-1,1), (1,-1), (1,1)
+    // 6x6 grid of chunks: [x][z] where x,z are 0 to 5
+    // Maps to chunk coordinates: (-3,-3) to (2,2)
     std::array<std::array<std::unique_ptr<Chunk>, WORLD_SIZE>, WORLD_SIZE> m_chunks;
     
     int m_seed;

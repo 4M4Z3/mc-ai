@@ -290,7 +290,11 @@ void Renderer::RenderChunks(const World& world) {
             // Render all chunks for this block type
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
-                    const Chunk* chunk = world.GetChunk(x, z);
+                    // Convert array indices to chunk coordinates
+                    // Array indices 0-5 map to chunk coordinates -3 to +2
+                    int chunkX = x - 3;
+                    int chunkZ = z - 3;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh()) {
                         chunk->RenderMeshForBlockType(blockType);
                     }

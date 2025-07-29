@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <string>
 #include <atomic>
+#include <memory>
+#include "World.h"
 
 #ifdef _WIN32
     #include <winsock2.h>
@@ -81,6 +83,9 @@ private:
     void SendPlayerList(socket_t clientSocket);
     void SendWorldSeed(socket_t clientSocket); // Send world seed to connecting client
     
+    // Calculate proper spawn position
+    PlayerPosition CalculateSpawnPosition(uint32_t playerId);
+
     // UDP Broadcast for server discovery
     void StartBroadcast();
     void StopBroadcast();
@@ -114,6 +119,7 @@ private:
     uint32_t m_nextPlayerId;
     int m_port;
     int32_t m_worldSeed; // Server-managed world seed
+    std::unique_ptr<World> m_world; // Server-side world for spawn calculations
     
 #ifdef _WIN32
     bool m_winsockInitialized;

@@ -1,4 +1,5 @@
 #include "Server.h"
+#include "World.h"
 #include <iostream>
 #include <sstream>
 #include <cstring>
@@ -20,6 +21,10 @@ Server::Server()
     // Generate server-managed world seed
     m_worldSeed = static_cast<int32_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     std::cout << "Server generated world seed: " << m_worldSeed << std::endl;
+    
+    // Create world for spawn calculations
+    m_world = std::make_unique<World>(m_worldSeed);
+    std::cout << "Server world generated for spawn calculations" << std::endl;
 }
 
 Server::~Server() {
@@ -205,7 +210,7 @@ void Server::AcceptClients() {
         client->socket = clientSocket;
         client->playerId = m_nextPlayerId++;
         client->active = true;
-        client->position = {0.0f, 1.0f, 0.0f, 0.0f, 0.0f, client->playerId};
+        client->position = CalculateSpawnPosition(client->playerId);
         
         // Send player list to new client
         SendPlayerList(clientSocket);
@@ -528,4 +533,24 @@ std::string Server::GetBroadcastAddress(const std::string& localIP) {
     
     // Fallback to general broadcast
     return "255.255.255.255";
+} 
+
+PlayerPosition Server::CalculateSpawnPosition(uint32_t playerId) {
+    PlayerPosition position;
+    position.x = 0.0f;
+    position.z = 0.0f;
+    position.yaw = 0.0f;
+    position.pitch = 0.0f;
+    position.playerId = playerId;
+    
+    // Calculate spawn Y position based on terrain
+    if (m_world) {
+        position.y = static_cast<float>(m_world->FindHighestBlock(0, 0));
+        std::cout << "Calculated spawn position for player " << playerId << " at (0, " << position.y << ", 0)" << std::endl;
+    } else {
+        position.y = 64.0f; // Fallback height
+        std::cout << "Using fallback spawn height for player " << playerId << std::endl;
+    }
+    
+    return position;
 } 

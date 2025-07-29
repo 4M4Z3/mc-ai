@@ -5,7 +5,7 @@
 #include <iostream> // Added for std::cout
 #include <vector> // Added for std::vector
 
-Player::Player() : m_position(0.0f, 40.0f, 3.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
+Player::Player() : m_position(0.0f, 64.0f, 0.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
                    m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false) {
     UpdateVectors();
 }

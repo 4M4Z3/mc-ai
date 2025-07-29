@@ -262,7 +262,8 @@ void Game::SetState(GameState newState) {
         
         // Initialize player if we have a world but no player yet
         if (m_world && !m_player) {
-            m_player = std::make_unique<Player>(0.0f, 10.0f, 0.0f);
+            float spawnY = static_cast<float>(m_world->FindHighestBlock(0, 0));
+            m_player = std::make_unique<Player>(0.0f, spawnY, 0.0f);
         }
     }
 }
@@ -279,8 +280,9 @@ void Game::UpdateMainMenu() {
         // Create player immediately after world creation
         if (!m_player) {
             std::cout << "Creating player at spawn position..." << std::endl;
-            m_player = std::make_unique<Player>(0.0f, 10.0f, 0.0f);
-            std::cout << "Player created at spawn position" << std::endl;
+            float spawnY = static_cast<float>(m_world->FindHighestBlock(0, 0));
+            m_player = std::make_unique<Player>(0.0f, spawnY, 0.0f);
+            std::cout << "Player created at spawn position (0, " << spawnY << ", 0)" << std::endl;
         }
         
         std::cout << "Setting state to GAME..." << std::endl;
