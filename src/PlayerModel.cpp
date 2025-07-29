@@ -68,16 +68,16 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     
     // Base transformation matrix for the entire player
     // Player position represents center at ground level (feet)
-    // Total player height is 2.0 blocks
+    // Total player height is 1.8 blocks
     // Apply rotation first (around local origin), then translation to world position
     Mat4 translation = CreateTranslationMatrix(position.x, position.y, position.z);
     Mat4 yawRotation = CreateRotationYMatrix(normalizedYaw * M_PI / 180.0f);
     Mat4 playerTransform = MultiplyMatrices(yawRotation, translation);
     
-    // Render Head (0.5x0.5x0.5 blocks) - top of player
-    // Position: y + 1.75 (center of head at 1.75 blocks above feet)
+    // Render Head (0.5x0.45x0.5 blocks) - top of player
+    // Position: y + 1.575 (center of head at 1.575 blocks above feet)
     {
-        Mat4 headTransform = CreateTranslationMatrix(0.0f, 1.75f, 0.0f);
+        Mat4 headTransform = CreateTranslationMatrix(0.0f, 1.575f, 0.0f);
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, headTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -86,10 +86,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         std::cout << "  Drew head with VAO " << m_headVAO << std::endl;
     }
     
-    // Render Torso (0.5x0.75x0.25 blocks) - middle of player
-    // Position: y + 1.125 (center of torso at 1.125 blocks above feet)
+    // Render Torso (0.5x0.675x0.25 blocks) - middle of player
+    // Position: y + 1.0125 (center of torso at 1.0125 blocks above feet)
     {
-        Mat4 torsoTransform = CreateTranslationMatrix(0.0f, 1.125f, 0.0f);
+        Mat4 torsoTransform = CreateTranslationMatrix(0.0f, 1.0125f, 0.0f);
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, torsoTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -98,10 +98,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         std::cout << "  Drew torso with VAO " << m_torsoVAO << std::endl;
     }
     
-    // Render Left Arm (0.25x0.75x0.25 blocks) - attached to torso
-    // Position: align with torso center at y + 1.125
+    // Render Left Arm (0.25x0.675x0.25 blocks) - attached to torso
+    // Position: align with torso center at y + 1.0125
     {
-        Mat4 armTransform = CreateTranslationMatrix(-0.375f, 1.125f, 0.0f); // -0.25 (torso half width) - 0.125 (arm half width)
+        Mat4 armTransform = CreateTranslationMatrix(-0.375f, 1.0125f, 0.0f); // -0.25 (torso half width) - 0.125 (arm half width)
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, armTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -110,10 +110,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         std::cout << "  Drew left arm with VAO " << m_leftArmVAO << std::endl;
     }
     
-    // Render Right Arm (0.25x0.75x0.25 blocks) - attached to torso
-    // Position: align with torso center at y + 1.125
+    // Render Right Arm (0.25x0.675x0.25 blocks) - attached to torso
+    // Position: align with torso center at y + 1.0125
     {
-        Mat4 armTransform = CreateTranslationMatrix(0.375f, 1.125f, 0.0f); // 0.25 (torso half width) + 0.125 (arm half width)
+        Mat4 armTransform = CreateTranslationMatrix(0.375f, 1.0125f, 0.0f); // 0.25 (torso half width) + 0.125 (arm half width)
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, armTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -122,10 +122,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         std::cout << "  Drew right arm with VAO " << m_rightArmVAO << std::endl;
     }
     
-    // Render Left Leg (0.25x0.75x0.25 blocks) - bottom of player
-    // Position: y + 0.375 (center of leg at 0.375 blocks above feet)
+    // Render Left Leg (0.25x0.675x0.25 blocks) - bottom of player
+    // Position: y + 0.3375 (center of leg at 0.3375 blocks above feet)
     {
-        Mat4 legTransform = CreateTranslationMatrix(-0.125f, 0.375f, 0.0f); // -0.125 (quarter torso width)
+        Mat4 legTransform = CreateTranslationMatrix(-0.125f, 0.3375f, 0.0f); // -0.125 (quarter torso width)
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, legTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -134,10 +134,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         std::cout << "  Drew left leg with VAO " << m_leftLegVAO << std::endl;
     }
     
-    // Render Right Leg (0.25x0.75x0.25 blocks) - bottom of player
-    // Position: y + 0.375 (center of leg at 0.375 blocks above feet)
+    // Render Right Leg (0.25x0.675x0.25 blocks) - bottom of player
+    // Position: y + 0.3375 (center of leg at 0.3375 blocks above feet)
     {
-        Mat4 legTransform = CreateTranslationMatrix(0.125f, 0.375f, 0.0f); // 0.125 (quarter torso width)
+        Mat4 legTransform = CreateTranslationMatrix(0.125f, 0.3375f, 0.0f); // 0.125 (quarter torso width)
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, legTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -151,8 +151,8 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
 }
 
 void PlayerModel::CreateHeadGeometry() {
-    // Head: 0.5x0.5x0.5 blocks (cube)
-    std::vector<float> vertices = CreateCubeVertices(0.5f, 0.5f, 0.5f);
+    // Head: 0.5x0.45x0.5 blocks (slightly shorter cube)
+    std::vector<float> vertices = CreateCubeVertices(0.5f, 0.45f, 0.5f);
     
     glGenVertexArrays(1, &m_headVAO);
     glBindVertexArray(m_headVAO);
@@ -170,8 +170,8 @@ void PlayerModel::CreateHeadGeometry() {
 }
 
 void PlayerModel::CreateTorsoGeometry() {
-    // Torso: 0.5x0.75x0.25 blocks
-    std::vector<float> vertices = CreateCubeVertices(0.5f, 0.75f, 0.25f);
+    // Torso: 0.5x0.675x0.25 blocks
+    std::vector<float> vertices = CreateCubeVertices(0.5f, 0.675f, 0.25f);
     
     glGenVertexArrays(1, &m_torsoVAO);
     glBindVertexArray(m_torsoVAO);
@@ -189,8 +189,8 @@ void PlayerModel::CreateTorsoGeometry() {
 }
 
 void PlayerModel::CreateArmGeometry(unsigned int& vao, unsigned int& vbo) {
-    // Arms: 0.25x0.75x0.25 blocks
-    std::vector<float> vertices = CreateCubeVertices(0.25f, 0.75f, 0.25f);
+    // Arms: 0.25x0.675x0.25 blocks
+    std::vector<float> vertices = CreateCubeVertices(0.25f, 0.675f, 0.25f);
     
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -208,8 +208,8 @@ void PlayerModel::CreateArmGeometry(unsigned int& vao, unsigned int& vbo) {
 }
 
 void PlayerModel::CreateLegGeometry(unsigned int& vao, unsigned int& vbo) {
-    // Legs: 0.25x0.75x0.25 blocks
-    std::vector<float> vertices = CreateCubeVertices(0.25f, 0.75f, 0.25f);
+    // Legs: 0.25x0.675x0.25 blocks
+    std::vector<float> vertices = CreateCubeVertices(0.25f, 0.675f, 0.25f);
     
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);

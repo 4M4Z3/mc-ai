@@ -121,10 +121,10 @@ private:
     
     // Player positioning:
     // - m_position represents the CENTER of the player at GROUND LEVEL (feet)
-    // - Camera is at m_position.y + 1.62 (eye level)
-    // - Collision detection uses m_position as center for both bottom and top blocks
-    // - Bottom block: from m_position.y to m_position.y + 1.0
-    // - Top block: from m_position.y + 1.0 to m_position.y + 2.0
+    // - Camera is at m_position.y + 1.6 (eye level)
+    // - Total player height is 1.8 blocks
+    // - Collision detection uses m_position as center for entire 1.8 block height
+    // - Player spans from m_position.y to m_position.y + 1.8
     
     // Helper functions
     void UpdateVectors();
