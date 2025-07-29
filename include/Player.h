@@ -97,6 +97,9 @@ public:
     
     // Ground collision
     bool IsOnGround(class World* world) const;
+    
+    // Jumping
+    void Jump();
 
 private:
     Vec3 m_position;  // Player position at CENTER of feet level (ground level)
@@ -114,6 +117,7 @@ private:
     // Physics constants
     static constexpr float GRAVITY = 32.0f;        // blocks per second squared
     static constexpr float TERMINAL_VELOCITY = 78.4f; // Maximum fall speed
+    static constexpr float JUMP_VELOCITY = 8.5f;   // Initial upward velocity when jumping
     
     // Player positioning:
     // - m_position represents the CENTER of the player at GROUND LEVEL (feet)

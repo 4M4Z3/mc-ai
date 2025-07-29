@@ -277,6 +277,14 @@ bool Player::IsOnGround(World* world) const {
     return CheckGroundCollision(testPos, world);
 }
 
+void Player::Jump() {
+    // Only allow jumping if in survival mode and on ground
+    if (m_isSurvivalMode && m_isOnGround) {
+        m_verticalVelocity = JUMP_VELOCITY;
+        m_isOnGround = false; // Player is no longer on ground after jumping
+    }
+}
+
 void Player::ProcessMouseMovement(float xOffset, float yOffset, float sensitivity) {
     xOffset *= sensitivity;
     yOffset *= sensitivity;
@@ -330,12 +338,18 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world) {
         intendedPosition = intendedPosition + m_right * velocity;
     }
     
-    // Vertical movement only in creative mode
+    // Handle vertical movement based on mode
     if (!m_isSurvivalMode) {
+        // Creative mode - free vertical movement
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
             intendedPosition.y += velocity;
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
             intendedPosition.y -= velocity;
+    } else {
+        // Survival mode - jumping only
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+            Jump();
+        }
     }
     
     // Apply collision detection
