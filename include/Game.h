@@ -130,6 +130,8 @@ private:
 
     // Window callbacks
     static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
+    static void WindowCloseCallback(GLFWwindow* window);
+    static void SignalHandler(int signal);
     static void ErrorCallback(int error, const char* description);
 
     // Static instance for callbacks

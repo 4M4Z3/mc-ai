@@ -116,6 +116,22 @@ void Server::Stop() {
         return;
     }
     
+    std::cout << "Server shutting down, notifying all clients..." << std::endl;
+    
+    // Notify all clients that server is shutting down
+    {
+        std::lock_guard<std::mutex> lock(m_clientsMutex);
+        NetworkMessage shutdownMessage;
+        shutdownMessage.type = NetworkMessage::PLAYER_LEAVE; // Reuse existing message type
+        shutdownMessage.playerId = 0; // Special ID for server shutdown
+        
+        for (auto& client : m_clients) {
+            if (client && client->active) {
+                send(client->socket, (const char*)&shutdownMessage, sizeof(NetworkMessage), 0);
+            }
+        }
+    }
+    
     m_running = false;
     
     // Stop UDP broadcast

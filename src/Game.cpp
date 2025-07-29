@@ -4,6 +4,7 @@
 #include <cstring>
 #include <chrono>
 #include <algorithm>
+#include <csignal>
 #ifdef __APPLE__
     #define GL_SILENCE_DEPRECATION
     #include <OpenGL/gl3.h>
@@ -36,10 +37,15 @@ Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_should
 }
 
 Game::~Game() {
+    std::cout << "Game destructor called" << std::endl;
     Shutdown();
 }
 
 bool Game::Initialize(int windowWidth, int windowHeight) {
+    // Set up signal handlers for graceful shutdown
+    std::signal(SIGINT, SignalHandler);  // Ctrl+C
+    std::signal(SIGTERM, SignalHandler); // Termination signal
+    
     // Initialize GLFW
     glfwSetErrorCallback(ErrorCallback);
     
@@ -69,6 +75,7 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     glfwSetFramebufferSizeCallback(m_window, FramebufferSizeCallback);
     glfwSetKeyCallback(m_window, KeyCallback);
     glfwSetCursorPosCallback(m_window, MouseCallback);
+    glfwSetWindowCloseCallback(m_window, WindowCloseCallback);
     
     // Start with normal cursor since we begin in main menu
     glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -169,6 +176,23 @@ void Game::Run() {
 }
 
 void Game::Shutdown() {
+    std::cout << "Game shutting down..." << std::endl;
+    
+    // Disconnect from network first (if client)
+    if (m_networkClient) {
+        std::cout << "Disconnecting network client..." << std::endl;
+        m_networkClient->Disconnect();
+        m_networkClient.reset();
+    }
+    
+    // Stop server (if hosting) - this will kick all connected players
+    if (m_server && m_isHost) {
+        std::cout << "Stopping server..." << std::endl;
+        m_server->Stop();
+        m_server.reset();
+        m_isHost = false;
+    }
+    
     // Stop server discovery
     if (m_serverDiscovery) {
         m_serverDiscovery->Stop();
@@ -186,6 +210,8 @@ void Game::Shutdown() {
         glfwTerminate();
         m_window = nullptr;
     }
+    
+    std::cout << "Game shutdown complete." << std::endl;
 }
 
 void Game::ProcessInput() {
@@ -198,8 +224,30 @@ void Game::ProcessInput() {
 }
 
 void Game::SetState(GameState newState) {
+    GameState oldState = m_currentState;
     m_currentState = newState;
     std::cout << "State changed to: " << (newState == GameState::MAIN_MENU ? "MAIN_MENU" : "GAME") << std::endl;
+    
+    // Handle state transitions
+    if (oldState == GameState::GAME && newState == GameState::MAIN_MENU) {
+        // Leaving game - clean up networking but keep server discovery
+        if (m_networkClient) {
+            std::cout << "Disconnecting from game..." << std::endl;
+            m_networkClient->Disconnect();
+            m_networkClient.reset();
+        }
+        
+        // If we were hosting, stop the server
+        if (m_server && m_isHost) {
+            std::cout << "Stopping hosted server..." << std::endl;
+            m_server->Stop();
+            m_server.reset();
+            m_isHost = false;
+        }
+        
+        // Clear other players
+        m_otherPlayers.clear();
+    }
     
     // Handle cursor visibility and mouse capture
     if (newState == GameState::MAIN_MENU) {
@@ -427,6 +475,19 @@ void Game::FramebufferSizeCallback(GLFWwindow* window, int width, int height) {
 
 void Game::ErrorCallback(int error, const char* description) {
     std::cerr << "GLFW Error " << error << ": " << description << std::endl;
+}
+
+void Game::WindowCloseCallback(GLFWwindow* window) {
+    if (s_instance) {
+        s_instance->m_shouldClose = true;
+    }
+}
+
+void Game::SignalHandler(int signal) {
+    std::cout << "\nReceived signal " << signal << ", shutting down gracefully..." << std::endl;
+    if (s_instance) {
+        s_instance->m_shouldClose = true;
+    }
 }
 
 // Networking methods

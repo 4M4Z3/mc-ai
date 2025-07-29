@@ -184,6 +184,13 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
         
         case NetworkMessage::PLAYER_LEAVE:
         {
+            // Check for server shutdown (special case: playerId = 0)
+            if (message.playerId == 0) {
+                std::cout << "Server is shutting down!" << std::endl;
+                m_connected = false;
+                return;
+            }
+            
             {
                 std::lock_guard<std::mutex> lock(m_otherPlayersMutex);
                 m_otherPlayers.erase(message.playerId);
