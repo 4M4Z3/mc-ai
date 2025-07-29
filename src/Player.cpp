@@ -129,6 +129,7 @@ bool Player::CheckCollision(const Vec3& newPosition, World* world) const {
     if (!world) return false;
     
     float playerWidth = GetPlayerWidth();
+    float halfWidth = playerWidth / 2.0f;
     
     // Check collision for a 2-block tall player
     // Bottom block (feet/legs): y to y+1
@@ -137,33 +138,40 @@ bool Player::CheckCollision(const Vec3& newPosition, World* world) const {
     for (int blockLevel = 0; blockLevel < 2; ++blockLevel) { // 2 blocks tall
         float yCheck = newPosition.y + blockLevel; // Check at y+0 and y+1
         
-        // Check the 4 corners of the player's horizontal footprint
-        std::vector<std::pair<float, float>> corners = {
-            {-playerWidth/2, -playerWidth/2}, // Bottom-left
-            {playerWidth/2, -playerWidth/2},  // Bottom-right  
-            {playerWidth/2, playerWidth/2},   // Top-right
-            {-playerWidth/2, playerWidth/2}   // Top-left
+        // Check multiple points around the player's circumference for precise collision
+        // Use symmetric sampling around the center point
+        std::vector<std::pair<float, float>> testPoints = {
+            {-halfWidth, -halfWidth}, // Bottom-left corner
+            {halfWidth, -halfWidth},  // Bottom-right corner
+            {halfWidth, halfWidth},   // Top-right corner
+            {-halfWidth, halfWidth},  // Top-left corner
+            {0.0f, -halfWidth},       // Bottom center
+            {halfWidth, 0.0f},        // Right center
+            {0.0f, halfWidth},        // Top center
+            {-halfWidth, 0.0f},       // Left center
+            {0.0f, 0.0f}              // Center point
         };
         
-        for (const auto& corner : corners) {
-            int blockX = static_cast<int>(std::floor(newPosition.x + corner.first));
-            int blockY = static_cast<int>(std::floor(yCheck));
-            int blockZ = static_cast<int>(std::floor(newPosition.z + corner.second));
+        for (const auto& offset : testPoints) {
+            float testX = newPosition.x + offset.first;
+            float testZ = newPosition.z + offset.second;
             
-            Block block = world->GetBlock(blockX, blockY, blockZ);
-            if (block.IsSolid()) {
-                return true; // Collision detected
+            // Use proper rounding to get the block coordinate
+            int blockX = static_cast<int>(std::round(testX));
+            int blockY = static_cast<int>(std::floor(yCheck));
+            int blockZ = static_cast<int>(std::round(testZ));
+            
+            // However, we need to check if the test point is actually inside the block
+            // A block at (bx, by, bz) occupies the space from (bx-0.5, by, bz-0.5) to (bx+0.5, by+1, bz+0.5)
+            if (testX >= blockX - 0.5f && testX <= blockX + 0.5f &&
+                testZ >= blockZ - 0.5f && testZ <= blockZ + 0.5f &&
+                yCheck >= blockY && yCheck < blockY + 1.0f) {
+                
+                Block block = world->GetBlock(blockX, blockY, blockZ);
+                if (block.IsSolid()) {
+                    return true; // Collision detected
+                }
             }
-        }
-        
-        // Also check center points for more accurate collision
-        int blockX = static_cast<int>(std::floor(newPosition.x));
-        int blockY = static_cast<int>(std::floor(yCheck));
-        int blockZ = static_cast<int>(std::floor(newPosition.z));
-        
-        Block block = world->GetBlock(blockX, blockY, blockZ);
-        if (block.IsSolid()) {
-            return true; // Collision detected
         }
     }
     
@@ -174,34 +182,39 @@ bool Player::CheckGroundCollision(const Vec3& position, World* world) const {
     if (!world) return false;
     
     float playerWidth = GetPlayerWidth();
+    float halfWidth = playerWidth / 2.0f;
     
-    // Check only the bottom block of the player (feet level)
-    // Check the 4 corners of the player's feet
-    std::vector<std::pair<float, float>> corners = {
-        {-playerWidth/2, -playerWidth/2}, // Bottom-left
-        {playerWidth/2, -playerWidth/2},  // Bottom-right  
-        {playerWidth/2, playerWidth/2},   // Top-right
-        {-playerWidth/2, playerWidth/2}   // Top-left
+    // Check only the bottom block of the player (feet level) with symmetric detection
+    std::vector<std::pair<float, float>> testPoints = {
+        {-halfWidth, -halfWidth}, // Bottom-left corner
+        {halfWidth, -halfWidth},  // Bottom-right corner
+        {halfWidth, halfWidth},   // Top-right corner
+        {-halfWidth, halfWidth},  // Top-left corner
+        {0.0f, 0.0f}              // Center point
     };
     
-    for (const auto& corner : corners) {
-        int blockX = static_cast<int>(std::floor(position.x + corner.first));
-        int blockY = static_cast<int>(std::floor(position.y));
-        int blockZ = static_cast<int>(std::floor(position.z + corner.second));
+    for (const auto& offset : testPoints) {
+        float testX = position.x + offset.first;
+        float testZ = position.z + offset.second;
         
-        Block block = world->GetBlock(blockX, blockY, blockZ);
-        if (block.IsSolid()) {
-            return true; // Ground collision detected
+        // Use proper rounding to get the block coordinate
+        int blockX = static_cast<int>(std::round(testX));
+        int blockY = static_cast<int>(std::floor(position.y));
+        int blockZ = static_cast<int>(std::round(testZ));
+        
+        // Check if the test point is actually inside the block
+        if (testX >= blockX - 0.5f && testX <= blockX + 0.5f &&
+            testZ >= blockZ - 0.5f && testZ <= blockZ + 0.5f &&
+            position.y >= blockY && position.y < blockY + 1.0f) {
+            
+            Block block = world->GetBlock(blockX, blockY, blockZ);
+            if (block.IsSolid()) {
+                return true; // Ground collision detected
+            }
         }
     }
     
-    // Also check center point
-    int blockX = static_cast<int>(std::floor(position.x));
-    int blockY = static_cast<int>(std::floor(position.y));
-    int blockZ = static_cast<int>(std::floor(position.z));
-    
-    Block block = world->GetBlock(blockX, blockY, blockZ);
-    return block.IsSolid();
+    return false;
 }
 
 Vec3 Player::HandleCollision(const Vec3& newPosition, World* world) {
