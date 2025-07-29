@@ -520,6 +520,12 @@ Mat4 Renderer::CreateTranslationMatrix(float x, float y, float z) {
 }
 
 void Renderer::RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosition>& otherPlayers) {
+    if (otherPlayers.empty()) {
+        return; // No other players to render
+    }
+    
+    std::cout << "Rendering " << otherPlayers.size() << " other players:" << std::endl;
+    
     // Set the view and projection matrices for player rendering
     glUseProgram(m_playerShaderProgram);
     glUniformMatrix4fv(m_playerViewLoc, 1, GL_FALSE, m_viewMatrix.m);
@@ -529,11 +535,15 @@ void Renderer::RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosit
     for (const auto& pair : otherPlayers) {
         const PlayerPosition& playerPos = pair.second;
         
+        std::cout << "  Player " << pair.first << " at (" << playerPos.x << ", " << playerPos.y << ", " << playerPos.z << ")" << std::endl;
+        
         // Render player model at their position with their rotation
         Vec3 position(playerPos.x, playerPos.y, playerPos.z);
         
         m_playerModel.Render(position, playerPos.yaw, playerPos.pitch);
     }
+    
+    std::cout << "Player rendering complete." << std::endl;
 }
 
 unsigned int Renderer::LoadTexture(const std::string& filepath) {
