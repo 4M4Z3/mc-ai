@@ -86,6 +86,7 @@ public:
     void ProcessInput();
     static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
     static void MouseCallback(GLFWwindow* window, double xpos, double ypos);
+    static void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
 private:
     GLFWwindow* m_window;
@@ -97,6 +98,9 @@ private:
     std::unique_ptr<World> m_world;
     std::unique_ptr<Player> m_player;
     
+    // Block targeting
+    RaycastResult m_targetBlock;
+    
     // Networking
     std::unique_ptr<Server> m_server;
     std::unique_ptr<NetworkClient> m_networkClient;
@@ -107,6 +111,10 @@ private:
     // World seed synchronization
     int32_t m_worldSeed;
     bool m_worldSeedReceived;
+    
+    // Game time synchronization
+    float m_gameTime; // Current game time (0-900 seconds)
+    bool m_gameTimeReceived;
     
     // Mouse input
     bool m_firstMouse;
@@ -145,6 +153,12 @@ private:
     void OnPlayerLeave(uint32_t playerId);
     void OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position);
     void OnWorldSeedReceived(int32_t worldSeed);
+    void OnGameTimeReceived(float gameTime);
+    
+    // Time utility methods
+    bool IsDay() const;
+    bool IsNight() const;
+    float GetTimeOfDay() const; // Returns 0.0-1.0 where 0.5 is sunset
 
     // Window callbacks
     static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #ifdef __APPLE__
     #define GL_SILENCE_DEPRECATION
     #include <OpenGL/gl3.h>
@@ -7,6 +9,9 @@
     #include <epoxy/gl.h>
 #endif
 #include <GLFW/glfw3.h>
+
+// Forward declarations
+class World;
 
 // Simple 3D vector and matrix structures
 struct Vec3 {
@@ -26,6 +31,18 @@ struct Vec3 {
     Vec3 operator*(float scalar) const {
         return Vec3(x * scalar, y * scalar, z * scalar);
     }
+    
+    float Length() const {
+        return sqrt(x*x + y*y + z*z);
+    }
+    
+    Vec3 Normalize() const {
+        float len = Length();
+        if (len > 0.0f) {
+            return Vec3(x/len, y/len, z/len);
+        }
+        return Vec3(0.0f, 0.0f, 0.0f);
+    }
 };
 
 struct Mat4 {
@@ -36,6 +53,17 @@ struct Mat4 {
         for (int i = 0; i < 16; i++) m[i] = 0.0f;
         m[0] = m[5] = m[10] = m[15] = 1.0f;
     }
+};
+
+// Structure to hold ray casting results
+struct RaycastResult {
+    bool hit;               // Whether the ray hit a block
+    Vec3 blockPos;         // World position of the hit block (as integers)
+    Vec3 hitPos;           // Exact hit position on the block
+    Vec3 normal;           // Face normal of the hit surface
+    float distance;        // Distance from ray origin to hit point
+    
+    RaycastResult() : hit(false), blockPos(0, 0, 0), hitPos(0, 0, 0), normal(0, 0, 0), distance(0.0f) {}
 };
 
 class Player {
@@ -60,6 +88,9 @@ public:
     void MoveRight(float distance);
     void MoveUp(float distance);
     void MoveDown(float distance);
+    
+    // Ray casting for block targeting
+    RaycastResult CastRay(World* world, float maxDistance = 5.0f) const;
     
     // Survival mode
     bool IsSurvivalMode() const { return m_isSurvivalMode; }

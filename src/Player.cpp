@@ -50,6 +50,111 @@ void Player::MoveDown(float distance) {
     m_position.y -= distance;
 }
 
+RaycastResult Player::CastRay(World* world, float maxDistance) const {
+    RaycastResult result;
+    
+    if (!world) {
+        return result;
+    }
+    
+    Vec3 rayOrigin = GetCameraPosition();
+    Vec3 rayDirection = GetForwardVector();
+    
+    // Step sizes for DDA algorithm
+    Vec3 stepSize;
+    stepSize.x = (rayDirection.x == 0.0f) ? 1e30f : abs(1.0f / rayDirection.x);
+    stepSize.y = (rayDirection.y == 0.0f) ? 1e30f : abs(1.0f / rayDirection.y);
+    stepSize.z = (rayDirection.z == 0.0f) ? 1e30f : abs(1.0f / rayDirection.z);
+    
+    // Calculate which direction to step in for each axis
+    Vec3 step;
+    Vec3 sideDist;
+    
+    int mapX = (int)floor(rayOrigin.x);
+    int mapY = (int)floor(rayOrigin.y);
+    int mapZ = (int)floor(rayOrigin.z);
+    
+    // Calculate step and initial sideDist
+    if (rayDirection.x < 0) {
+        step.x = -1;
+        sideDist.x = (rayOrigin.x - mapX) * stepSize.x;
+    } else {
+        step.x = 1;
+        sideDist.x = (mapX + 1.0f - rayOrigin.x) * stepSize.x;
+    }
+    
+    if (rayDirection.y < 0) {
+        step.y = -1;
+        sideDist.y = (rayOrigin.y - mapY) * stepSize.y;
+    } else {
+        step.y = 1;
+        sideDist.y = (mapY + 1.0f - rayOrigin.y) * stepSize.y;
+    }
+    
+    if (rayDirection.z < 0) {
+        step.z = -1;
+        sideDist.z = (rayOrigin.z - mapZ) * stepSize.z;
+    } else {
+        step.z = 1;
+        sideDist.z = (mapZ + 1.0f - rayOrigin.z) * stepSize.z;
+    }
+    
+    // Perform DDA
+    int side = 0; // 0=X-side, 1=Y-side, 2=Z-side
+    float perpWallDist = 0.0f;
+    
+    while (true) {
+        // Jump to next map square, either in x-direction, y-direction, or z-direction
+        if (sideDist.x < sideDist.y && sideDist.x < sideDist.z) {
+            sideDist.x += stepSize.x;
+            mapX += (int)step.x;
+            side = 0;
+            perpWallDist = (mapX - rayOrigin.x + (1 - step.x) / 2) / rayDirection.x;
+        } else if (sideDist.y < sideDist.z) {
+            sideDist.y += stepSize.y;
+            mapY += (int)step.y;
+            side = 1;
+            perpWallDist = (mapY - rayOrigin.y + (1 - step.y) / 2) / rayDirection.y;
+        } else {
+            sideDist.z += stepSize.z;
+            mapZ += (int)step.z;
+            side = 2;
+            perpWallDist = (mapZ - rayOrigin.z + (1 - step.z) / 2) / rayDirection.z;
+        }
+        
+        // Check if we've exceeded maximum distance
+        if (perpWallDist > maxDistance) {
+            break;
+        }
+        
+        // Check if we hit a solid block
+        Block block = world->GetBlock(mapX, mapY, mapZ);
+        if (block.IsSolid()) {
+            result.hit = true;
+            result.blockPos = Vec3((float)mapX, (float)mapY, (float)mapZ);
+            result.distance = perpWallDist;
+            result.hitPos = rayOrigin + rayDirection * perpWallDist;
+            
+            // Calculate face normal based on which side was hit
+            switch (side) {
+                case 0: // X-side
+                    result.normal = Vec3(-step.x, 0.0f, 0.0f);
+                    break;
+                case 1: // Y-side
+                    result.normal = Vec3(0.0f, -step.y, 0.0f);
+                    break;
+                case 2: // Z-side
+                    result.normal = Vec3(0.0f, 0.0f, -step.z);
+                    break;
+            }
+            
+            break;
+        }
+    }
+    
+    return result;
+}
+
 bool Player::CanEnterSurvivalMode() const {
     // This method will be called with world context from Game class
     return true; // Placeholder - will be checked in ToggleSurvivalMode with world

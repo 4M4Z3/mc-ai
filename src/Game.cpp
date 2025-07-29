@@ -32,6 +32,7 @@ Game* Game::s_instance = nullptr;
 
 Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false),
                m_isHost(false), m_worldSeed(0), m_worldSeedReceived(false),
+               m_gameTime(0.0f), m_gameTimeReceived(false),
                m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
                m_deltaTime(0.0f), m_lastFrame(0.0f),
                m_fontSmall(nullptr), m_fontDefault(nullptr), m_fontLarge(nullptr), m_fontTitle(nullptr),
@@ -78,6 +79,7 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     glfwSetFramebufferSizeCallback(m_window, FramebufferSizeCallback);
     glfwSetKeyCallback(m_window, KeyCallback);
     glfwSetCursorPosCallback(m_window, MouseCallback);
+    glfwSetMouseButtonCallback(m_window, MouseButtonCallback);
     glfwSetWindowCloseCallback(m_window, WindowCloseCallback);
     
     // Start with normal cursor since we begin in main menu
@@ -315,6 +317,29 @@ void Game::UpdateGame() {
         m_player->Update(m_deltaTime, m_world.get());
     }
     
+    // Update target block for wireframe rendering
+    if (m_player && m_world) {
+        m_targetBlock = m_player->CastRay(m_world.get(), 5.0f);
+    }
+    
+    // Update local game time for smooth progression between server syncs
+    if (m_gameTimeReceived) {
+        static auto lastTimeUpdate = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTimeUpdate);
+        
+        // Add elapsed time (accelerated for testing like server)
+        float deltaSeconds = elapsed.count() / 1000.0f;
+        m_gameTime += deltaSeconds * 10.0f; // 10x speed to match server
+        
+        // Wrap around every 15 minutes (900 seconds)
+        if (m_gameTime >= 900.0f) {
+            m_gameTime = fmod(m_gameTime, 900.0f);
+        }
+        
+        lastTimeUpdate = now;
+    }
+    
     // Send player position updates to server
     static float lastPositionSend = 0.0f;
     const float positionSendInterval = 1.0f / 20.0f; // Send 20 times per second
@@ -439,7 +464,24 @@ void Game::RenderGame() {
     // 3D world rendering
     if (m_world && m_player) {
         m_renderer.BeginFrame(*m_player);
+        
+        // Render sky first (background)
+        if (m_gameTimeReceived) {
+            m_renderer.RenderSky(m_gameTime);
+        } else {
+            static bool debugOnce = false;
+            if (!debugOnce) {
+                std::cout << "[CLIENT] Game time not yet received from server, using default sky" << std::endl;
+                debugOnce = true;
+            }
+        }
+        
         m_renderer.RenderWorld(*m_world);
+        
+        // Render wireframe around target block
+        if (m_targetBlock.hit) {
+            m_renderer.RenderBlockWireframe(m_targetBlock.blockPos, *m_world);
+        }
         
         // Render other players with interpolated positions
         if (m_networkClient && m_networkClient->IsConnected()) {
@@ -476,6 +518,22 @@ void Game::RenderGame() {
             ImGui::Text("Player Position:");
             ImGui::Text("  X: %.1f, Y: %.1f, Z: %.1f", pos.x, pos.y, pos.z);
             ImGui::Text("Yaw: %.1f, Pitch: %.1f", m_player->GetYaw(), m_player->GetPitch());
+        }
+        
+        ImGui::Separator();
+        
+        // Show time information
+        if (m_gameTimeReceived) {
+            ImGui::Text("Game Time: %.1f seconds", m_gameTime);
+            ImGui::Text("Time of Day: %s", IsDay() ? "Day" : "Night");
+            
+            // Show time progress bar
+            float timeProgress = GetTimeOfDay();
+            ImGui::ProgressBar(timeProgress, ImVec2(-1, 0), "");
+            ImGui::SameLine(0, 5);
+            ImGui::Text("Day Cycle");
+        } else {
+            ImGui::Text("Waiting for time sync...");
         }
         
         ImGui::Separator();
@@ -621,6 +679,61 @@ void Game::MouseCallback(GLFWwindow* window, double xpos, double ypos) {
     }
 }
 
+void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player && s_instance->m_world && !s_instance->m_showPauseMenu) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+            // Cast ray to find target block
+            RaycastResult raycast = s_instance->m_player->CastRay(s_instance->m_world.get(), 5.0f);
+            
+            if (raycast.hit) {
+                int blockX = (int)raycast.blockPos.x;
+                int blockY = (int)raycast.blockPos.y;
+                int blockZ = (int)raycast.blockPos.z;
+                
+                std::cout << "Breaking block at (" << blockX << ", " << blockY << ", " << blockZ << ")" << std::endl;
+                
+                // Break the block immediately on client
+                s_instance->m_world->SetBlock(blockX, blockY, blockZ, BlockType::AIR);
+                
+                // Regenerate affected chunk meshes
+                int chunkX, chunkZ, localX, localZ;
+                s_instance->m_world->WorldToChunkCoords(blockX, blockZ, chunkX, chunkZ, localX, localZ);
+                
+                // Regenerate the chunk containing the broken block
+                Chunk* chunk = s_instance->m_world->GetChunk(chunkX, chunkZ);
+                if (chunk) {
+                    chunk->GenerateMesh(s_instance->m_world.get());
+                }
+                
+                // Check if we need to regenerate neighboring chunks
+                // (if the broken block was on a chunk boundary)
+                if (localX == 0) {
+                    // Block was on the left edge, regenerate left neighbor
+                    Chunk* leftChunk = s_instance->m_world->GetChunk(chunkX - 1, chunkZ);
+                    if (leftChunk) leftChunk->GenerateMesh(s_instance->m_world.get());
+                }
+                if (localX == 15) {
+                    // Block was on the right edge, regenerate right neighbor
+                    Chunk* rightChunk = s_instance->m_world->GetChunk(chunkX + 1, chunkZ);
+                    if (rightChunk) rightChunk->GenerateMesh(s_instance->m_world.get());
+                }
+                if (localZ == 0) {
+                    // Block was on the back edge, regenerate back neighbor
+                    Chunk* backChunk = s_instance->m_world->GetChunk(chunkX, chunkZ - 1);
+                    if (backChunk) backChunk->GenerateMesh(s_instance->m_world.get());
+                }
+                if (localZ == 15) {
+                    // Block was on the front edge, regenerate front neighbor
+                    Chunk* frontChunk = s_instance->m_world->GetChunk(chunkX, chunkZ + 1);
+                    if (frontChunk) frontChunk->GenerateMesh(s_instance->m_world.get());
+                }
+                
+                // TODO: Send network message to server for synchronization
+            }
+        }
+    }
+}
+
 void Game::FramebufferSizeCallback(GLFWwindow* window, int width, int height) {
     if (s_instance) {
         s_instance->m_renderer.SetViewport(width, height);
@@ -668,6 +781,10 @@ void Game::StartHost() {
 
         m_networkClient->SetWorldSeedCallback([this](int32_t worldSeed) {
             OnWorldSeedReceived(worldSeed);
+        });
+        
+        m_networkClient->SetGameTimeCallback([this](float gameTime) {
+            OnGameTimeReceived(gameTime);
         });
         
         if (m_networkClient->Connect("127.0.0.1", 8080)) {
@@ -722,6 +839,10 @@ void Game::JoinServer(const std::string& serverIP) {
 
     m_networkClient->SetWorldSeedCallback([this](int32_t worldSeed) {
         OnWorldSeedReceived(worldSeed);
+    });
+    
+    m_networkClient->SetGameTimeCallback([this](float gameTime) {
+        OnGameTimeReceived(gameTime);
     });
     
     if (m_networkClient->Connect(ip, port)) {
@@ -851,4 +972,34 @@ void Game::OnWorldSeedReceived(int32_t worldSeed) {
     
     // Don't create world/player or change state from this thread!
     // Just set the flag - the main thread will handle the rest
+}
+
+void Game::OnGameTimeReceived(float gameTime) {
+    std::cout << "[CLIENT] Time sync - server: " << gameTime << " seconds (" 
+              << (gameTime < 450.0f ? "DAY" : "NIGHT") << "), client was: " << m_gameTime << std::endl;
+    
+    // Update our time and reset the client-side timer
+    m_gameTime = gameTime;
+    m_gameTimeReceived = true;
+    
+    // Reset the client-side time update reference point
+    static auto* lastTimeUpdate = []() {
+        static auto time = std::chrono::steady_clock::now();
+        return &time;
+    }();
+    *lastTimeUpdate = std::chrono::steady_clock::now();
+}
+
+bool Game::IsDay() const {
+    return m_gameTime < 450.0f; // First 7.5 minutes (450 seconds) is day
+}
+
+bool Game::IsNight() const {
+    return m_gameTime >= 450.0f; // Last 7.5 minutes (450-900 seconds) is night
+}
+
+float Game::GetTimeOfDay() const {
+    // Convert game time (0-900 seconds) to 0.0-1.0 
+    // where 0.0 = sunrise, 0.5 = sunset, 1.0 = sunrise again
+    return m_gameTime / 900.0f;
 } 

@@ -33,7 +33,11 @@ public:
     void RenderChunks(const World& world);  // New chunk-based rendering
     void RenderCube(float x, float y, float z);  // Legacy individual cube rendering
     void RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosition>& otherPlayers);
+    void RenderSky(float gameTime); // Render sky with sun/moon based on time
     void EndFrame();
+    
+    // Block targeting wireframe
+    void RenderBlockWireframe(const Vec3& blockPos, const World& world);
     
     // Legacy triangle rendering (for debugging)
     void RenderTriangle();
@@ -47,6 +51,12 @@ private:
     // Triangle data (legacy)
     unsigned int m_triangleVAO;
     unsigned int m_triangleVBO;
+    
+    // Wireframe rendering for block targeting
+    unsigned int m_wireframeVAO;
+    unsigned int m_wireframeVBO;
+    unsigned int m_wireframeShaderProgram;
+    int m_wireframeModelLoc, m_wireframeViewLoc, m_wireframeProjLoc;
     
     // Player model rendering
     PlayerModel m_playerModel;
@@ -62,9 +72,14 @@ private:
     unsigned int m_grassSideOverlayTexture;
     unsigned int m_grassBottomTexture;
     
+    // Sky textures
+    unsigned int m_sunTexture;
+    unsigned int m_moonTexture;
+    
     unsigned int LoadTexture(const std::string& filepath);
     unsigned int LoadTextureWithAlpha(const std::string& filepath);
     bool LoadBlockTextures();
+    bool LoadSkyTextures();
     
     // Projection matrix
     Mat4 m_projectionMatrix;
@@ -79,7 +94,9 @@ private:
     // Shader management
     bool CreateShaders();
     bool CreatePlayerShaders();
+    bool CreateWireframeShaders();
     bool CreateCubeGeometry();
+    bool CreateWireframeGeometry();
     std::string LoadShaderSource(const std::string& filepath);
     unsigned int CompileShader(unsigned int type, const char* source);
     bool CheckShaderCompilation(unsigned int shader, const char* type);

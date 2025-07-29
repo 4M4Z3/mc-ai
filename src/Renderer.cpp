@@ -13,8 +13,11 @@
 
 Renderer::Renderer() : m_cubeVAO(0), m_cubeVBO(0), m_shaderProgram(0), 
                        m_triangleVAO(0), m_triangleVBO(0),
+                       m_wireframeVAO(0), m_wireframeVBO(0), m_wireframeShaderProgram(0),
+                       m_wireframeModelLoc(-1), m_wireframeViewLoc(-1), m_wireframeProjLoc(-1),
                        m_playerShaderProgram(0),
                        m_playerModelLoc(-1), m_playerViewLoc(-1), m_playerProjLoc(-1),
+                       m_sunTexture(0), m_moonTexture(0),
                        m_viewportWidth(1280), m_viewportHeight(720) {
 }
 
@@ -60,6 +63,18 @@ bool Renderer::Initialize() {
         std::cerr << "Failed to create player shaders" << std::endl;
         return false;
     }
+    
+    // Create wireframe shaders
+    if (!CreateWireframeShaders()) {
+        std::cerr << "Failed to create wireframe shaders" << std::endl;
+        return false;
+    }
+    
+    // Create wireframe geometry
+    if (!CreateWireframeGeometry()) {
+        std::cerr << "Failed to create wireframe geometry" << std::endl;
+        return false;
+    }
 
     // Get uniform locations for block shaders
     m_modelLoc = glGetUniformLocation(m_shaderProgram, "model");
@@ -70,6 +85,11 @@ bool Renderer::Initialize() {
     m_playerModelLoc = glGetUniformLocation(m_playerShaderProgram, "model");
     m_playerViewLoc = glGetUniformLocation(m_playerShaderProgram, "view");
     m_playerProjLoc = glGetUniformLocation(m_playerShaderProgram, "projection");
+    
+    // Get uniform locations for wireframe shaders
+    m_wireframeModelLoc = glGetUniformLocation(m_wireframeShaderProgram, "model");
+    m_wireframeViewLoc = glGetUniformLocation(m_wireframeShaderProgram, "view");
+    m_wireframeProjLoc = glGetUniformLocation(m_wireframeShaderProgram, "projection");
 
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
@@ -83,6 +103,12 @@ bool Renderer::Initialize() {
     // Load block textures AFTER ambient occlusion shaders
     if (!LoadBlockTextures()) {
         std::cerr << "Failed to load block textures" << std::endl;
+        return false;
+    }
+    
+    // Load sky textures
+    if (!LoadSkyTextures()) {
+        std::cerr << "Failed to load sky textures" << std::endl;
         return false;
     }
     
@@ -211,6 +237,20 @@ void Renderer::Shutdown() {
         m_playerShaderProgram = 0;
     }
     
+    // Clean up wireframe resources
+    if (m_wireframeVAO) {
+        glDeleteVertexArrays(1, &m_wireframeVAO);
+        m_wireframeVAO = 0;
+    }
+    if (m_wireframeVBO) {
+        glDeleteBuffers(1, &m_wireframeVBO);
+        m_wireframeVBO = 0;
+    }
+    if (m_wireframeShaderProgram) {
+        glDeleteProgram(m_wireframeShaderProgram);
+        m_wireframeShaderProgram = 0;
+    }
+    
     // Clean up player model
     m_playerModel.Shutdown();
     
@@ -239,9 +279,21 @@ void Renderer::Shutdown() {
         glDeleteTextures(1, &m_grassBottomTexture);
         m_grassBottomTexture = 0;
     }
+    
+    // Clean up sky textures
+    if (m_sunTexture != 0) {
+        glDeleteTextures(1, &m_sunTexture);
+        m_sunTexture = 0;
+    }
+    if (m_moonTexture != 0) {
+        glDeleteTextures(1, &m_moonTexture);
+        m_moonTexture = 0;
+    }
 }
 
 void Renderer::Clear() {
+    // Dynamic sky color will be handled in RenderSky()
+    // For now, use a neutral color that will be overridden
     glClearColor(0.529f, 0.808f, 0.922f, 1.0f); // Sky blue background (#87CEEB)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
@@ -409,6 +461,84 @@ void Renderer::RenderCube(float x, float y, float z) {
     }
 }
 
+void Renderer::RenderBlockWireframe(const Vec3& blockPos, const World& world) {
+    // Check if the block position has a solid block
+    Block block = world.GetBlock((int)blockPos.x, (int)blockPos.y, (int)blockPos.z);
+    if (!block.IsSolid()) {
+        return; // Don't render wireframe for air blocks
+    }
+    
+    // Use wireframe shader program
+    glUseProgram(m_wireframeShaderProgram);
+    
+    // Set view and projection matrices (same as current frame)
+    glUniformMatrix4fv(m_wireframeViewLoc, 1, GL_FALSE, m_viewMatrix.m);
+    glUniformMatrix4fv(m_wireframeProjLoc, 1, GL_FALSE, m_projectionMatrix.m);
+    
+    // Create translation matrix for the block position
+    Mat4 modelMatrix = CreateTranslationMatrix(blockPos.x, blockPos.y, blockPos.z);
+    glUniformMatrix4fv(m_wireframeModelLoc, 1, GL_FALSE, modelMatrix.m);
+    
+    // Set up wireframe rendering
+    glDisable(GL_CULL_FACE); // Disable face culling for wireframe
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Render as wireframe
+    glLineWidth(2.0f); // Make wireframe lines thicker
+    
+    // Render only visible faces by checking neighboring blocks
+    glBindVertexArray(m_wireframeVAO);
+    
+    // Check each face and render only if it's visible (neighboring block is air)
+    int faceOffset = 0;
+    
+    // Front face (+Z)
+    Block frontNeighbor = world.GetBlock((int)blockPos.x, (int)blockPos.y, (int)blockPos.z + 1);
+    if (!frontNeighbor.IsSolid()) {
+        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
+    }
+    faceOffset += 6;
+    
+    // Back face (-Z)
+    Block backNeighbor = world.GetBlock((int)blockPos.x, (int)blockPos.y, (int)blockPos.z - 1);
+    if (!backNeighbor.IsSolid()) {
+        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
+    }
+    faceOffset += 6;
+    
+    // Left face (-X)
+    Block leftNeighbor = world.GetBlock((int)blockPos.x - 1, (int)blockPos.y, (int)blockPos.z);
+    if (!leftNeighbor.IsSolid()) {
+        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
+    }
+    faceOffset += 6;
+    
+    // Right face (+X)
+    Block rightNeighbor = world.GetBlock((int)blockPos.x + 1, (int)blockPos.y, (int)blockPos.z);
+    if (!rightNeighbor.IsSolid()) {
+        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
+    }
+    faceOffset += 6;
+    
+    // Bottom face (-Y)
+    Block bottomNeighbor = world.GetBlock((int)blockPos.x, (int)blockPos.y - 1, (int)blockPos.z);
+    if (!bottomNeighbor.IsSolid()) {
+        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
+    }
+    faceOffset += 6;
+    
+    // Top face (+Y)
+    Block topNeighbor = world.GetBlock((int)blockPos.x, (int)blockPos.y + 1, (int)blockPos.z);
+    if (!topNeighbor.IsSolid()) {
+        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
+    }
+    
+    glBindVertexArray(0);
+    
+    // Restore rendering state
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Back to filled polygons
+    glLineWidth(1.0f); // Reset line width
+    glEnable(GL_CULL_FACE); // Re-enable face culling
+}
+
 void Renderer::EndFrame() {
     // Ensure OpenGL state is properly reset after rendering
     glBindVertexArray(0);
@@ -542,6 +672,123 @@ bool Renderer::CreatePlayerShaders() {
     glDeleteShader(fragmentShader);
 
     std::cout << "Player shaders loaded and compiled successfully!" << std::endl;
+    return true;
+}
+
+bool Renderer::CreateWireframeShaders() {
+    // Load wireframe vertex shader source from file
+    std::string vertexShaderSource = LoadShaderSource("shaders/wireframe_vertex.glsl");
+    if (vertexShaderSource.empty()) {
+        std::cerr << "Failed to load wireframe vertex shader" << std::endl;
+        return false;
+    }
+
+    // Load wireframe fragment shader source from file  
+    std::string fragmentShaderSource = LoadShaderSource("shaders/wireframe_fragment.glsl");
+    if (fragmentShaderSource.empty()) {
+        std::cerr << "Failed to load wireframe fragment shader" << std::endl;
+        return false;
+    }
+
+    // Compile wireframe shaders
+    unsigned int vertexShader = CompileShader(GL_VERTEX_SHADER, vertexShaderSource.c_str());
+    if (vertexShader == 0) return false;
+
+    unsigned int fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource.c_str());
+    if (fragmentShader == 0) {
+        glDeleteShader(vertexShader);
+        return false;
+    }
+
+    // Create wireframe shader program
+    m_wireframeShaderProgram = glCreateProgram();
+    glAttachShader(m_wireframeShaderProgram, vertexShader);
+    glAttachShader(m_wireframeShaderProgram, fragmentShader);
+    glLinkProgram(m_wireframeShaderProgram);
+
+    // Check for linking errors
+    if (!CheckProgramLinking(m_wireframeShaderProgram)) {
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+        glDeleteProgram(m_wireframeShaderProgram);
+        m_wireframeShaderProgram = 0;
+        return false;
+    }
+
+    // Clean up shaders
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    std::cout << "Wireframe shaders loaded and compiled successfully!" << std::endl;
+    return true;
+}
+
+bool Renderer::CreateWireframeGeometry() {
+    // Wireframe cube vertices (only positions)
+    float wireframeVertices[] = {
+        // Front face
+        -0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+
+        // Back face
+        -0.5f, -0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        // Left face
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+
+        // Right face
+         0.5f,  0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f,  0.5f,
+
+        // Bottom face
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        // Top face
+        -0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f
+    };
+
+    glGenVertexArrays(1, &m_wireframeVAO);
+    glBindVertexArray(m_wireframeVAO);
+
+    glGenBuffers(1, &m_wireframeVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_wireframeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(wireframeVertices), wireframeVertices, GL_STATIC_DRAW);
+
+    // Position attribute (location = 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
     return true;
 }
 
@@ -727,4 +974,90 @@ bool Renderer::LoadBlockTextures() {
     m_blockTextures[0] = 0;
     
     return true;
+}
+
+bool Renderer::LoadSkyTextures() {
+    // Load sun texture
+    m_sunTexture = LoadTexture("assets/environment/sun.png");
+    if (m_sunTexture == 0) {
+        std::cerr << "Failed to load sun texture" << std::endl;
+        return false;
+    }
+    
+    // Load moon texture (use top-left moon from the 4x2 grid)
+    m_moonTexture = LoadTexture("assets/environment/moon_phases.png");
+    if (m_moonTexture == 0) {
+        std::cerr << "Failed to load moon texture" << std::endl;
+        return false;
+    }
+    
+    std::cout << "Sky textures loaded successfully!" << std::endl;
+    return true;
+}
+
+void Renderer::RenderSky(float gameTime) {
+    // Debug output only when time changes significantly
+    static float lastDebugTime = -1.0f;
+    if (abs(gameTime - lastDebugTime) > 10.0f) {
+        std::cout << "[RENDERER] Sky time: " << gameTime << " seconds" << std::endl;
+        lastDebugTime = gameTime;
+    }
+    
+    // Calculate time factor (0.0 = start of day, 1.0 = end of day cycle)
+    float timeFactor = gameTime / 900.0f; // 900 seconds = 15 minutes
+    
+    // Determine sky color based on time
+    float r, g, b;
+    if (gameTime < 450.0f) {
+        // Day time (0-450 seconds) - bright blue sky
+        float dayProgress = gameTime / 450.0f;
+        
+        // Sunrise/sunset transitions
+        if (dayProgress < 0.1f) {
+            // Sunrise (orange to blue)
+            float sunrise = dayProgress / 0.1f;
+            r = 1.0f - (sunrise * 0.471f); // 1.0 to 0.529
+            g = 0.5f + (sunrise * 0.308f); // 0.5 to 0.808  
+            b = 0.2f + (sunrise * 0.722f); // 0.2 to 0.922
+        } else if (dayProgress > 0.9f) {
+            // Sunset (blue to orange)
+            float sunset = (dayProgress - 0.9f) / 0.1f;
+            r = 0.529f + (sunset * 0.471f); // 0.529 to 1.0
+            g = 0.808f - (sunset * 0.308f); // 0.808 to 0.5
+            b = 0.922f - (sunset * 0.722f); // 0.922 to 0.2
+        } else {
+            // Midday - bright blue
+            r = 0.529f; g = 0.808f; b = 0.922f;
+        }
+    } else {
+        // Night time (450-900 seconds) - dark blue/black sky
+        float nightProgress = (gameTime - 450.0f) / 450.0f;
+        
+        if (nightProgress < 0.1f) {
+            // Transition from sunset to night
+            float transition = nightProgress / 0.1f;
+            r = 1.0f - (transition * 0.9f); // 1.0 to 0.1
+            g = 0.5f - (transition * 0.4f); // 0.5 to 0.1
+            b = 0.2f - (transition * 0.1f); // 0.2 to 0.1
+        } else if (nightProgress > 0.9f) {
+            // Transition from night to sunrise
+            float transition = (nightProgress - 0.9f) / 0.1f;
+            r = 0.1f + (transition * 0.9f); // 0.1 to 1.0
+            g = 0.1f + (transition * 0.4f); // 0.1 to 0.5
+            b = 0.1f + (transition * 0.1f); // 0.1 to 0.2
+        } else {
+            // Midnight - dark blue
+            r = 0.1f; g = 0.1f; b = 0.2f;
+        }
+    }
+    
+    // Set the clear color to our calculated sky color
+    glClearColor(r, g, b, 1.0f);
+    
+    // Clear the color buffer with the new sky color
+    glClear(GL_COLOR_BUFFER_BIT);
+    
+    // TODO: Add actual sun/moon rendering with textured quads
+    // For now, we're just changing the sky color
+    // Future implementation will render sun/moon sprites positioned in the sky
 } 

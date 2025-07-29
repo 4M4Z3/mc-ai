@@ -26,6 +26,7 @@ public:
     void SetPlayerLeaveCallback(std::function<void(uint32_t playerId)> callback);
     void SetPlayerPositionCallback(std::function<void(uint32_t playerId, const PlayerPosition&)> callback);
     void SetWorldSeedCallback(std::function<void(int32_t worldSeed)> callback);
+    void SetGameTimeCallback(std::function<void(float gameTime)> callback);
     
     // Get other players
     std::unordered_map<uint32_t, PlayerPosition> GetOtherPlayers() const;
@@ -53,6 +54,7 @@ private:
     std::function<void(uint32_t)> m_onPlayerLeave;
     std::function<void(uint32_t, const PlayerPosition&)> m_onPlayerPosition;
     std::function<void(int32_t)> m_onWorldSeed;
+    std::function<void(float)> m_onGameTime;
     
     std::string m_serverIP;
     int m_serverPort;

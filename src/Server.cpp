@@ -14,6 +14,8 @@ Server::Server()
     , m_port(8080)
     , m_broadcastSocket(INVALID_SOCKET)
     , m_broadcasting(false)
+    , m_gameTime(0.0f)
+    , m_timeUpdating(false)
 #ifdef _WIN32
     , m_winsockInitialized(false)
 #endif
@@ -25,6 +27,11 @@ Server::Server()
     // Create world for spawn calculations
     m_world = std::make_unique<World>(m_worldSeed);
     std::cout << "Server world generated for spawn calculations" << std::endl;
+    
+    // Initialize game time
+    m_gameStartTime = std::chrono::steady_clock::now();
+    m_lastTimeSyncBroadcast = m_gameStartTime;
+    std::cout << "Game time initialized (15 minute day cycle)" << std::endl;
 }
 
 Server::~Server() {
@@ -115,6 +122,9 @@ bool Server::Start(int port) {
     // Start UDP broadcast for server discovery
     StartBroadcast();
     
+    // Start time management
+    StartTimeSync();
+    
     std::cout << "Server started on port " << port << std::endl;
     return true;
 }
@@ -144,6 +154,9 @@ void Server::Stop() {
     
     // Stop UDP broadcast
     StopBroadcast();
+    
+    // Stop time management
+    StopTimeSync();
     
     // Close server socket to stop accepting new connections
     if (m_serverSocket != INVALID_SOCKET) {
@@ -217,6 +230,9 @@ void Server::AcceptClients() {
         
         // Send world seed to new client
         SendWorldSeed(clientSocket);
+        
+        // Send current game time to new client
+        SendGameTime(clientSocket);
         
         // Notify all clients about new player
         NetworkMessage joinMessage;
@@ -553,4 +569,126 @@ PlayerPosition Server::CalculateSpawnPosition(uint32_t playerId) {
     }
     
     return position;
+}
+
+// Time management methods
+void Server::SendGameTime(socket_t clientSocket) {
+    NetworkMessage timeMessage;
+    timeMessage.type = NetworkMessage::TIME_SYNC;
+    timeMessage.playerId = 0; // Not used for time sync
+    timeMessage.gameTime = m_gameTime;
+    
+    int bytesSent = send(clientSocket, (const char*)&timeMessage, sizeof(NetworkMessage), 0);
+    if (bytesSent == SOCKET_ERROR) {
+        std::cerr << "Failed to send game time to client" << std::endl;
+    } else {
+        std::cout << "Sent game time " << m_gameTime << " to new client" << std::endl;
+    }
+}
+
+void Server::BroadcastGameTime() {
+    NetworkMessage timeMessage;
+    timeMessage.type = NetworkMessage::TIME_SYNC;
+    timeMessage.playerId = 0; // Not used for time sync
+    timeMessage.gameTime = m_gameTime;
+    
+    int clientCount = 0;
+    int successCount = 0;
+    
+    std::lock_guard<std::mutex> lock(m_clientsMutex);
+    for (auto& client : m_clients) {
+        if (client && client->active) {
+            clientCount++;
+            int bytesSent = send(client->socket, (const char*)&timeMessage, sizeof(NetworkMessage), 0);
+            if (bytesSent == SOCKET_ERROR) {
+                std::cerr << "[SERVER] Failed to broadcast game time to player " << client->playerId << std::endl;
+            } else {
+                successCount++;
+            }
+        }
+    }
+    
+    std::cout << "[SERVER] Broadcasted game time " << m_gameTime << " to " << successCount << "/" << clientCount << " clients" << std::endl;
+}
+
+bool Server::IsDay() const {
+    return m_gameTime < 450.0f; // First 7.5 minutes (450 seconds) is day
+}
+
+bool Server::IsNight() const {
+    return m_gameTime >= 450.0f; // Last 7.5 minutes (450-900 seconds) is night
+}
+
+void Server::UpdateGameTime() {  
+    const float DAY_CYCLE_SECONDS = 900.0f; // 15 minutes in seconds
+    const float TIME_SYNC_INTERVAL = 5.0f; // 5 seconds for testing (was 30 seconds)
+    
+    std::cout << "[SERVER] Time update thread started" << std::endl;
+    
+    // Send initial time sync immediately when time thread starts
+    std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Brief delay for server to start
+    std::cout << "[SERVER] Sending initial time sync..." << std::endl;
+    BroadcastGameTime();
+    
+    auto lastDebugTime = std::chrono::steady_clock::now();
+    
+    while (m_timeUpdating) {
+        auto now = std::chrono::steady_clock::now();
+        
+        // Calculate elapsed time since game start
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_gameStartTime);
+        float totalElapsed = elapsed.count() / 1000.0f; // Convert to seconds
+        
+        // Update game time (cycles every 15 minutes) - speed up for testing
+        float acceleratedElapsed = totalElapsed * 10.0f; // 10x speed for testing
+        m_gameTime = fmod(acceleratedElapsed, DAY_CYCLE_SECONDS);
+        
+        // Debug output every 2 seconds for better visibility
+        auto timeSinceDebug = std::chrono::duration_cast<std::chrono::seconds>(now - lastDebugTime);
+        if (timeSinceDebug.count() >= 2) {
+            std::cout << "[SERVER] Game time: " << m_gameTime << " seconds (elapsed: " << totalElapsed 
+                      << "s, " << (IsDay() ? "DAY" : "NIGHT") << ")" << std::endl;
+            lastDebugTime = now;
+        }
+        
+        // Check if we need to broadcast time sync
+        auto timeSinceLastSync = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastTimeSyncBroadcast);
+        if (timeSinceLastSync.count() >= TIME_SYNC_INTERVAL) {
+            std::cout << "[SERVER] Broadcasting time sync..." << std::endl;
+            BroadcastGameTime();
+            m_lastTimeSyncBroadcast = now;
+        }
+        
+        // Sleep for a short time to avoid excessive CPU usage
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    
+    std::cout << "[SERVER] Time update thread ended" << std::endl;
+}
+
+void Server::StartTimeSync() {
+    if (m_timeUpdating) {
+        std::cout << "Time synchronization already running" << std::endl;
+        return; // Already running
+    }
+    
+    std::cout << "[SERVER] Starting time synchronization..." << std::endl;
+    m_timeUpdating = true;
+    m_timeUpdateThread = std::thread(&Server::UpdateGameTime, this);
+    
+    std::cout << "[SERVER] Time synchronization thread started successfully" << std::endl;
+}
+
+void Server::StopTimeSync() {
+    if (!m_timeUpdating) {
+        return; // Not running
+    }
+    
+    m_timeUpdating = false;
+    
+    if (m_timeUpdateThread.joinable()) {
+        m_timeUpdateThread.join();
+    }
+    
+    std::cout << "Time synchronization stopped" << std::endl;
 } 

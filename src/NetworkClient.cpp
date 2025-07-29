@@ -238,6 +238,16 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
             }
             break;
         }
+        
+        case NetworkMessage::TIME_SYNC:
+        {
+            std::cout << "Received game time sync: " << message.gameTime << std::endl;
+            
+            if (m_onGameTime) {
+                m_onGameTime(message.gameTime);
+            }
+            break;
+        }
     }
 }
 
@@ -255,6 +265,10 @@ void NetworkClient::SetPlayerPositionCallback(std::function<void(uint32_t, const
 
 void NetworkClient::SetWorldSeedCallback(std::function<void(int32_t)> callback) {
     m_onWorldSeed = callback;
+}
+
+void NetworkClient::SetGameTimeCallback(std::function<void(float)> callback) {
+    m_onGameTime = callback;
 }
 
 std::unordered_map<uint32_t, PlayerPosition> NetworkClient::GetOtherPlayers() const {

@@ -35,13 +35,15 @@ struct NetworkMessage {
         PLAYER_LEAVE = 2,
         PLAYER_POSITION = 3,
         PLAYER_LIST = 4,
-        WORLD_SEED = 5
+        WORLD_SEED = 5,
+        TIME_SYNC = 6
     };
     
     uint8_t type;
     uint32_t playerId;
     PlayerPosition position;
     int32_t worldSeed; // Added for seed synchronization
+    float gameTime; // Game time in seconds (0-900 for 15 minute cycle)
 };
 
 // Server announcement for UDP broadcast discovery
@@ -75,6 +77,11 @@ public:
 
     // World seed management
     int32_t GetWorldSeed() const { return m_worldSeed; }
+    
+    // Time management
+    float GetGameTime() const { return m_gameTime; }
+    bool IsDay() const;
+    bool IsNight() const;
 
 private:
     void AcceptClients();
@@ -82,9 +89,16 @@ private:
     void BroadcastToAllClients(const NetworkMessage& message, uint32_t excludePlayerId = 0);
     void SendPlayerList(socket_t clientSocket);
     void SendWorldSeed(socket_t clientSocket); // Send world seed to connecting client
+    void SendGameTime(socket_t clientSocket); // Send current game time to connecting client
+    void BroadcastGameTime(); // Broadcast time sync to all clients
     
     // Calculate proper spawn position
     PlayerPosition CalculateSpawnPosition(uint32_t playerId);
+    
+    // Time management
+    void UpdateGameTime();
+    void StartTimeSync();
+    void StopTimeSync();
 
     // UDP Broadcast for server discovery
     void StartBroadcast();
@@ -120,6 +134,13 @@ private:
     int m_port;
     int32_t m_worldSeed; // Server-managed world seed
     std::unique_ptr<World> m_world; // Server-side world for spawn calculations
+    
+    // Time management
+    float m_gameTime; // Current game time in seconds (0-900 for 15 minute cycle)
+    std::chrono::steady_clock::time_point m_gameStartTime;
+    std::chrono::steady_clock::time_point m_lastTimeSyncBroadcast;
+    std::thread m_timeUpdateThread;
+    std::atomic<bool> m_timeUpdating;
     
 #ifdef _WIN32
     bool m_winsockInitialized;
