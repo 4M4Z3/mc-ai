@@ -405,162 +405,165 @@ Block Chunk::GetBlockAtOffset(int x, int y, int z, int dx, int dy, int dz, const
 }
 
 // Calculate ambient occlusion for a specific vertex of a face
-// Uses Minecraft's algorithm: sample 3 neighbors (2 sides + 1 corner)
+// Simplified version - just samples blocks that would block ambient light to this vertex
 float Chunk::CalculateVertexAO(int x, int y, int z, int faceDirection, int vertexIndex, const World* world) const {
-    // For each face and vertex combination, we need to sample 3 specific neighbor blocks
-    // The pattern is always: 2 edge-adjacent blocks + 1 corner-adjacent block
+    // Key insight: we need to sample blocks that are adjacent to where the vertex will be positioned
+    // For a TOP face, vertices are on the top surface, so we sample blocks ABOVE that position
+    // For a FRONT face, vertices are on the front surface, so we sample blocks IN FRONT of that position
     
-    int dx1 = 0, dy1 = 0, dz1 = 0;  // First side neighbor
-    int dx2 = 0, dy2 = 0, dz2 = 0;  // Second side neighbor  
-    int dxc = 0, dyc = 0, dzc = 0;  // Corner neighbor
+    int side1_dx = 0, side1_dy = 0, side1_dz = 0;
+    int side2_dx = 0, side2_dy = 0, side2_dz = 0;
+    int corner_dx = 0, corner_dy = 0, corner_dz = 0;
     
+    // The sampling pattern depends on the face and vertex position
     switch (faceDirection) {
-        case FACE_TOP: { // +Y face (looking down at face)
+        case FACE_TOP: { // Top face - sample blocks above
+            // All samples are 1 block above the current block
             switch (vertexIndex) {
-                case 0: // Bottom-left (-X, -Z)
-                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
-                    dx2 = 0; dy2 = 0; dz2 = -1;   // Front side
-                    dxc = -1; dyc = 0; dzc = -1;   // Corner
+                case 0: // (-0.5, +0.5, -0.5) vertex
+                    side1_dx = -1; side1_dy = 1; side1_dz = 0;   // Left-above
+                    side2_dx = 0; side2_dy = 1; side2_dz = -1;   // Front-above
+                    corner_dx = -1; corner_dy = 1; corner_dz = -1; // Corner-above
                     break;
-                case 1: // Bottom-right (+X, -Z)  
-                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
-                    dx2 = 0; dy2 = 0; dz2 = -1;   // Front side
-                    dxc = 1; dyc = 0; dzc = -1;    // Corner
+                case 1: // (+0.5, +0.5, -0.5) vertex
+                    side1_dx = 1; side1_dy = 1; side1_dz = 0;    // Right-above
+                    side2_dx = 0; side2_dy = 1; side2_dz = -1;   // Front-above
+                    corner_dx = 1; corner_dy = 1; corner_dz = -1; // Corner-above
                     break;
-                case 2: // Top-right (+X, +Z)
-                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side  
-                    dx2 = 0; dy2 = 0; dz2 = 1;    // Back side
-                    dxc = 1; dyc = 0; dzc = 1;     // Corner
+                case 2: // (+0.5, +0.5, +0.5) vertex
+                    side1_dx = 1; side1_dy = 1; side1_dz = 0;    // Right-above
+                    side2_dx = 0; side2_dy = 1; side2_dz = 1;    // Back-above
+                    corner_dx = 1; corner_dy = 1; corner_dz = 1;  // Corner-above
                     break;
-                case 3: // Top-left (-X, +Z)
-                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
-                    dx2 = 0; dy2 = 0; dz2 = 1;    // Back side  
-                    dxc = -1; dyc = 0; dzc = 1;    // Corner
+                case 3: // (-0.5, +0.5, +0.5) vertex
+                    side1_dx = -1; side1_dy = 1; side1_dz = 0;   // Left-above
+                    side2_dx = 0; side2_dy = 1; side2_dz = 1;    // Back-above
+                    corner_dx = -1; corner_dy = 1; corner_dz = 1; // Corner-above
                     break;
             }
             break;
         }
-        case FACE_BOTTOM: { // -Y face (looking up at face)
+        case FACE_BOTTOM: { // Bottom face - sample blocks below
             switch (vertexIndex) {
-                case 0: // Bottom-left (-X, -Z)
-                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
-                    dx2 = 0; dy2 = 0; dz2 = -1;   // Front side
-                    dxc = -1; dyc = 0; dzc = -1;   // Corner
+                case 0: 
+                    side1_dx = -1; side1_dy = -1; side1_dz = 0;
+                    side2_dx = 0; side2_dy = -1; side2_dz = -1;
+                    corner_dx = -1; corner_dy = -1; corner_dz = -1;
                     break;
-                case 1: // Bottom-right (+X, -Z)
-                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
-                    dx2 = 0; dy2 = 0; dz2 = -1;   // Front side
-                    dxc = 1; dyc = 0; dzc = -1;    // Corner
+                case 1:
+                    side1_dx = 1; side1_dy = -1; side1_dz = 0;
+                    side2_dx = 0; side2_dy = -1; side2_dz = -1;
+                    corner_dx = 1; corner_dy = -1; corner_dz = -1;
                     break;
-                case 2: // Top-right (+X, +Z)
-                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
-                    dx2 = 0; dy2 = 0; dz2 = 1;    // Back side
-                    dxc = 1; dyc = 0; dzc = 1;     // Corner
+                case 2:
+                    side1_dx = 1; side1_dy = -1; side1_dz = 0;
+                    side2_dx = 0; side2_dy = -1; side2_dz = 1;
+                    corner_dx = 1; corner_dy = -1; corner_dz = 1;
                     break;
-                case 3: // Top-left (-X, +Z)
-                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
-                    dx2 = 0; dy2 = 0; dz2 = 1;    // Back side
-                    dxc = -1; dyc = 0; dzc = 1;    // Corner
+                case 3:
+                    side1_dx = -1; side1_dy = -1; side1_dz = 0;
+                    side2_dx = 0; side2_dy = -1; side2_dz = 1;
+                    corner_dx = -1; corner_dy = -1; corner_dz = 1;
                     break;
             }
             break;
         }
-        case FACE_FRONT: { // +Z face
+        case FACE_FRONT: { // Front face - sample blocks in front (+Z)
             switch (vertexIndex) {
-                case 0: // Bottom-left (-X, -Y)
-                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
-                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
-                    dxc = -1; dyc = -1; dzc = 0;   // Corner
+                case 0:
+                    side1_dx = -1; side1_dy = 0; side1_dz = 1;
+                    side2_dx = 0; side2_dy = -1; side2_dz = 1;
+                    corner_dx = -1; corner_dy = -1; corner_dz = 1;
                     break;
-                case 1: // Bottom-right (+X, -Y)
-                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
-                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
-                    dxc = 1; dyc = -1; dzc = 0;    // Corner
+                case 1:
+                    side1_dx = 1; side1_dy = 0; side1_dz = 1;
+                    side2_dx = 0; side2_dy = -1; side2_dz = 1;
+                    corner_dx = 1; corner_dy = -1; corner_dz = 1;
                     break;
-                case 2: // Top-right (+X, +Y)
-                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
-                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
-                    dxc = 1; dyc = 1; dzc = 0;     // Corner
+                case 2:
+                    side1_dx = 1; side1_dy = 0; side1_dz = 1;
+                    side2_dx = 0; side2_dy = 1; side2_dz = 1;
+                    corner_dx = 1; corner_dy = 1; corner_dz = 1;
                     break;
-                case 3: // Top-left (-X, +Y)
-                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
-                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
-                    dxc = -1; dyc = 1; dzc = 0;    // Corner
+                case 3:
+                    side1_dx = -1; side1_dy = 0; side1_dz = 1;
+                    side2_dx = 0; side2_dy = 1; side2_dz = 1;
+                    corner_dx = -1; corner_dy = 1; corner_dz = 1;
                     break;
             }
             break;
         }
-        case FACE_BACK: { // -Z face
+        case FACE_BACK: { // Back face - sample blocks behind (-Z)
             switch (vertexIndex) {
-                case 0: // Bottom-left (-X, -Y)
-                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
-                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side  
-                    dxc = -1; dyc = -1; dzc = 0;   // Corner
+                case 0:
+                    side1_dx = -1; side1_dy = 0; side1_dz = -1;
+                    side2_dx = 0; side2_dy = -1; side2_dz = -1;
+                    corner_dx = -1; corner_dy = -1; corner_dz = -1;
                     break;
-                case 1: // Bottom-right (+X, -Y)
-                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
-                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
-                    dxc = 1; dyc = -1; dzc = 0;    // Corner
+                case 1:
+                    side1_dx = 1; side1_dy = 0; side1_dz = -1;
+                    side2_dx = 0; side2_dy = -1; side2_dz = -1;
+                    corner_dx = 1; corner_dy = -1; corner_dz = -1;
                     break;
-                case 2: // Top-right (+X, +Y)
-                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
-                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
-                    dxc = 1; dyc = 1; dzc = 0;     // Corner
+                case 2:
+                    side1_dx = 1; side1_dy = 0; side1_dz = -1;
+                    side2_dx = 0; side2_dy = 1; side2_dz = -1;
+                    corner_dx = 1; corner_dy = 1; corner_dz = -1;
                     break;
-                case 3: // Top-left (-X, +Y)
-                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
-                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
-                    dxc = -1; dyc = 1; dzc = 0;    // Corner
+                case 3:
+                    side1_dx = -1; side1_dy = 0; side1_dz = -1;
+                    side2_dx = 0; side2_dy = 1; side2_dz = -1;
+                    corner_dx = -1; corner_dy = 1; corner_dz = -1;
                     break;
             }
             break;
         }
-        case FACE_LEFT: { // -X face
+        case FACE_LEFT: { // Left face - sample blocks to the left (-X)
             switch (vertexIndex) {
-                case 0: // Bottom-left (-Z, -Y)
-                    dx1 = 0; dy1 = 0; dz1 = -1;   // Front side
-                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
-                    dxc = 0; dyc = -1; dzc = -1;   // Corner
+                case 0:
+                    side1_dx = -1; side1_dy = 0; side1_dz = -1;
+                    side2_dx = -1; side2_dy = -1; side2_dz = 0;
+                    corner_dx = -1; corner_dy = -1; corner_dz = -1;
                     break;
-                case 1: // Bottom-right (+Z, -Y)
-                    dx1 = 0; dy1 = 0; dz1 = 1;    // Back side
-                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
-                    dxc = 0; dyc = -1; dzc = 1;    // Corner
+                case 1:
+                    side1_dx = -1; side1_dy = 0; side1_dz = 1;
+                    side2_dx = -1; side2_dy = -1; side2_dz = 0;
+                    corner_dx = -1; corner_dy = -1; corner_dz = 1;
                     break;
-                case 2: // Top-right (+Z, +Y)
-                    dx1 = 0; dy1 = 0; dz1 = 1;    // Back side
-                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
-                    dxc = 0; dyc = 1; dzc = 1;     // Corner
+                case 2:
+                    side1_dx = -1; side1_dy = 0; side1_dz = 1;
+                    side2_dx = -1; side2_dy = 1; side2_dz = 0;
+                    corner_dx = -1; corner_dy = 1; corner_dz = 1;
                     break;
-                case 3: // Top-left (-Z, +Y)
-                    dx1 = 0; dy1 = 0; dz1 = -1;   // Front side
-                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
-                    dxc = 0; dyc = 1; dzc = -1;    // Corner
+                case 3:
+                    side1_dx = -1; side1_dy = 0; side1_dz = -1;
+                    side2_dx = -1; side2_dy = 1; side2_dz = 0;
+                    corner_dx = -1; corner_dy = 1; corner_dz = -1;
                     break;
             }
             break;
         }
-        case FACE_RIGHT: { // +X face
+        case FACE_RIGHT: { // Right face - sample blocks to the right (+X)
             switch (vertexIndex) {
-                case 0: // Bottom-left (-Z, -Y)
-                    dx1 = 0; dy1 = 0; dz1 = -1;   // Front side
-                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
-                    dxc = 0; dyc = -1; dzc = -1;   // Corner
+                case 0:
+                    side1_dx = 1; side1_dy = 0; side1_dz = -1;
+                    side2_dx = 1; side2_dy = -1; side2_dz = 0;
+                    corner_dx = 1; corner_dy = -1; corner_dz = -1;
                     break;
-                case 1: // Bottom-right (+Z, -Y)
-                    dx1 = 0; dy1 = 0; dz1 = 1;    // Back side
-                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
-                    dxc = 0; dyc = -1; dzc = 1;    // Corner
+                case 1:
+                    side1_dx = 1; side1_dy = 0; side1_dz = 1;
+                    side2_dx = 1; side2_dy = -1; side2_dz = 0;
+                    corner_dx = 1; corner_dy = -1; corner_dz = 1;
                     break;
-                case 2: // Top-right (+Z, +Y)
-                    dx1 = 0; dy1 = 0; dz1 = 1;    // Back side
-                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
-                    dxc = 0; dyc = 1; dzc = 1;     // Corner
+                case 2:
+                    side1_dx = 1; side1_dy = 0; side1_dz = 1;
+                    side2_dx = 1; side2_dy = 1; side2_dz = 0;
+                    corner_dx = 1; corner_dy = 1; corner_dz = 1;
                     break;
-                case 3: // Top-left (-Z, +Y)  
-                    dx1 = 0; dy1 = 0; dz1 = -1;   // Front side
-                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
-                    dxc = 0; dyc = 1; dzc = -1;    // Corner
+                case 3:
+                    side1_dx = 1; side1_dy = 0; side1_dz = -1;
+                    side2_dx = 1; side2_dy = 1; side2_dz = 0;
+                    corner_dx = 1; corner_dy = 1; corner_dz = -1;
                     break;
             }
             break;
@@ -568,9 +571,9 @@ float Chunk::CalculateVertexAO(int x, int y, int z, int faceDirection, int verte
     }
     
     // Sample the 3 neighbor blocks
-    Block side1 = GetBlockAtOffset(x, y, z, dx1, dy1, dz1, world);
-    Block side2 = GetBlockAtOffset(x, y, z, dx2, dy2, dz2, world);
-    Block corner = GetBlockAtOffset(x, y, z, dxc, dyc, dzc, world);
+    Block side1 = GetBlockAtOffset(x, y, z, side1_dx, side1_dy, side1_dz, world);
+    Block side2 = GetBlockAtOffset(x, y, z, side2_dx, side2_dy, side2_dz, world);
+    Block corner = GetBlockAtOffset(x, y, z, corner_dx, corner_dy, corner_dz, world);
     
     // Convert to boolean (solid = true, air = false)
     bool s1 = !side1.IsAir();
@@ -579,10 +582,16 @@ float Chunk::CalculateVertexAO(int x, int y, int z, int faceDirection, int verte
     
     // Apply Minecraft's ambient occlusion formula
     if (s1 && s2) {
-        return 0.0f;  // Fully occluded
+        return 0.25f;  // Fully occluded - but not completely black
     }
     
-    // Return AO value normalized to 0-1 range
+    // Count number of occluding blocks and use more reasonable AO values
     int occluded = (s1 ? 1 : 0) + (s2 ? 1 : 0) + (c ? 1 : 0);
-    return (3.0f - occluded) / 3.0f;
+    switch (occluded) {
+        case 0: return 1.0f;   // No occlusion - full brightness
+        case 1: return 0.8f;   // Light occlusion
+        case 2: return 0.6f;   // Medium occlusion  
+        case 3: return 0.4f;   // Heavy occlusion
+        default: return 1.0f;
+    }
 } 
