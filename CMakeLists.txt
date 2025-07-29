@@ -11,11 +11,78 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Find packages
 find_package(OpenGL REQUIRED)
-find_package(glfw3 REQUIRED)
+find_package(PkgConfig QUIET)
 
-# If packages are not found, try to use vcpkg or build from source
+# Find GLFW
+find_package(glfw3 QUIET)
 if(NOT TARGET glfw)
-    message(STATUS "GLFW not found, trying to find it in third_party or system")
+    if(PkgConfig_FOUND)
+        pkg_check_modules(GLFW QUIET glfw3)
+        if(GLFW_FOUND)
+            add_library(glfw INTERFACE)
+            target_link_libraries(glfw INTERFACE ${GLFW_LIBRARIES})
+            target_include_directories(glfw INTERFACE ${GLFW_INCLUDE_DIRS})
+            target_compile_options(glfw INTERFACE ${GLFW_CFLAGS_OTHER})
+        endif()
+    endif()
+endif()
+
+# Find OpenGL loading library (prefer epoxy, fallback to GLEW or GLAD)
+set(OPENGL_LOADER_FOUND FALSE)
+
+# Try to find libepoxy first
+if(PkgConfig_FOUND)
+    pkg_check_modules(EPOXY QUIET epoxy)
+    if(EPOXY_FOUND)
+        set(OPENGL_LOADER_FOUND TRUE)
+        set(OPENGL_LOADER_NAME "epoxy")
+        add_library(opengl_loader INTERFACE)
+        target_link_libraries(opengl_loader INTERFACE ${EPOXY_LIBRARIES})
+        target_include_directories(opengl_loader INTERFACE ${EPOXY_INCLUDE_DIRS})
+        target_compile_options(opengl_loader INTERFACE ${EPOXY_CFLAGS_OTHER})
+        target_compile_definitions(opengl_loader INTERFACE USE_EPOXY)
+    endif()
+endif()
+
+# Fallback to find_library for epoxy if pkg-config didn't work
+if(NOT OPENGL_LOADER_FOUND)
+    find_library(EPOXY_LIBRARY NAMES epoxy)
+    find_path(EPOXY_INCLUDE_DIR NAMES epoxy/gl.h)
+    if(EPOXY_LIBRARY AND EPOXY_INCLUDE_DIR)
+        set(OPENGL_LOADER_FOUND TRUE)
+        set(OPENGL_LOADER_NAME "epoxy")
+        add_library(opengl_loader INTERFACE)
+        target_link_libraries(opengl_loader INTERFACE ${EPOXY_LIBRARY})
+        target_include_directories(opengl_loader INTERFACE ${EPOXY_INCLUDE_DIR})
+        target_compile_definitions(opengl_loader INTERFACE USE_EPOXY)
+    endif()
+endif()
+
+# Try GLEW as fallback
+if(NOT OPENGL_LOADER_FOUND)
+    find_package(GLEW QUIET)
+    if(GLEW_FOUND)
+        set(OPENGL_LOADER_FOUND TRUE)
+        set(OPENGL_LOADER_NAME "GLEW")
+        add_library(opengl_loader INTERFACE)
+        target_link_libraries(opengl_loader INTERFACE GLEW::GLEW)
+        target_compile_definitions(opengl_loader INTERFACE USE_GLEW)
+    endif()
+endif()
+
+# Final fallback: no loader library (use system OpenGL headers)
+if(NOT OPENGL_LOADER_FOUND)
+    message(WARNING "No OpenGL loading library found (epoxy, GLEW). Using system OpenGL headers.")
+    set(OPENGL_LOADER_NAME "system")
+    add_library(opengl_loader INTERFACE)
+    target_compile_definitions(opengl_loader INTERFACE USE_SYSTEM_OPENGL)
+endif()
+
+message(STATUS "Using OpenGL loader: ${OPENGL_LOADER_NAME}")
+
+# Verify we have GLFW
+if(NOT TARGET glfw AND NOT GLFW_FOUND)
+    message(FATAL_ERROR "GLFW not found. Please install GLFW development libraries.")
 endif()
 
 # Include directories
@@ -66,9 +133,17 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${IMGUI_SOURCES})
 # Link libraries
 target_link_libraries(${PROJECT_NAME} 
     OpenGL::GL
-    glfw
-    epoxy
+    opengl_loader
 )
+
+# Link GLFW
+if(TARGET glfw)
+    target_link_libraries(${PROJECT_NAME} glfw)
+elseif(GLFW_FOUND)
+    target_link_libraries(${PROJECT_NAME} ${GLFW_LIBRARIES})
+    target_include_directories(${PROJECT_NAME} PRIVATE ${GLFW_INCLUDE_DIRS})
+    target_compile_options(${PROJECT_NAME} PRIVATE ${GLFW_CFLAGS_OTHER})
+endif()
 
 # Platform-specific settings
 if(APPLE)
@@ -84,7 +159,6 @@ elseif(WIN32)
     )
 elseif(UNIX)
     target_link_libraries(${PROJECT_NAME}
-        GL
         X11
         pthread
         Xrandr
