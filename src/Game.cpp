@@ -219,7 +219,7 @@ void Game::ProcessInput() {
     
     // Player movement (only in game state and not paused)
     if (m_currentState == GameState::GAME && m_player && !m_showPauseMenu) {
-        m_player->ProcessInput(m_window, m_deltaTime);
+        m_player->ProcessInput(m_window, m_deltaTime, m_world.get());
     }
 }
 
@@ -271,6 +271,11 @@ void Game::UpdateMainMenu() {
 }
 
 void Game::UpdateGame() {
+    // Update player physics (gravity, etc.)
+    if (m_player) {
+        m_player->Update(m_deltaTime);
+    }
+    
     // Send player position updates to server
     static float lastPositionSend = 0.0f;
     const float positionSendInterval = 1.0f / 20.0f; // Send 20 times per second
@@ -512,6 +517,14 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
                 } else {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
                 }
+            }
+        }
+        
+        // Toggle survival mode with backslash key
+        if (key == GLFW_KEY_BACKSLASH && action == GLFW_PRESS) {
+            if (s_instance->m_currentState == GameState::GAME && s_instance->m_player && s_instance->m_world) {
+                s_instance->m_player->ToggleSurvivalMode(s_instance->m_world.get());
+                std::cout << "Survival mode: " << (s_instance->m_player->IsSurvivalMode() ? "ON" : "OFF") << std::endl;
             }
         }
     }

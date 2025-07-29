@@ -60,17 +60,40 @@ public:
     void MoveUp(float distance);
     void MoveDown(float distance);
     
+    // Survival mode
+    bool IsSurvivalMode() const { return m_isSurvivalMode; }
+    void SetSurvivalMode(bool enabled) { m_isSurvivalMode = enabled; }
+    bool CanEnterSurvivalMode() const;
+    bool CanEnterSurvivalMode(class World* world) const;
+    void ToggleSurvivalMode();
+    void ToggleSurvivalMode(class World* world);
+    
+    // Physics for survival mode
+    void ApplyGravity(float deltaTime);
+    void Update(float deltaTime);
+    
+    // Collision detection
+    bool CheckCollision(const Vec3& newPosition, class World* world) const;
+    Vec3 HandleCollision(const Vec3& newPosition, class World* world);
+    
+    // Player dimensions
+    float GetPlayerHeight() const { return 2.0f; }  // 2 blocks tall
+    float GetPlayerWidth() const { return 0.6f; }   // 0.6 blocks wide
+    
     // Mouse look
     void ProcessMouseMovement(float xOffset, float yOffset, float sensitivity = 0.1f);
     
     // Input processing
-    void ProcessInput(GLFWwindow* window, float deltaTime);
+    void ProcessInput(GLFWwindow* window, float deltaTime, class World* world);
     
     // Camera matrices
     Mat4 GetViewMatrix() const;
     Vec3 GetForwardVector() const;
     Vec3 GetRightVector() const;
     Vec3 GetUpVector() const;
+    
+    // Ground collision
+    bool IsOnGround(class World* world) const;
 
 private:
     Vec3 m_position;
@@ -79,6 +102,15 @@ private:
     
     // Movement speed
     float m_movementSpeed;
+    
+    // Survival mode physics
+    bool m_isSurvivalMode;
+    float m_verticalVelocity;  // For gravity
+    bool m_isOnGround;
+    
+    // Physics constants
+    static constexpr float GRAVITY = 32.0f;        // blocks per second squared
+    static constexpr float TERMINAL_VELOCITY = 78.4f; // Maximum fall speed
     
     // Helper functions
     void UpdateVectors();
