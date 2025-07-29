@@ -69,10 +69,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Base transformation matrix for the entire player
     // Player position represents center at ground level (feet)
     // Total player height is 1.8 blocks
-    // Apply rotation first (around local origin), then translation to world position
+    // Apply translation first, then rotation, so player rotates around their own center
     Mat4 translation = CreateTranslationMatrix(position.x, position.y, position.z);
     Mat4 yawRotation = CreateRotationYMatrix(normalizedYaw * M_PI / 180.0f);
-    Mat4 playerTransform = MultiplyMatrices(yawRotation, translation);
+    Mat4 playerTransform = MultiplyMatrices(translation, yawRotation);
     
     // Render Head (0.5x0.45x0.5 blocks) - top of player
     // Position: y + 1.575 (center of head at 1.575 blocks above feet)
