@@ -89,7 +89,7 @@ void Chunk::GenerateMesh(const World* world) {
                     // Check each face for visibility
                     for (int face = 0; face < 6; ++face) {
                         if (ShouldRenderFace(x, y, z, face, world)) {
-                            AddFaceToMesh(vertices, x, y, z, face);
+                            AddFaceToMesh(vertices, x, y, z, face, world);
                         }
                     }
                 }
@@ -112,14 +112,18 @@ void Chunk::GenerateMesh(const World* world) {
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
     
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Position attribute (x, y, z)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    
+    // Ambient occlusion attribute (ao)
+    glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     
-    m_vertexCount = vertices.size() / 3;
+    m_vertexCount = vertices.size() / 4;
     m_meshGenerated = true;
 }
 
@@ -171,89 +175,121 @@ Block Chunk::GetNeighborBlock(int x, int y, int z, int faceDirection, const Worl
     return Block(BlockType::AIR);
 }
 
-void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection) const {
+void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world) const {
     // Convert local chunk coordinates to world position for rendering
     float worldX = static_cast<float>(m_chunkX * CHUNK_WIDTH + x);
     float worldY = static_cast<float>(y);
     float worldZ = static_cast<float>(m_chunkZ * CHUNK_DEPTH + z);
     
-    // Face vertices (relative to block center)
-    float faceVertices[6][18]; // 6 faces, each with 6 vertices (2 triangles), each vertex has 3 coordinates
+    // Face vertices (relative to block center) - now includes AO values
+    // Each vertex: x, y, z, ao_value (4 floats per vertex)
     
-    // Front face (+Z)
-    float frontFace[18] = {
-        -0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f
-    };
-    
-    // Back face (-Z)
-    float backFace[18] = {
-        -0.5f, -0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f
-    };
-    
-    // Left face (-X)
-    float leftFace[18] = {
-        -0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f
-    };
-    
-    // Right face (+X)
-    float rightFace[18] = {
-         0.5f,  0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f,  0.5f
-    };
-    
-    // Bottom face (-Y)
-    float bottomFace[18] = {
-        -0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f, -0.5f
-    };
-    
-    // Top face (+Y)
-    float topFace[18] = {
-        -0.5f,  0.5f, -0.5f,
-        -0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f
-    };
-    
-    // Copy face data into array
-    for (int i = 0; i < 18; ++i) frontFace[i] = frontFace[i];
-    for (int i = 0; i < 18; ++i) faceVertices[FACE_FRONT][i] = frontFace[i];
-    for (int i = 0; i < 18; ++i) faceVertices[FACE_BACK][i] = backFace[i];
-    for (int i = 0; i < 18; ++i) faceVertices[FACE_LEFT][i] = leftFace[i];
-    for (int i = 0; i < 18; ++i) faceVertices[FACE_RIGHT][i] = rightFace[i];
-    for (int i = 0; i < 18; ++i) faceVertices[FACE_BOTTOM][i] = bottomFace[i];
-    for (int i = 0; i < 18; ++i) faceVertices[FACE_TOP][i] = topFace[i];
-    
-    // Add the face vertices to the mesh, translated to world position
-    for (int i = 0; i < 18; i += 3) {
-        vertices.push_back(faceVertices[faceDirection][i] + worldX);       // X
-        vertices.push_back(faceVertices[faceDirection][i + 1] + worldY);   // Y  
-        vertices.push_back(faceVertices[faceDirection][i + 2] + worldZ);   // Z
+    switch (faceDirection) {
+        case FACE_FRONT: { // +Z face
+            // Calculate AO for each vertex of the front face
+            float ao0 = CalculateVertexAO(x, y, z, FACE_FRONT, 0, world); // Bottom-left
+            float ao1 = CalculateVertexAO(x, y, z, FACE_FRONT, 1, world); // Bottom-right  
+            float ao2 = CalculateVertexAO(x, y, z, FACE_FRONT, 2, world); // Top-right
+            float ao3 = CalculateVertexAO(x, y, z, FACE_FRONT, 3, world); // Top-left
+            
+            float frontVertices[] = {
+                // Triangle 1
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0, // Bottom-left
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, // Bottom-right
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, // Top-right
+                // Triangle 2  
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, // Top-right
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao3, // Top-left
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0  // Bottom-left
+            };
+            vertices.insert(vertices.end(), frontVertices, frontVertices + 24);
+            break;
+        }
+        case FACE_BACK: { // -Z face
+            float ao0 = CalculateVertexAO(x, y, z, FACE_BACK, 0, world);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_BACK, 1, world);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_BACK, 2, world);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_BACK, 3, world);
+            
+            float backVertices[] = {
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0,
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2,
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao1,
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0
+            };
+            vertices.insert(vertices.end(), backVertices, backVertices + 24);
+            break;
+        }
+        case FACE_LEFT: { // -X face
+            float ao0 = CalculateVertexAO(x, y, z, FACE_LEFT, 0, world);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_LEFT, 1, world);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_LEFT, 2, world);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_LEFT, 3, world);
+            
+            float leftVertices[] = {
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0,
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1,
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3,
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0
+            };
+            vertices.insert(vertices.end(), leftVertices, leftVertices + 24);
+            break;
+        }
+        case FACE_RIGHT: { // +X face
+            float ao0 = CalculateVertexAO(x, y, z, FACE_RIGHT, 0, world);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_RIGHT, 1, world);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_RIGHT, 2, world);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_RIGHT, 3, world);
+            
+            float rightVertices[] = {
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1,
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0
+            };
+            vertices.insert(vertices.end(), rightVertices, rightVertices + 24);
+            break;
+        }
+        case FACE_BOTTOM: { // -Y face
+            float ao0 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 0, world);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 1, world);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 2, world);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 3, world);
+            
+            float bottomVertices[] = {
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0,
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao1,
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao2,
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao2,
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao3,
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0
+            };
+            vertices.insert(vertices.end(), bottomVertices, bottomVertices + 24);
+            break;
+        }
+        case FACE_TOP: { // +Y face
+            float ao0 = CalculateVertexAO(x, y, z, FACE_TOP, 0, world);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_TOP, 1, world);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_TOP, 2, world);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_TOP, 3, world);
+            
+            float topVertices[] = {
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao0,
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao3,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao1,
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao0
+            };
+            vertices.insert(vertices.end(), topVertices, topVertices + 24);
+            break;
+        }
     }
 }
 
@@ -341,4 +377,212 @@ double Chunk::Grad(int hash, double x, double z) const {
     double u = h < 2 ? x : z;
     double v = h < 2 ? z : x;
     return ((h & 1) ? -u : u) + ((h & 2) ? -2.0 * v : 2.0 * v);
+} 
+
+// Helper method to get a block at an arbitrary offset from the current position
+// Handles cross-chunk boundaries properly
+Block Chunk::GetBlockAtOffset(int x, int y, int z, int dx, int dy, int dz, const World* world) const {
+    int targetX = x + dx;
+    int targetY = y + dy;
+    int targetZ = z + dz;
+    
+    // If target is within this chunk, get it directly
+    if (IsValidPosition(targetX, targetY, targetZ)) {
+        return m_blocks[targetX][targetY][targetZ];
+    }
+    
+    // Target is outside this chunk - convert to world coordinates and query world
+    if (world) {
+        int worldX = m_chunkX * CHUNK_WIDTH + targetX;
+        int worldY = targetY;
+        int worldZ = m_chunkZ * CHUNK_DEPTH + targetZ;
+        
+        return world->GetBlock(worldX, worldY, worldZ);
+    }
+    
+    // No world access - assume air
+    return Block(BlockType::AIR);
+}
+
+// Calculate ambient occlusion for a specific vertex of a face
+// Uses Minecraft's algorithm: sample 3 neighbors (2 sides + 1 corner)
+float Chunk::CalculateVertexAO(int x, int y, int z, int faceDirection, int vertexIndex, const World* world) const {
+    // For each face and vertex combination, we need to sample 3 specific neighbor blocks
+    // The pattern is always: 2 edge-adjacent blocks + 1 corner-adjacent block
+    
+    int dx1 = 0, dy1 = 0, dz1 = 0;  // First side neighbor
+    int dx2 = 0, dy2 = 0, dz2 = 0;  // Second side neighbor  
+    int dxc = 0, dyc = 0, dzc = 0;  // Corner neighbor
+    
+    switch (faceDirection) {
+        case FACE_TOP: { // +Y face (looking down at face)
+            switch (vertexIndex) {
+                case 0: // Bottom-left (-X, -Z)
+                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
+                    dx2 = 0; dy2 = 0; dz2 = -1;   // Front side
+                    dxc = -1; dyc = 0; dzc = -1;   // Corner
+                    break;
+                case 1: // Bottom-right (+X, -Z)  
+                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
+                    dx2 = 0; dy2 = 0; dz2 = -1;   // Front side
+                    dxc = 1; dyc = 0; dzc = -1;    // Corner
+                    break;
+                case 2: // Top-right (+X, +Z)
+                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side  
+                    dx2 = 0; dy2 = 0; dz2 = 1;    // Back side
+                    dxc = 1; dyc = 0; dzc = 1;     // Corner
+                    break;
+                case 3: // Top-left (-X, +Z)
+                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
+                    dx2 = 0; dy2 = 0; dz2 = 1;    // Back side  
+                    dxc = -1; dyc = 0; dzc = 1;    // Corner
+                    break;
+            }
+            break;
+        }
+        case FACE_BOTTOM: { // -Y face (looking up at face)
+            switch (vertexIndex) {
+                case 0: // Bottom-left (-X, -Z)
+                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
+                    dx2 = 0; dy2 = 0; dz2 = -1;   // Front side
+                    dxc = -1; dyc = 0; dzc = -1;   // Corner
+                    break;
+                case 1: // Bottom-right (+X, -Z)
+                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
+                    dx2 = 0; dy2 = 0; dz2 = -1;   // Front side
+                    dxc = 1; dyc = 0; dzc = -1;    // Corner
+                    break;
+                case 2: // Top-right (+X, +Z)
+                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
+                    dx2 = 0; dy2 = 0; dz2 = 1;    // Back side
+                    dxc = 1; dyc = 0; dzc = 1;     // Corner
+                    break;
+                case 3: // Top-left (-X, +Z)
+                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
+                    dx2 = 0; dy2 = 0; dz2 = 1;    // Back side
+                    dxc = -1; dyc = 0; dzc = 1;    // Corner
+                    break;
+            }
+            break;
+        }
+        case FACE_FRONT: { // +Z face
+            switch (vertexIndex) {
+                case 0: // Bottom-left (-X, -Y)
+                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
+                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
+                    dxc = -1; dyc = -1; dzc = 0;   // Corner
+                    break;
+                case 1: // Bottom-right (+X, -Y)
+                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
+                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
+                    dxc = 1; dyc = -1; dzc = 0;    // Corner
+                    break;
+                case 2: // Top-right (+X, +Y)
+                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
+                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
+                    dxc = 1; dyc = 1; dzc = 0;     // Corner
+                    break;
+                case 3: // Top-left (-X, +Y)
+                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
+                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
+                    dxc = -1; dyc = 1; dzc = 0;    // Corner
+                    break;
+            }
+            break;
+        }
+        case FACE_BACK: { // -Z face
+            switch (vertexIndex) {
+                case 0: // Bottom-left (-X, -Y)
+                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
+                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side  
+                    dxc = -1; dyc = -1; dzc = 0;   // Corner
+                    break;
+                case 1: // Bottom-right (+X, -Y)
+                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
+                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
+                    dxc = 1; dyc = -1; dzc = 0;    // Corner
+                    break;
+                case 2: // Top-right (+X, +Y)
+                    dx1 = 1; dy1 = 0; dz1 = 0;    // Right side
+                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
+                    dxc = 1; dyc = 1; dzc = 0;     // Corner
+                    break;
+                case 3: // Top-left (-X, +Y)
+                    dx1 = -1; dy1 = 0; dz1 = 0;   // Left side
+                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
+                    dxc = -1; dyc = 1; dzc = 0;    // Corner
+                    break;
+            }
+            break;
+        }
+        case FACE_LEFT: { // -X face
+            switch (vertexIndex) {
+                case 0: // Bottom-left (-Z, -Y)
+                    dx1 = 0; dy1 = 0; dz1 = -1;   // Front side
+                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
+                    dxc = 0; dyc = -1; dzc = -1;   // Corner
+                    break;
+                case 1: // Bottom-right (+Z, -Y)
+                    dx1 = 0; dy1 = 0; dz1 = 1;    // Back side
+                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
+                    dxc = 0; dyc = -1; dzc = 1;    // Corner
+                    break;
+                case 2: // Top-right (+Z, +Y)
+                    dx1 = 0; dy1 = 0; dz1 = 1;    // Back side
+                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
+                    dxc = 0; dyc = 1; dzc = 1;     // Corner
+                    break;
+                case 3: // Top-left (-Z, +Y)
+                    dx1 = 0; dy1 = 0; dz1 = -1;   // Front side
+                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
+                    dxc = 0; dyc = 1; dzc = -1;    // Corner
+                    break;
+            }
+            break;
+        }
+        case FACE_RIGHT: { // +X face
+            switch (vertexIndex) {
+                case 0: // Bottom-left (-Z, -Y)
+                    dx1 = 0; dy1 = 0; dz1 = -1;   // Front side
+                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
+                    dxc = 0; dyc = -1; dzc = -1;   // Corner
+                    break;
+                case 1: // Bottom-right (+Z, -Y)
+                    dx1 = 0; dy1 = 0; dz1 = 1;    // Back side
+                    dx2 = 0; dy2 = -1; dz2 = 0;   // Bottom side
+                    dxc = 0; dyc = -1; dzc = 1;    // Corner
+                    break;
+                case 2: // Top-right (+Z, +Y)
+                    dx1 = 0; dy1 = 0; dz1 = 1;    // Back side
+                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
+                    dxc = 0; dyc = 1; dzc = 1;     // Corner
+                    break;
+                case 3: // Top-left (-Z, +Y)  
+                    dx1 = 0; dy1 = 0; dz1 = -1;   // Front side
+                    dx2 = 0; dy2 = 1; dz2 = 0;    // Top side
+                    dxc = 0; dyc = 1; dzc = -1;    // Corner
+                    break;
+            }
+            break;
+        }
+    }
+    
+    // Sample the 3 neighbor blocks
+    Block side1 = GetBlockAtOffset(x, y, z, dx1, dy1, dz1, world);
+    Block side2 = GetBlockAtOffset(x, y, z, dx2, dy2, dz2, world);
+    Block corner = GetBlockAtOffset(x, y, z, dxc, dyc, dzc, world);
+    
+    // Convert to boolean (solid = true, air = false)
+    bool s1 = !side1.IsAir();
+    bool s2 = !side2.IsAir();
+    bool c = !corner.IsAir();
+    
+    // Apply Minecraft's ambient occlusion formula
+    if (s1 && s2) {
+        return 0.0f;  // Fully occluded
+    }
+    
+    // Return AO value normalized to 0-1 range
+    int occluded = (s1 ? 1 : 0) + (s2 ? 1 : 0) + (c ? 1 : 0);
+    return (3.0f - occluded) / 3.0f;
 } 

@@ -65,7 +65,11 @@ private:
     // Face culling helpers
     bool ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world) const;
     Block GetNeighborBlock(int x, int y, int z, int faceDirection, const World* world) const;
-    void AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection) const;
+    void AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world) const;
+    
+    // Ambient occlusion calculation
+    float CalculateVertexAO(int x, int y, int z, int faceDirection, int vertexIndex, const World* world) const;
+    Block GetBlockAtOffset(int x, int y, int z, int dx, int dy, int dz, const World* world) const;
     
     // Face direction constants
     enum Face {
