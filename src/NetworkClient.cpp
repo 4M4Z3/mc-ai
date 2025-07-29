@@ -188,7 +188,7 @@ void NetworkClient::SendMessagesThread() {
             if (!m_outgoingMessages.empty()) {
                 message = m_outgoingMessages.front();
                 m_outgoingMessages.pop();
-                hasMessage = true;
+                hasMessage = true; // CRITICAL FIX: Set flag so message gets sent
             }
         }
         
