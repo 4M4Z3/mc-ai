@@ -3,14 +3,10 @@
 #include <sstream>
 #include <cstring>
 
-NetworkClient::NetworkClient()
-    : m_socket(INVALID_SOCKET)
-    , m_connected(false)
-    , m_serverPort(8080)
+NetworkClient::NetworkClient() : m_socket(INVALID_SOCKET), m_connected(false), m_shouldStopSending(false), m_serverPort(8080) {
 #ifdef _WIN32
-    , m_winsockInitialized(false)
+    m_winsockInitialized = false;
 #endif
-{
 }
 
 NetworkClient::~NetworkClient() {
@@ -87,7 +83,9 @@ bool NetworkClient::Connect(const std::string& serverIP, int port) {
     }
     
     m_connected = true;
+    m_shouldStopSending = false;
     m_receiveThread = std::thread(&NetworkClient::ReceiveMessages, this);
+    m_sendThread = std::thread(&NetworkClient::SendMessagesThread, this);
     
     std::cout << "[CLIENT] Successfully connected to server " << serverIP << ":" << port << std::endl;
     return true;
@@ -99,6 +97,12 @@ void NetworkClient::Disconnect() {
     }
     
     m_connected = false;
+    m_shouldStopSending = true;
+    
+    // Wait for send thread to finish
+    if (m_sendThread.joinable()) {
+        m_sendThread.join();
+    }
     
     // Close socket
     if (m_socket != INVALID_SOCKET) {
@@ -135,11 +139,7 @@ void NetworkClient::SendPlayerPosition(const PlayerPosition& position) {
     message.playerId = 0; // Server will assign the correct player ID
     message.position = position;
     
-    int bytesSent = send(m_socket, (const char*)&message, sizeof(NetworkMessage), 0);
-    if (bytesSent == SOCKET_ERROR) {
-        std::cerr << "Failed to send position update to server" << std::endl;
-        // Could trigger disconnect here if needed
-    }
+    QueueMessage(message);
 }
 
 void NetworkClient::SendBlockBreak(int32_t x, int32_t y, int32_t z) {
@@ -154,29 +154,77 @@ void NetworkClient::SendBlockBreak(int32_t x, int32_t y, int32_t z) {
     message.blockPos.y = y;
     message.blockPos.z = z;
     
-    int bytesSent = send(m_socket, (const char*)&message, sizeof(NetworkMessage), 0);
-    if (bytesSent == SOCKET_ERROR) {
-        std::cerr << "Failed to send block break to server" << std::endl;
-    }
+    QueueMessage(message);
 }
 
-void NetworkClient::RequestChunk(int32_t chunkX, int32_t chunkZ) {
+void NetworkClient::RequestChunk(int32_t chunkX, int32_t chunkZ)
+{
     if (!m_connected) {
         return;
     }
     
     NetworkMessage message;
     message.type = NetworkMessage::CHUNK_REQUEST;
-    message.playerId = 0; // Server will identify the client
+    message.playerId = 0; // Server will assign the correct player ID
     message.chunkData.chunkX = chunkX;
     message.chunkData.chunkZ = chunkZ;
     
     int bytesSent = send(m_socket, (const char*)&message, sizeof(NetworkMessage), 0);
     if (bytesSent == SOCKET_ERROR) {
-        std::cerr << "Failed to send chunk request to server" << std::endl;
+        std::cerr << "Failed to request chunk from server" << std::endl;
     } else {
         std::cout << "[CLIENT] Requested chunk (" << chunkX << ", " << chunkZ << ") from server" << std::endl;
     }
+}
+
+void NetworkClient::SendMessagesThread() {
+    while (m_connected && !m_shouldStopSending) {
+        NetworkMessage message;
+        bool hasMessage = false;
+        
+        // Check for outgoing messages
+        {
+            std::lock_guard<std::mutex> lock(m_outgoingMessagesMutex);
+            if (!m_outgoingMessages.empty()) {
+                message = m_outgoingMessages.front();
+                m_outgoingMessages.pop();
+                hasMessage = true;
+            }
+        }
+        
+        if (hasMessage) {
+            // Send the message
+            size_t messageSize = sizeof(NetworkMessage);
+            size_t totalBytesSent = 0;
+            const char* messageBuffer = reinterpret_cast<const char*>(&message);
+            
+            while (totalBytesSent < messageSize && m_connected) {
+                int bytesSent = send(m_socket, 
+                                   messageBuffer + totalBytesSent, 
+                                   messageSize - totalBytesSent, 
+                                   0);
+                
+                if (bytesSent == SOCKET_ERROR) {
+                    std::cerr << "[CLIENT] Failed to send message type " << (int)message.type << std::endl;
+                    break;
+                }
+                
+                totalBytesSent += bytesSent;
+            }
+        } else {
+            // No messages, sleep briefly to avoid busy waiting
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+}
+
+void NetworkClient::QueueMessage(const NetworkMessage& message) {
+    if (!m_connected) {
+        return;
+    }
+    
+    std::lock_guard<std::mutex> lock(m_outgoingMessagesMutex);
+    m_outgoingMessages.push(message);
 }
 
 void NetworkClient::ReceiveMessages() {

@@ -7,6 +7,7 @@
 #include <atomic>
 #include <unordered_map>
 #include <functional>
+#include <queue> // Added for outgoing message queue
 
 class NetworkClient {
 public:
@@ -65,6 +66,15 @@ private:
     std::function<void(float)> m_onGameTime;
     std::function<void(uint32_t, int32_t, int32_t, int32_t)> m_onBlockBreak;
     std::function<void(int32_t, int32_t, const uint8_t*)> m_onChunkData;
+    
+    // Thread-safe outgoing message queue
+    std::queue<NetworkMessage> m_outgoingMessages;
+    std::mutex m_outgoingMessagesMutex;
+    std::thread m_sendThread;
+    std::atomic<bool> m_shouldStopSending;
+    
+    void SendMessagesThread();
+    void QueueMessage(const NetworkMessage& message);
     
     std::string m_serverIP;
     int m_serverPort;
