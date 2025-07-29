@@ -301,8 +301,8 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                                 }
                                 
                                 // Define thresholds for server-side filtering
-                                const float POSITION_THRESHOLD = 0.01f;
-                                const float ROTATION_THRESHOLD = 0.5f;
+                                const float POSITION_THRESHOLD = 0.05f;
+                                const float ROTATION_THRESHOLD = 1.0f;
                                 
                                 if (positionDelta >= POSITION_THRESHOLD || 
                                     yawDelta >= ROTATION_THRESHOLD ||
@@ -321,7 +321,8 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     // Only broadcast if position changed significantly
                     if (shouldBroadcast) {
                         message.playerId = playerId;
-                        BroadcastToAllClients(message, playerId);
+                        // Don't exclude the sender for position updates - they need to see themselves in other clients' views
+                        BroadcastToAllClients(message);
                     }
                     break;
                 }

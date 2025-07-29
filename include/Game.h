@@ -138,8 +138,8 @@ private:
     // Player position change detection for networking
     PlayerPosition m_lastSentPlayerPosition;
     bool m_hasLastSentPosition;
-    static constexpr float POSITION_CHANGE_THRESHOLD = 0.01f; // Minimum position change to send update
-    static constexpr float ROTATION_CHANGE_THRESHOLD = 0.5f;  // Minimum rotation change (degrees) to send update
+    static constexpr float POSITION_CHANGE_THRESHOLD = 0.05f; // Minimum position change to send update
+    static constexpr float ROTATION_CHANGE_THRESHOLD = 1.0f;  // Minimum rotation change (degrees) to send update
     
     // Mouse input
     bool m_firstMouse;
