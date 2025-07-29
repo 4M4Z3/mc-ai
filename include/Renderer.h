@@ -59,6 +59,7 @@ private:
     // Special grass block textures (different per face)
     unsigned int m_grassTopTexture;
     unsigned int m_grassSideTexture;
+    unsigned int m_grassSideOverlayTexture;
     unsigned int m_grassBottomTexture;
     
     unsigned int LoadTexture(const std::string& filepath);

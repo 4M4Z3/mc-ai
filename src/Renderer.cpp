@@ -220,6 +220,24 @@ void Renderer::Shutdown() {
         }
     }
     m_blockTextures.clear();
+    
+    // Clean up grass textures
+    if (m_grassTopTexture != 0) {
+        glDeleteTextures(1, &m_grassTopTexture);
+        m_grassTopTexture = 0;
+    }
+    if (m_grassSideTexture != 0) {
+        glDeleteTextures(1, &m_grassSideTexture);
+        m_grassSideTexture = 0;
+    }
+    if (m_grassSideOverlayTexture != 0) {
+        glDeleteTextures(1, &m_grassSideOverlayTexture);
+        m_grassSideOverlayTexture = 0;
+    }
+    if (m_grassBottomTexture != 0) {
+        glDeleteTextures(1, &m_grassBottomTexture);
+        m_grassBottomTexture = 0;
+    }
 }
 
 void Renderer::Clear() {
@@ -298,7 +316,7 @@ void Renderer::RenderChunks(const World& world) {
                 }
             }
             
-            // Render grass side faces
+            // Render grass side faces with base texture
             glBindTexture(GL_TEXTURE_2D, m_grassSideTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -310,6 +328,21 @@ void Renderer::RenderChunks(const World& world) {
                     }
                 }
             }
+            
+            // Render grass side overlay on top - disable depth writing so it renders over base
+            glDepthMask(GL_FALSE); // Don't write to depth buffer
+            glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    int chunkX = x - 3;
+                    int chunkZ = z - 3;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                    if (chunk && chunk->HasMesh()) {
+                        chunk->RenderGrassFace(Chunk::GRASS_SIDE);
+                    }
+                }
+            }
+            glDepthMask(GL_TRUE); // Re-enable depth writing
             
             // Render grass bottom faces
             glBindTexture(GL_TEXTURE_2D, m_grassBottomTexture);
@@ -641,6 +674,7 @@ bool Renderer::LoadBlockTextures() {
     // Load grass textures (BlockType::GRASS = 3)
     m_grassTopTexture = LoadTexture("assets/block/grass_block_top.png");
     m_grassSideTexture = LoadTexture("assets/block/grass_block_side.png");
+    m_grassSideOverlayTexture = LoadTexture("assets/block/grass_block_side_overlay.png");
     m_grassBottomTexture = LoadTexture("assets/block/dirt.png"); // Use dirt texture for grass bottom
     
     // For now, set grass block texture to side texture (will be overridden per face)
