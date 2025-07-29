@@ -301,14 +301,8 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     if (m_world) {
                         m_world->SetBlock(message.blockPos.x, message.blockPos.y, message.blockPos.z, BlockType::AIR);
                         
-                        // Regenerate affected chunk meshes on server (if needed for server-side logic)
-                        int chunkX, chunkZ, localX, localZ;
-                        m_world->WorldToChunkCoords(message.blockPos.x, message.blockPos.z, chunkX, chunkZ, localX, localZ);
-                        
-                        Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
-                        if (chunk) {
-                            chunk->GenerateMesh(m_world.get());
-                        }
+                        // Server doesn't need to generate meshes - only clients do
+                        // Mesh generation happens on each client when they receive the message
                     }
                     
                     // Broadcast block break to all clients (including the sender for confirmation)
