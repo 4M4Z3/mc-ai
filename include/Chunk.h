@@ -53,6 +53,9 @@ public:
     
     // Mesh generation and rendering
     void GenerateMesh(const World* world);
+    void UpdateBlockMesh(int x, int y, int z, const World* world); // Incremental mesh update for single block
+    void BatchBlockUpdate(int x, int y, int z, BlockType oldType, BlockType newType); // Queue block update for batching
+    void ProcessBatchedUpdates(const World* world); // Process all batched updates at once
     void RenderMesh() const;
     void RenderMeshForBlockType(BlockType blockType) const;
     void RenderGrassMesh(GrassFaceType faceType) const;
@@ -84,6 +87,15 @@ private:
     std::unordered_map<GrassFaceType, BlockMesh> m_grassFaceMeshes;
     
     bool m_meshGenerated;
+    
+    // Batched update system for efficiency
+    struct PendingBlockUpdate {
+        int x, y, z;
+        BlockType oldType;
+        BlockType newType;
+    };
+    std::vector<PendingBlockUpdate> m_pendingUpdates;
+    bool m_hasPendingUpdates = false;
     
     // Face culling helpers
     bool ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world) const;

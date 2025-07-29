@@ -371,6 +371,28 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     break;
                 }
                 
+                case NetworkMessage::BLOCK_UPDATE:
+                {
+                    std::cout << "[SERVER] Player " << playerId << " updated block at (" 
+                              << message.blockUpdate.x << ", " << message.blockUpdate.y << ", " << message.blockUpdate.z 
+                              << ") to type " << (int)message.blockUpdate.blockType << std::endl;
+                    
+                    // Apply block update to server world
+                    if (m_world) {
+                        m_world->SetBlock(message.blockUpdate.x, message.blockUpdate.y, message.blockUpdate.z, 
+                                        static_cast<BlockType>(message.blockUpdate.blockType));
+                        std::cout << "[SERVER] Applied block update to server world" << std::endl;
+                    }
+                    
+                    // Set the player ID for the message
+                    message.playerId = playerId;
+                    
+                    // Broadcast to ALL clients (including sender for consistency)
+                    BroadcastToAllClients(message);
+                    std::cout << "[SERVER] Broadcasted block update to all clients" << std::endl;
+                    break;
+                }
+                
                 case NetworkMessage::CHUNK_REQUEST:
                 {
                     std::cout << "[SERVER] Player " << playerId << " requested chunk (" 

@@ -831,13 +831,13 @@ void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int m
                 
                 std::cout << "Breaking block at (" << blockX << ", " << blockY << ", " << blockZ << ")" << std::endl;
                 
-                // Break the block immediately on client (client prediction)
-                s_instance->m_world->SetBlock(blockX, blockY, blockZ, BlockType::AIR);
+                // Break the block immediately on client (client prediction) with efficient mesh update
+                s_instance->m_world->SetBlockWithMeshUpdate(blockX, blockY, blockZ, BlockType::AIR);
                 
-                // Send to server for synchronization with other clients
+                // Send to server for synchronization with other clients using the new streaming system
                 if (s_instance->m_networkClient && s_instance->m_networkClient->IsConnected()) {
-                    std::cout << "[CLIENT] Sending block break to server at (" << blockX << ", " << blockY << ", " << blockZ << ")" << std::endl;
-                    s_instance->m_networkClient->SendBlockBreak(blockX, blockY, blockZ);
+                    std::cout << "[CLIENT] Sending block update to server at (" << blockX << ", " << blockY << ", " << blockZ << ") to AIR" << std::endl;
+                    s_instance->m_networkClient->SendBlockUpdate(blockX, blockY, blockZ, static_cast<uint8_t>(BlockType::AIR));
                 }
             }
         }
@@ -1265,19 +1265,32 @@ void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t
     
     // Apply block break to client world (this is from another player or server confirmation)
     if (m_world) {
-        m_world->SetBlock(x, y, z, BlockType::AIR);
-        
-        // Regenerate affected chunk meshes
-        int chunkX, chunkZ, localX, localZ;
-        m_world->WorldToChunkCoords(x, z, chunkX, chunkZ, localX, localZ);
-        
-        // Regenerate the chunk containing the broken block
-        Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
-        if (chunk) {
-            chunk->GenerateMesh(m_world.get());
+        try {
+            // Use efficient mesh update method
+            m_world->SetBlockWithMeshUpdate(x, y, z, BlockType::AIR);
+            std::cout << "[CLIENT] Applied block break at (" << x << ", " << y << ", " << z << ") with incremental mesh update" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "[CLIENT] Error processing block break: " << e.what() << std::endl;
         }
-        
-        std::cout << "[CLIENT] Applied block break at (" << x << ", " << y << ", " << z << ") and regenerated chunk mesh" << std::endl;
+    } else {
+        std::cout << "[CLIENT] Warning: No world available for block break at (" << x << ", " << y << ", " << z << ")" << std::endl;
+    }
+}
+
+void Game::OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType) {
+    std::cout << "[CLIENT] Received block update from player " << playerId << " at (" << x << ", " << y << ", " << z << ") to type " << (int)blockType << std::endl;
+    
+    // Apply block update to client world (this is from another player or server confirmation)
+    if (m_world) {
+        try {
+            // Use efficient mesh update method
+            m_world->SetBlockWithMeshUpdate(x, y, z, static_cast<BlockType>(blockType));
+            std::cout << "[CLIENT] Applied block update at (" << x << ", " << y << ", " << z << ") to type " << (int)blockType << " with incremental mesh update" << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "[CLIENT] Error processing block update: " << e.what() << std::endl;
+        }
+    } else {
+        std::cout << "[CLIENT] Warning: No world available for block update at (" << x << ", " << y << ", " << z << ")" << std::endl;
     }
 }
 

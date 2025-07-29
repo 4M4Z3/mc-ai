@@ -84,6 +84,81 @@ void World::SetBlock(int worldX, int worldY, int worldZ, const Block& block) {
     }
 }
 
+void World::SetBlockWithMeshUpdate(int worldX, int worldY, int worldZ, BlockType type) {
+    if (!IsValidWorldPosition(worldX, worldY, worldZ)) {
+        return;
+    }
+    
+    int chunkX, chunkZ, localX, localZ;
+    WorldToChunkCoords(worldX, worldZ, chunkX, chunkZ, localX, localZ);
+    
+    Chunk* chunk = GetChunk(chunkX, chunkZ);
+    if (chunk) {
+        chunk->SetBlock(localX, worldY, localZ, type);
+        chunk->UpdateBlockMesh(localX, worldY, localZ, this);
+        
+        // Update neighboring chunks if block is on chunk boundary
+        UpdateNeighboringChunks(worldX, worldY, worldZ);
+    }
+}
+
+void World::UpdateNeighboringChunks(int worldX, int worldY, int worldZ) {
+    int chunkX, chunkZ, localX, localZ;
+    WorldToChunkCoords(worldX, worldZ, chunkX, chunkZ, localX, localZ);
+    
+    // Check if block is on chunk boundaries
+    bool onLeftEdge = (localX == 0);
+    bool onRightEdge = (localX == CHUNK_WIDTH - 1);
+    bool onBackEdge = (localZ == 0);
+    bool onFrontEdge = (localZ == CHUNK_DEPTH - 1);
+    
+    // Update neighboring chunks that might be affected
+    if (onLeftEdge) {
+        Chunk* leftChunk = GetChunk(chunkX - 1, chunkZ);
+        if (leftChunk) leftChunk->UpdateBlockMesh(CHUNK_WIDTH - 1, worldY, localZ, this);
+    }
+    
+    if (onRightEdge) {
+        Chunk* rightChunk = GetChunk(chunkX + 1, chunkZ);
+        if (rightChunk) rightChunk->UpdateBlockMesh(0, worldY, localZ, this);
+    }
+    
+    if (onBackEdge) {
+        Chunk* backChunk = GetChunk(chunkX, chunkZ - 1);
+        if (backChunk) backChunk->UpdateBlockMesh(localX, worldY, CHUNK_DEPTH - 1, this);
+    }
+    
+    if (onFrontEdge) {
+        Chunk* frontChunk = GetChunk(chunkX, chunkZ + 1);
+        if (frontChunk) frontChunk->UpdateBlockMesh(localX, worldY, 0, this);
+    }
+}
+
+void World::SetBlockBatched(int worldX, int worldY, int worldZ, BlockType type) {
+    if (!IsValidWorldPosition(worldX, worldY, worldZ)) {
+        return;
+    }
+    
+    int chunkX, chunkZ, localX, localZ;
+    WorldToChunkCoords(worldX, worldZ, chunkX, chunkZ, localX, localZ);
+    
+    Chunk* chunk = GetChunk(chunkX, chunkZ);
+    if (chunk) {
+        BlockType oldType = chunk->GetBlock(localX, worldY, localZ).GetType();
+        chunk->BatchBlockUpdate(localX, worldY, localZ, oldType, type);
+    }
+}
+
+void World::ProcessAllBatchedUpdates() {
+    for (int x = 0; x < WORLD_SIZE; ++x) {
+        for (int z = 0; z < WORLD_SIZE; ++z) {
+            if (m_chunks[x][z]) {
+                m_chunks[x][z]->ProcessBatchedUpdates(this);
+            }
+        }
+    }
+}
+
 Chunk* World::GetChunk(int chunkX, int chunkZ) {
     int arrayX, arrayZ;
     ChunkCoordsToArrayIndex(chunkX, chunkZ, arrayX, arrayZ);

@@ -213,6 +213,49 @@ void Chunk::GenerateMesh(const World* world) {
     m_meshGenerated = true;
 }
 
+void Chunk::UpdateBlockMesh(int x, int y, int z, const World* world) {
+    // For now, fall back to full mesh regeneration
+    // TODO: Implement truly incremental mesh updates
+    GenerateMesh(world);
+}
+
+void Chunk::BatchBlockUpdate(int x, int y, int z, BlockType oldType, BlockType newType) {
+    PendingBlockUpdate update;
+    update.x = x;
+    update.y = y;
+    update.z = z;
+    update.oldType = oldType;
+    update.newType = newType;
+    
+    m_pendingUpdates.push_back(update);
+    m_hasPendingUpdates = true;
+}
+
+void Chunk::ProcessBatchedUpdates(const World* world) {
+    if (!m_hasPendingUpdates || m_pendingUpdates.empty()) {
+        return;
+    }
+    
+    std::cout << "[CHUNK] Processing " << m_pendingUpdates.size() << " batched block updates for chunk (" 
+              << m_chunkX << ", " << m_chunkZ << ")" << std::endl;
+    
+    // Apply all pending updates to the chunk
+    for (const auto& update : m_pendingUpdates) {
+        if (IsValidPosition(update.x, update.y, update.z)) {
+            m_blocks[update.x][update.y][update.z].SetType(update.newType);
+        }
+    }
+    
+    // Clear pending updates
+    m_pendingUpdates.clear();
+    m_hasPendingUpdates = false;
+    
+    // Regenerate mesh once for all updates
+    GenerateMesh(world);
+    
+    std::cout << "[CHUNK] Completed batched mesh update for chunk (" << m_chunkX << ", " << m_chunkZ << ")" << std::endl;
+}
+
 void Chunk::RenderMesh() const {
     // This method now renders all block types - but we'll change this approach
     for (const auto& pair : m_blockMeshes) {

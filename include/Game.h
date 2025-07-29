@@ -184,6 +184,7 @@ private:
     void OnGameTimeReceived(float gameTime);
     void OnMyPlayerIdReceived(uint32_t myPlayerId); // Handle receiving own player ID
     void OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z);
+    void OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType);
     void OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData);
     
     // Time utility methods

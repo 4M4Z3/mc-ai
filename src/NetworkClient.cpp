@@ -257,6 +257,8 @@ void NetworkClient::QueueMessage(const NetworkMessage& message) {
     std::cout << "[CLIENT] Queuing message type " << (int)message.type;
     if (message.type == NetworkMessage::BLOCK_BREAK) {
         std::cout << " - block break at (" << message.blockPos.x << ", " << message.blockPos.y << ", " << message.blockPos.z << ")";
+    } else if (message.type == NetworkMessage::BLOCK_UPDATE) {
+        std::cout << " - block update at (" << message.blockUpdate.x << ", " << message.blockUpdate.y << ", " << message.blockUpdate.z << ") to type " << (int)message.blockUpdate.blockType;
     }
     std::cout << std::endl;
     
