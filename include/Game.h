@@ -135,6 +135,12 @@ private:
     float m_gameTime; // Current game time (0-900 seconds)
     bool m_gameTimeReceived;
     
+    // Player position change detection for networking
+    PlayerPosition m_lastSentPlayerPosition;
+    bool m_hasLastSentPosition;
+    static constexpr float POSITION_CHANGE_THRESHOLD = 0.01f; // Minimum position change to send update
+    static constexpr float ROTATION_CHANGE_THRESHOLD = 0.5f;  // Minimum rotation change (degrees) to send update
+    
     // Mouse input
     bool m_firstMouse;
     double m_lastX, m_lastY;

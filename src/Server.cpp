@@ -277,11 +277,40 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
             switch (message.type) {
                 case NetworkMessage::PLAYER_POSITION:
                 {
-                    // Update player position
+                    bool shouldBroadcast = false;
+                    
+                    // Update player position and check if it changed significantly
                     {
                         std::lock_guard<std::mutex> lock(m_clientsMutex);
                         for (auto& client : m_clients) {
                             if (client && client->playerId == playerId && client->active) {
+                                // Check for position changes
+                                float positionDelta = sqrtf(
+                                    (message.position.x - client->position.x) * (message.position.x - client->position.x) +
+                                    (message.position.y - client->position.y) * (message.position.y - client->position.y) +
+                                    (message.position.z - client->position.z) * (message.position.z - client->position.z)
+                                );
+                                
+                                // Check for rotation changes
+                                float yawDelta = fabsf(message.position.yaw - client->position.yaw);
+                                float pitchDelta = fabsf(message.position.pitch - client->position.pitch);
+                                
+                                // Handle yaw wrap-around (360 degrees)
+                                if (yawDelta > 180.0f) {
+                                    yawDelta = 360.0f - yawDelta;
+                                }
+                                
+                                // Define thresholds for server-side filtering
+                                const float POSITION_THRESHOLD = 0.01f;
+                                const float ROTATION_THRESHOLD = 0.5f;
+                                
+                                if (positionDelta >= POSITION_THRESHOLD || 
+                                    yawDelta >= ROTATION_THRESHOLD ||
+                                    pitchDelta >= ROTATION_THRESHOLD) {
+                                    shouldBroadcast = true;
+                                }
+                                
+                                // Update stored position
                                 client->position = message.position;
                                 client->position.playerId = playerId; // Ensure correct player ID
                                 break;
@@ -289,9 +318,11 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                         }
                     }
                     
-                    // Broadcast position update to all other clients
-                    message.playerId = playerId;
-                    BroadcastToAllClients(message, playerId);
+                    // Only broadcast if position changed significantly
+                    if (shouldBroadcast) {
+                        message.playerId = playerId;
+                        BroadcastToAllClients(message, playerId);
+                    }
                     break;
                 }
                 

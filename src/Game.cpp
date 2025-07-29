@@ -34,6 +34,7 @@ Game* Game::s_instance = nullptr;
 Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false),
                m_isHost(false), m_worldSeed(0), m_worldSeedReceived(false),
                m_gameTime(0.0f), m_gameTimeReceived(false),
+               m_hasLastSentPosition(false),
                m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
                m_deltaTime(0.0f), m_lastFrame(0.0f),
                m_fontSmall(nullptr), m_fontDefault(nullptr), m_fontLarge(nullptr), m_fontTitle(nullptr),
@@ -1075,7 +1076,41 @@ void Game::SendPlayerPosition() {
         playerPos.pitch = m_player->GetPitch();
         playerPos.playerId = 0; // Server will assign
         
-        m_networkClient->SendPlayerPosition(playerPos);
+        // Only send update if position or rotation has changed significantly
+        bool shouldSend = false;
+        
+        if (!m_hasLastSentPosition) {
+            // First time sending position
+            shouldSend = true;
+        } else {
+            // Check for position changes
+            float positionDelta = sqrtf(
+                (playerPos.x - m_lastSentPlayerPosition.x) * (playerPos.x - m_lastSentPlayerPosition.x) +
+                (playerPos.y - m_lastSentPlayerPosition.y) * (playerPos.y - m_lastSentPlayerPosition.y) +
+                (playerPos.z - m_lastSentPlayerPosition.z) * (playerPos.z - m_lastSentPlayerPosition.z)
+            );
+            
+            // Check for rotation changes
+            float yawDelta = fabsf(playerPos.yaw - m_lastSentPlayerPosition.yaw);
+            float pitchDelta = fabsf(playerPos.pitch - m_lastSentPlayerPosition.pitch);
+            
+            // Handle yaw wrap-around (360 degrees)
+            if (yawDelta > 180.0f) {
+                yawDelta = 360.0f - yawDelta;
+            }
+            
+            if (positionDelta >= POSITION_CHANGE_THRESHOLD || 
+                yawDelta >= ROTATION_CHANGE_THRESHOLD ||
+                pitchDelta >= ROTATION_CHANGE_THRESHOLD) {
+                shouldSend = true;
+            }
+        }
+        
+        if (shouldSend) {
+            m_networkClient->SendPlayerPosition(playerPos);
+            m_lastSentPlayerPosition = playerPos;
+            m_hasLastSentPosition = true;
+        }
     }
 }
 

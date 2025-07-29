@@ -57,8 +57,6 @@ void PlayerModel::SetUniformLocations(int modelLoc, int viewLoc, int projLoc) {
 void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     if (m_shaderProgram == 0) return;
     
-    std::cout << "Rendering player model at (" << position.x << ", " << position.y << ", " << position.z << ") yaw=" << yaw << std::endl;
-    
     // Don't switch shader programs - use the one set by Renderer
     // glUseProgram(m_shaderProgram);
     
@@ -83,7 +81,6 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         
         glBindVertexArray(m_headVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36); // 6 faces * 6 vertices
-        std::cout << "  Drew head with VAO " << m_headVAO << std::endl;
     }
     
     // Render Torso (0.5x0.675x0.25 blocks) - middle of player
@@ -95,7 +92,6 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         
         glBindVertexArray(m_torsoVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        std::cout << "  Drew torso with VAO " << m_torsoVAO << std::endl;
     }
     
     // Render Left Arm (0.25x0.675x0.25 blocks) - attached to torso
@@ -107,7 +103,6 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         
         glBindVertexArray(m_leftArmVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        std::cout << "  Drew left arm with VAO " << m_leftArmVAO << std::endl;
     }
     
     // Render Right Arm (0.25x0.675x0.25 blocks) - attached to torso
@@ -119,7 +114,6 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         
         glBindVertexArray(m_rightArmVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        std::cout << "  Drew right arm with VAO " << m_rightArmVAO << std::endl;
     }
     
     // Render Left Leg (0.25x0.675x0.25 blocks) - bottom of player
@@ -131,7 +125,6 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         
         glBindVertexArray(m_leftLegVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        std::cout << "  Drew left leg with VAO " << m_leftLegVAO << std::endl;
     }
     
     // Render Right Leg (0.25x0.675x0.25 blocks) - bottom of player
@@ -143,11 +136,9 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         
         glBindVertexArray(m_rightLegVAO);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        std::cout << "  Drew right leg with VAO " << m_rightLegVAO << std::endl;
     }
     
     glBindVertexArray(0);
-    std::cout << "Player model rendering complete." << std::endl;
 }
 
 void PlayerModel::CreateHeadGeometry() {
