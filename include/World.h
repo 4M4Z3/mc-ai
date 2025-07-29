@@ -30,6 +30,10 @@ public:
     void Generate();
     void RegenerateWithSeed(int newSeed);
     
+    // Mesh generation
+    void GenerateAllMeshes();
+    void RegenerateMeshes();
+    
     // Utility functions
     bool IsValidWorldPosition(int worldX, int worldY, int worldZ) const;
     void WorldToChunkCoords(int worldX, int worldZ, int& chunkX, int& chunkZ, int& localX, int& localZ) const;

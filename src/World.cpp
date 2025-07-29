@@ -23,16 +23,16 @@ World::World(int seed) : m_seed(seed) {
 }
 
 void World::InitializeChunks() {
-    // Initialize 2x2 grid of chunks
-    // Array index [0][0] = chunk (-1, -1)
-    // Array index [0][1] = chunk (-1,  1)  
-    // Array index [1][0] = chunk ( 1, -1)
-    // Array index [1][1] = chunk ( 1,  1)
+    // Initialize 2x2 grid of chunks adjacent to each other
+    // Array index [0][0] = chunk (0, 0)
+    // Array index [0][1] = chunk (0, 1)  
+    // Array index [1][0] = chunk (1, 0)
+    // Array index [1][1] = chunk (1, 1)
     
     for (int x = 0; x < WORLD_SIZE; ++x) {
         for (int z = 0; z < WORLD_SIZE; ++z) {
-            int chunkX = (x == 0) ? -1 : 1;
-            int chunkZ = (z == 0) ? -1 : 1;
+            int chunkX = x;
+            int chunkZ = z;
             
             m_chunks[x][z] = std::make_unique<Chunk>(chunkX, chunkZ);
         }
@@ -113,6 +113,9 @@ void World::Generate() {
             }
         }
     }
+    
+    // Generate meshes after all chunks are generated
+    GenerateAllMeshes();
 }
 
 void World::RegenerateWithSeed(int newSeed) {
@@ -122,6 +125,22 @@ void World::RegenerateWithSeed(int newSeed) {
     Generate();
     
     std::cout << "World regenerated with seed: " << m_seed << std::endl;
+}
+
+void World::GenerateAllMeshes() {
+    // Generate meshes for all chunks
+    for (int x = 0; x < WORLD_SIZE; ++x) {
+        for (int z = 0; z < WORLD_SIZE; ++z) {
+            if (m_chunks[x][z]) {
+                m_chunks[x][z]->GenerateMesh(this);
+            }
+        }
+    }
+}
+
+void World::RegenerateMeshes() {
+    // Regenerate meshes for all chunks (useful when blocks change)
+    GenerateAllMeshes();
 }
 
 bool World::IsValidWorldPosition(int worldX, int worldY, int worldZ) const {
@@ -134,26 +153,29 @@ bool World::IsValidWorldPosition(int worldX, int worldY, int worldZ) const {
     int chunkX, chunkZ, localX, localZ;
     WorldToChunkCoords(worldX, worldZ, chunkX, chunkZ, localX, localZ);
     
-    // Valid chunk coordinates are -1 and 1 for both X and Z
-    return (chunkX == -1 || chunkX == 1) && (chunkZ == -1 || chunkZ == 1);
+    // Valid chunk coordinates are 0 and 1 for both X and Z
+    return (chunkX >= 0 && chunkX < WORLD_SIZE) && (chunkZ >= 0 && chunkZ < WORLD_SIZE);
 }
 
 void World::WorldToChunkCoords(int worldX, int worldZ, int& chunkX, int& chunkZ, int& localX, int& localZ) const {
     // Convert world coordinates to chunk coordinates and local coordinates
+    // Each chunk is 16x16, so we divide by chunk size to get chunk coords
     if (worldX >= 0) {
-        chunkX = 1;
+        chunkX = worldX / CHUNK_WIDTH;
         localX = worldX % CHUNK_WIDTH;
     } else {
-        chunkX = -1;
-        localX = (CHUNK_WIDTH + (worldX % CHUNK_WIDTH)) % CHUNK_WIDTH;
+        // Handle negative coordinates
+        chunkX = (worldX - CHUNK_WIDTH + 1) / CHUNK_WIDTH;
+        localX = worldX - (chunkX * CHUNK_WIDTH);
     }
     
     if (worldZ >= 0) {
-        chunkZ = 1;
+        chunkZ = worldZ / CHUNK_DEPTH;
         localZ = worldZ % CHUNK_DEPTH;
     } else {
-        chunkZ = -1;
-        localZ = (CHUNK_DEPTH + (worldZ % CHUNK_DEPTH)) % CHUNK_DEPTH;
+        // Handle negative coordinates
+        chunkZ = (worldZ - CHUNK_DEPTH + 1) / CHUNK_DEPTH;
+        localZ = worldZ - (chunkZ * CHUNK_DEPTH);
     }
 }
 
@@ -163,8 +185,7 @@ bool World::IsValidChunkIndex(int x, int z) const {
 
 void World::ChunkCoordsToArrayIndex(int chunkX, int chunkZ, int& arrayX, int& arrayZ) const {
     // Convert chunk coordinates to array indices
-    // chunkX: -1 -> 0, 1 -> 1
-    // chunkZ: -1 -> 0, 1 -> 1
-    arrayX = (chunkX == -1) ? 0 : 1;
-    arrayZ = (chunkZ == -1) ? 0 : 1;
+    // Now chunk coordinates directly map to array indices
+    arrayX = chunkX;
+    arrayZ = chunkZ;
 } 

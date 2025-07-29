@@ -1,5 +1,6 @@
 #include "Renderer.h"
 #include "World.h"
+#include "Chunk.h"
 #include <iostream>
 #include <string>
 #include <cmath>
@@ -192,20 +193,34 @@ void Renderer::BeginFrame(const Player& player) {
 }
 
 void Renderer::RenderWorld(const World& world) {
-    // Simple approach: check all possible positions in our small world
-    for (int x = -16; x < 16; x++) {
-        for (int y = 0; y < 10; y++) { // Only check lower part of world for performance
-            for (int z = -16; z < 16; z++) {
-                Block block = world.GetBlock(x, y, z);
-                if (!block.IsAir()) {
-                    RenderCube(x, y, z);
-                }
+    // Use optimized chunk-based rendering instead of individual cubes
+    RenderChunks(world);
+}
+
+void Renderer::RenderChunks(const World& world) {
+    // Set identity model matrix since chunks handle their own world positioning
+    Mat4 modelMatrix;  // Identity matrix
+    glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
+    
+    // Render all chunks using their pre-generated meshes
+    for (int x = 0; x < WORLD_SIZE; ++x) {
+        for (int z = 0; z < WORLD_SIZE; ++z) {
+            const Chunk* chunk = nullptr;
+            
+            // Chunk coordinates now directly correspond to array indices
+            int chunkX = x;
+            int chunkZ = z;
+            
+            chunk = world.GetChunk(chunkX, chunkZ);
+            if (chunk && chunk->HasMesh()) {
+                chunk->RenderMesh();
             }
         }
     }
 }
 
 void Renderer::RenderCube(float x, float y, float z) {
+    // Legacy individual cube rendering (kept for compatibility)
     // Create translation matrix for this cube
     Mat4 modelMatrix = CreateTranslationMatrix(x, y, z);
     

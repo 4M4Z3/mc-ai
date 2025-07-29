@@ -26,7 +26,8 @@ public:
     // 3D rendering
     void BeginFrame(const Player& player);
     void RenderWorld(const World& world);
-    void RenderCube(float x, float y, float z);
+    void RenderChunks(const World& world);  // New chunk-based rendering
+    void RenderCube(float x, float y, float z);  // Legacy individual cube rendering
     void RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosition>& otherPlayers);
     void EndFrame();
     
@@ -34,7 +35,7 @@ public:
     void RenderTriangle();
 
 private:
-    // Cube rendering data
+    // Cube rendering data (legacy)
     unsigned int m_cubeVAO;
     unsigned int m_cubeVBO;
     unsigned int m_shaderProgram;
