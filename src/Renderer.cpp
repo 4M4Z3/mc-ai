@@ -88,6 +88,7 @@ bool Renderer::Initialize() {
     
     // Get texture uniform location after loading textures
     m_textureLoc = glGetUniformLocation(m_shaderProgram, "blockTexture");
+    m_colorTintLoc = glGetUniformLocation(m_shaderProgram, "colorTint");
     
     // Initialize player model
     if (!m_playerModel.Initialize()) {
@@ -303,7 +304,8 @@ void Renderer::RenderChunks(const World& world) {
         
         // Handle grass blocks specially (different textures per face)
         if (blockType == BlockType::GRASS) {
-            // Render grass top faces
+            // Render grass top faces with purple tint
+            glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint
             glBindTexture(GL_TEXTURE_2D, m_grassTopTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -316,7 +318,8 @@ void Renderer::RenderChunks(const World& world) {
                 }
             }
             
-            // Render grass side faces with base texture
+            // Render grass side faces with base texture (no tint)
+            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
             glBindTexture(GL_TEXTURE_2D, m_grassSideTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -332,6 +335,7 @@ void Renderer::RenderChunks(const World& world) {
             // Render grass side overlay on top using polygon offset to avoid z-fighting
             glEnable(GL_POLYGON_OFFSET_FILL);
             glPolygonOffset(-1.0f, -1.0f); // Pull overlay slightly toward camera
+            glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint for overlay
             glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -345,7 +349,8 @@ void Renderer::RenderChunks(const World& world) {
             }
             glDisable(GL_POLYGON_OFFSET_FILL);
             
-            // Render grass bottom faces
+            // Render grass bottom faces (no tint) 
+            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
             glBindTexture(GL_TEXTURE_2D, m_grassBottomTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -358,7 +363,8 @@ void Renderer::RenderChunks(const World& world) {
                 }
             }
         } else {
-            // Bind the appropriate texture for this block type
+            // Bind the appropriate texture for this block type (no tint)
+            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
             if (static_cast<size_t>(blockType) < m_blockTextures.size() && m_blockTextures[static_cast<int>(blockType)] != 0) {
                 glBindTexture(GL_TEXTURE_2D, m_blockTextures[static_cast<int>(blockType)]);
                 

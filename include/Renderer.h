@@ -74,6 +74,7 @@ private:
     // Shader uniforms
     int m_modelLoc, m_viewLoc, m_projLoc;
     int m_textureLoc;
+    int m_colorTintLoc;
 
     // Shader management
     bool CreateShaders();
