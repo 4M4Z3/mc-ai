@@ -688,6 +688,7 @@ void Game::JoinServer(const std::string& serverIP) {
 void Game::SendPlayerPosition() {
     if (m_networkClient && m_networkClient->IsConnected() && m_player) {
         Vec3 pos = m_player->GetPosition();
+        Vec3 cameraPos = m_player->GetCameraPosition();
         PlayerPosition playerPos;
         playerPos.x = pos.x;
         playerPos.y = pos.y;
@@ -695,6 +696,15 @@ void Game::SendPlayerPosition() {
         playerPos.yaw = m_player->GetYaw();
         playerPos.pitch = m_player->GetPitch();
         playerPos.playerId = 0; // Server will assign
+        
+        // Debug: Show what we're sending vs our camera position
+        static int sendCounter = 0;
+        if (sendCounter % 60 == 0) { // Print every second at 60fps
+            std::cout << "Sending my position: feet(" << pos.x << ", " << pos.y << ", " << pos.z 
+                     << ") camera(" << cameraPos.x << ", " << cameraPos.y << ", " << cameraPos.z 
+                     << ") yaw=" << playerPos.yaw << std::endl;
+        }
+        sendCounter++;
         
         m_networkClient->SendPlayerPosition(playerPos);
     }
@@ -778,6 +788,13 @@ void Game::OnPlayerJoin(uint32_t playerId, const PlayerPosition& position) {
     player.previousUpdateTime = player.lastUpdateTime;
     
     std::cout << "Player " << playerId << " joined at (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+    
+    // Debug: Show current player position for comparison
+    if (m_player) {
+        Vec3 myPos = m_player->GetPosition();
+        std::cout << "  My position: (" << myPos.x << ", " << myPos.y << ", " << myPos.z << ")" << std::endl;
+        std::cout << "  Distance from me: " << sqrt(pow(position.x - myPos.x, 2) + pow(position.y - myPos.y, 2) + pow(position.z - myPos.z, 2)) << " blocks" << std::endl;
+    }
 }
 
 void Game::OnPlayerLeave(uint32_t playerId) {
@@ -788,6 +805,15 @@ void Game::OnPlayerLeave(uint32_t playerId) {
 void Game::OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position) {
     auto it = m_otherPlayers.find(playerId);
     if (it != m_otherPlayers.end()) {
+        // Debug: Show position updates
+        static int updateCounter = 0;
+        if (updateCounter % 60 == 0) { // Print every second at 60fps
+            std::cout << "Received position update for player " << playerId 
+                     << ": (" << position.x << ", " << position.y << ", " << position.z 
+                     << ") yaw=" << position.yaw << std::endl;
+        }
+        updateCounter++;
+        
         it->second.UpdatePosition(position);
     }
 }

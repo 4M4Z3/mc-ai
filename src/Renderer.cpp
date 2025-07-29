@@ -531,6 +531,26 @@ void Renderer::RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosit
         
         // Render player model at their position with their rotation
         Vec3 position(playerPos.x, playerPos.y, playerPos.z);
+        
+        // Debug: Print where we're rendering this player
+        static int debugCounter = 0;
+        if (debugCounter % 120 == 0) { // Print every ~2 seconds at 60fps
+            std::cout << "Rendering player " << pair.first << " at world pos(" 
+                     << position.x << ", " << position.y << ", " << position.z 
+                     << ") yaw=" << playerPos.yaw << " pitch=" << playerPos.pitch << std::endl;
+                     
+            // Debug: Show view matrix translation component (our camera position in negative)
+            std::cout << "  View matrix translation: (" << -m_viewMatrix.m[12] 
+                     << ", " << -m_viewMatrix.m[13] << ", " << -m_viewMatrix.m[14] << ")" << std::endl;
+                     
+            // Calculate relative position
+            float relX = position.x + m_viewMatrix.m[12];
+            float relY = position.y + m_viewMatrix.m[13]; 
+            float relZ = position.z + m_viewMatrix.m[14];
+            std::cout << "  Relative to camera: (" << relX << ", " << relY << ", " << relZ << ")" << std::endl;
+        }
+        debugCounter++;
+        
         m_playerModel.Render(position, playerPos.yaw, playerPos.pitch);
     }
 }
