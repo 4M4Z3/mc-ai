@@ -115,9 +115,9 @@ private:
     bool m_isOnGround;
     
     // Physics constants
-    static constexpr float GRAVITY = 32.0f;        // blocks per second squared
+    static constexpr float GRAVITY = 20.48f;        // blocks per second squared (moderately reduced for slower jump)
     static constexpr float TERMINAL_VELOCITY = 78.4f; // Maximum fall speed
-    static constexpr float JUMP_VELOCITY = 8.5f;   // Initial upward velocity when jumping
+    static constexpr float JUMP_VELOCITY = 6.8f;   // Initial upward velocity when jumping (moderately reduced for slower jump)
     
     // Player positioning:
     // - m_position represents the CENTER of the player at GROUND LEVEL (feet)

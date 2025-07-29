@@ -436,7 +436,7 @@ Vec3 Player::GetCameraPosition() const {
     // Camera should be at eye level, which is approximately 1.5 blocks above the feet
     // Since m_position represents the center bottom of the player (feet level),
     // we add the eye height offset (adjusted to look more natural)
-    return Vec3(m_position.x, m_position.y + 1.1f, m_position.z);
+    return Vec3(m_position.x, m_position.y + 1.2f, m_position.z);
 }
 
 void Player::UpdateVectors() {
