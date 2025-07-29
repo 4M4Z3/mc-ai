@@ -413,6 +413,37 @@ void Game::UpdateGame() {
             m_pendingBlockBreaks.pop();
         }
     }
+    
+    // Process pending chunk data from network
+    {
+        std::lock_guard<std::mutex> lock(m_pendingChunkDataMutex);
+        while (!m_pendingChunkData.empty()) {
+            auto& chunkInfo = m_pendingChunkData.front();
+            int32_t chunkX = chunkInfo.chunkX;
+            int32_t chunkZ = chunkInfo.chunkZ;
+            const std::vector<uint8_t>& blockData = chunkInfo.blockData;
+            
+            std::cout << "[CLIENT] Applying chunk data for (" << chunkX << ", " << chunkZ << ")" << std::endl;
+            
+            // Apply chunk data to client world (if we have one)
+            if (m_world) {
+                // Get or create the chunk
+                Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
+                if (chunk) {
+                    // Apply server data to the chunk
+                    chunk->ApplyServerData(blockData.data());
+                    
+                    // Generate mesh for the updated chunk
+                    chunk->GenerateMesh(m_world.get());
+                    
+                    std::cout << "[CLIENT] Updated chunk (" << chunkX << ", " << chunkZ << ") with server data" << std::endl;
+                } else {
+                    std::cerr << "[CLIENT] Failed to get chunk (" << chunkX << ", " << chunkZ << ")" << std::endl;
+                }
+            }
+            m_pendingChunkData.pop();
+        }
+    }
 }
 
 void Game::RenderMainMenu() {
@@ -1086,22 +1117,18 @@ void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t
 }
 
 void Game::OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
-    std::cout << "[CLIENT] Applying chunk data for (" << chunkX << ", " << chunkZ << ")" << std::endl;
+    std::cout << "[CLIENT] Queuing chunk data for (" << chunkX << ", " << chunkZ << ")" << std::endl;
     
-    if (m_world) {
-        // Get or create the chunk
-        Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
-        if (chunk) {
-            // Apply server data to the chunk
-            chunk->ApplyServerData(blockData);
-            
-            // Generate mesh for the updated chunk
-            chunk->GenerateMesh(m_world.get());
-            
-            std::cout << "[CLIENT] Updated chunk (" << chunkX << ", " << chunkZ << ") with server data" << std::endl;
-        } else {
-            std::cerr << "[CLIENT] Failed to get chunk (" << chunkX << ", " << chunkZ << ")" << std::endl;
-        }
+    // Queue the chunk data for processing on the main thread
+    // (OpenGL operations must happen on the main thread)
+    {
+        std::lock_guard<std::mutex> lock(m_pendingChunkDataMutex);
+        PendingChunkData chunkData;
+        chunkData.chunkX = chunkX;
+        chunkData.chunkZ = chunkZ;
+        // Copy the block data (16x256x16 = 65536 bytes)
+        chunkData.blockData.assign(blockData, blockData + (16 * 256 * 16));
+        m_pendingChunkData.push(std::move(chunkData));
     }
 }
 

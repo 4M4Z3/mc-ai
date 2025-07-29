@@ -13,6 +13,7 @@
 #include <chrono>
 #include <queue> // Added for thread-safe queue
 #include <mutex> // Added for mutex
+#include <vector> // Added for chunk data storage
 
 // Forward declare ImFont to avoid including the full ImGui header
 struct ImFont;
@@ -110,6 +111,14 @@ private:
     };
     std::queue<PendingBlockBreak> m_pendingBlockBreaks;
     std::mutex m_pendingBlockBreaksMutex;
+    
+    // Thread-safe queue for chunk data received from network
+    struct PendingChunkData {
+        int32_t chunkX, chunkZ;
+        std::vector<uint8_t> blockData; // Copy the block data
+    };
+    std::queue<PendingChunkData> m_pendingChunkData;
+    std::mutex m_pendingChunkDataMutex;
     
     // Networking
     std::unique_ptr<Server> m_server;

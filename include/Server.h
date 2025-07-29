@@ -56,7 +56,7 @@ struct NetworkMessage {
     // Chunk data
     struct {
         int32_t chunkX, chunkZ;
-        uint8_t blocks[16 * 64 * 16]; // 16x64x16 chunk, 1 byte per block type
+        uint8_t blocks[16 * 256 * 16]; // 16x256x16 chunk, 1 byte per block type
     } chunkData;
 };
 

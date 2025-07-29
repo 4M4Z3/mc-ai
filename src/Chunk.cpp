@@ -468,7 +468,7 @@ void Chunk::ApplyServerData(const uint8_t* blockData) {
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int y = 0; y < CHUNK_HEIGHT; ++y) {
             for (int z = 0; z < CHUNK_DEPTH; ++z) {
-                int index = x + (y * 16) + (z * 16 * 64);
+                int index = x + (y * 16) + (z * 16 * 256);
                 BlockType blockType = static_cast<BlockType>(blockData[index]);
                 m_blocks[x][y][z].SetType(blockType);
             }

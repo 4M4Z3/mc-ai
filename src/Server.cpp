@@ -228,6 +228,9 @@ void Server::AcceptClients() {
         // Send player list to new client
         SendPlayerList(clientSocket);
         
+        // Small delay to ensure client's receive thread is ready
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
         // Send world seed to new client
         SendWorldSeed(clientSocket);
         
@@ -689,10 +692,10 @@ void Server::SendChunkData(socket_t clientSocket, int32_t chunkX, int32_t chunkZ
     
     // Serialize chunk blocks to network message
     for (int x = 0; x < 16; ++x) {
-        for (int y = 0; y < 64; ++y) {
+        for (int y = 0; y < 256; ++y) {
             for (int z = 0; z < 16; ++z) {
                 Block block = chunk->GetBlock(x, y, z);
-                int index = x + (y * 16) + (z * 16 * 64);
+                int index = x + (y * 16) + (z * 16 * 256);
                 message.chunkData.blocks[index] = static_cast<uint8_t>(block.GetType());
             }
         }
