@@ -23,6 +23,13 @@ constexpr int CHUNK_DEPTH = 16;
 
 class Chunk {
 public:
+    // Special grass face types (different textures per face)
+    enum GrassFaceType {
+        GRASS_TOP = 0,
+        GRASS_SIDE = 1, 
+        GRASS_BOTTOM = 2
+    };
+    
     Chunk();
     Chunk(int chunkX, int chunkZ);
     ~Chunk();
@@ -48,8 +55,9 @@ public:
     void GenerateMesh(const World* world);
     void RenderMesh() const;
     void RenderMeshForBlockType(BlockType blockType) const;
+    void RenderGrassFace(GrassFaceType faceType) const;
     std::vector<BlockType> GetBlockTypesInChunk() const;
-    bool HasMesh() const { return !m_blockMeshes.empty(); }
+    bool HasMesh() const { return !m_blockMeshes.empty() || !m_grassFaceMeshes.empty(); }
     void ClearMesh();
 
 private:
@@ -66,12 +74,16 @@ private:
         int vertexCount = 0;
     };
     std::unordered_map<BlockType, BlockMesh> m_blockMeshes;
+    
+    // Special mesh data for grass faces (different textures per face)
+    std::unordered_map<GrassFaceType, BlockMesh> m_grassFaceMeshes;
+    
     bool m_meshGenerated;
     
     // Face culling helpers
     bool ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world) const;
     Block GetNeighborBlock(int x, int y, int z, int faceDirection, const World* world) const;
-    void AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world) const;
+    void AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world, bool flipTextureV = false) const;
     
     // Ambient occlusion calculation
     float CalculateVertexAO(int x, int y, int z, int faceDirection, int vertexIndex, const World* world) const;

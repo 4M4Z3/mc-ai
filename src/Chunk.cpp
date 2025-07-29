@@ -76,6 +76,22 @@ void Chunk::ClearMesh() {
         mesh.vertexCount = 0;
     }
     m_blockMeshes.clear();
+    
+    // Clear grass face meshes too
+    for (auto& pair : m_grassFaceMeshes) {
+        BlockMesh& mesh = pair.second;
+        if (mesh.VAO) {
+            glDeleteVertexArrays(1, &mesh.VAO);
+            mesh.VAO = 0;
+        }
+        if (mesh.VBO) {
+            glDeleteBuffers(1, &mesh.VBO);
+            mesh.VBO = 0;
+        }
+        mesh.vertexCount = 0;
+    }
+    m_grassFaceMeshes.clear();
+    
     m_meshGenerated = false;
 }
 
@@ -86,6 +102,9 @@ void Chunk::GenerateMesh(const World* world) {
     // Group vertices by block type
     std::unordered_map<BlockType, std::vector<float>> blockVertices;
     
+    // Separate vertex groups for grass faces
+    std::unordered_map<GrassFaceType, std::vector<float>> grassFaceVertices;
+    
     // Generate mesh data for all non-air blocks, grouped by type
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int y = 0; y < CHUNK_HEIGHT; ++y) {
@@ -95,8 +114,21 @@ void Chunk::GenerateMesh(const World* world) {
                     // Check each face for visibility
                     for (int face = 0; face < 6; ++face) {
                         if (ShouldRenderFace(x, y, z, face, world)) {
-                            // Add face vertices to the appropriate block type group
-                            AddFaceToMesh(blockVertices[blockType], x, y, z, face, world);
+                            // Handle grass blocks specially
+                            if (blockType == BlockType::GRASS) {
+                                // Group grass faces by face type for different textures
+                                if (face == FACE_TOP) {
+                                    AddFaceToMesh(grassFaceVertices[GRASS_TOP], x, y, z, face, world);
+                                } else if (face == FACE_BOTTOM) {
+                                    AddFaceToMesh(grassFaceVertices[GRASS_BOTTOM], x, y, z, face, world);
+                                } else {
+                                    // Side faces (FRONT, BACK, LEFT, RIGHT) - flip texture vertically  
+                                    AddFaceToMesh(grassFaceVertices[GRASS_SIDE], x, y, z, face, world, true);
+                                }
+                            } else {
+                                // Add face vertices to the appropriate block type group
+                                AddFaceToMesh(blockVertices[blockType], x, y, z, face, world);
+                            }
                         }
                     }
                 }
@@ -114,6 +146,43 @@ void Chunk::GenerateMesh(const World* world) {
         }
         
         BlockMesh& mesh = m_blockMeshes[blockType];
+        
+        // Create OpenGL mesh
+        glGenVertexArrays(1, &mesh.VAO);
+        glBindVertexArray(mesh.VAO);
+        
+        glGenBuffers(1, &mesh.VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+        
+        // Position attribute (x, y, z) - location 0
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        
+        // Ambient occlusion attribute (ao) - location 1
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+        
+        // Texture coordinate attribute (u, v) - location 2
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(4 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        
+        mesh.vertexCount = vertices.size() / 6; // 6 floats per vertex
+    }
+    
+    // Create OpenGL meshes for grass faces that have vertices
+    for (auto& pair : grassFaceVertices) {
+        GrassFaceType faceType = pair.first;
+        std::vector<float>& vertices = pair.second;
+        
+        if (vertices.empty()) {
+            continue;
+        }
+        
+        BlockMesh& mesh = m_grassFaceMeshes[faceType];
         
         // Create OpenGL mesh
         glGenVertexArrays(1, &mesh.VAO);
@@ -159,6 +228,18 @@ void Chunk::RenderMesh() const {
 void Chunk::RenderMeshForBlockType(BlockType blockType) const {
     auto it = m_blockMeshes.find(blockType);
     if (it != m_blockMeshes.end()) {
+        const BlockMesh& mesh = it->second;
+        if (mesh.VAO != 0 && mesh.vertexCount > 0) {
+            glBindVertexArray(mesh.VAO);
+            glDrawArrays(GL_TRIANGLES, 0, mesh.vertexCount);
+            glBindVertexArray(0);
+        }
+    }
+}
+
+void Chunk::RenderGrassFace(GrassFaceType faceType) const {
+    auto it = m_grassFaceMeshes.find(faceType);
+    if (it != m_grassFaceMeshes.end()) {
         const BlockMesh& mesh = it->second;
         if (mesh.VAO != 0 && mesh.vertexCount > 0) {
             glBindVertexArray(mesh.VAO);
@@ -216,11 +297,15 @@ Block Chunk::GetNeighborBlock(int x, int y, int z, int faceDirection, const Worl
     return Block(BlockType::AIR);
 }
 
-void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world) const {
+void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world, bool flipTextureV) const {
     // Convert local chunk coordinates to world position for rendering
     float worldX = static_cast<float>(m_chunkX * CHUNK_WIDTH + x);
     float worldY = static_cast<float>(y);
     float worldZ = static_cast<float>(m_chunkZ * CHUNK_DEPTH + z);
+    
+    // Calculate texture coordinates for top and bottom based on flip setting
+    float vBottom = flipTextureV ? 1.0f : 0.0f;
+    float vTop = flipTextureV ? 0.0f : 1.0f;
     
     // Face vertices with position (3), AO (1), and texture coordinates (2) 
     // Each vertex: x, y, z, ao_value, u, v (6 floats per vertex)
@@ -235,13 +320,13 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             
             float frontVertices[] = {
                 // Triangle 1: x, y, z, ao, u, v
-                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0, 0.0f, 0.0f, // Bottom-left
-                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, 1.0f, 0.0f, // Bottom-right
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f, // Top-right
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0, 0.0f, vBottom, // Bottom-left
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, 1.0f, vBottom, // Bottom-right
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, vTop, // Top-right
                 // Triangle 2  
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f, // Top-right
-                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao3, 0.0f, 1.0f, // Top-left
-                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0, 0.0f, 0.0f  // Bottom-left
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, vTop, // Top-right
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao3, 0.0f, vTop, // Top-left
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao0, 0.0f, vBottom  // Bottom-left
             };
             vertices.insert(vertices.end(), frontVertices, frontVertices + 36);
             break;
@@ -253,12 +338,12 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao3 = CalculateVertexAO(x, y, z, FACE_BACK, 3, world);
             
             float backVertices[] = {
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, 0.0f,
-                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3, 1.0f, 1.0f,
-                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2, 0.0f, 1.0f,
-                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2, 0.0f, 1.0f,
-                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao1, 0.0f, 0.0f,
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, 0.0f
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, vBottom,
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3, 1.0f, vTop,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2, 0.0f, vTop,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao2, 0.0f, vTop,
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao1, 0.0f, vBottom,
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, vBottom
             };
             vertices.insert(vertices.end(), backVertices, backVertices + 36);
             break;
@@ -270,12 +355,12 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao3 = CalculateVertexAO(x, y, z, FACE_LEFT, 3, world);
             
             float leftVertices[] = {
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f,
-                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, 1.0f, 0.0f,
-                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
-                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
-                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3, 0.0f, 1.0f,
-                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, vBottom,
+                worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, 1.0f, vBottom,
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, vTop,
+                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, vTop,
+                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3, 0.0f, vTop,
+                worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, vBottom
             };
             vertices.insert(vertices.end(), leftVertices, leftVertices + 36);
             break;
@@ -287,12 +372,12 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao3 = CalculateVertexAO(x, y, z, FACE_RIGHT, 3, world);
             
             float rightVertices[] = {
-                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, 0.0f,
-                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3, 1.0f, 1.0f,
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 0.0f, 1.0f,
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 0.0f, 1.0f,
-                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, 0.0f, 0.0f,
-                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, 0.0f
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, vBottom,
+                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao3, 1.0f, vTop,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 0.0f, vTop,
+                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 0.0f, vTop,
+                worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao1, 0.0f, vBottom,
+                worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, vBottom
             };
             vertices.insert(vertices.end(), rightVertices, rightVertices + 36);
             break;
@@ -358,8 +443,8 @@ void Chunk::Generate(int seed) {
             // Fill blocks from bottom up to terrain height
             for (int y = 0; y <= terrainHeight; ++y) {
                 if (y == terrainHeight) {
-                    // Top layer: grass/surface - use dirt for now
-                    m_blocks[x][y][z].SetType(BlockType::DIRT);
+                    // Top layer: grass surface
+                    m_blocks[x][y][z].SetType(BlockType::GRASS);
                 } else if (y >= terrainHeight - 3) {
                     // Dirt layer (3 blocks deep)
                     m_blocks[x][y][z].SetType(BlockType::DIRT);

@@ -5,7 +5,8 @@
 enum class BlockType : uint8_t {
     AIR = 0,
     STONE = 1,
-    DIRT = 2
+    DIRT = 2,
+    GRASS = 3
 };
 
 class Block {

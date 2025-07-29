@@ -240,7 +240,7 @@ void Renderer::SetViewport(int width, int height) {
     
     // Update projection matrix
     float aspect = (float)width / (float)height;
-    m_projectionMatrix = CreateProjectionMatrix(45.0f, aspect, 0.1f, 100.0f);
+    m_projectionMatrix = CreateProjectionMatrix(75.0f, aspect, 0.1f, 100.0f);
     
     std::cout << "Aspect ratio: " << aspect << std::endl;
 }
@@ -274,7 +274,7 @@ void Renderer::RenderChunks(const World& world) {
     glUniform1i(m_textureLoc, 0);
     
     // Define the block types we want to render in order
-    std::vector<BlockType> blockTypesToRender = {BlockType::STONE, BlockType::DIRT};
+    std::vector<BlockType> blockTypesToRender = {BlockType::STONE, BlockType::DIRT, BlockType::GRASS};
     
     // Render each block type separately with its texture
     for (BlockType blockType : blockTypesToRender) {
@@ -283,20 +283,62 @@ void Renderer::RenderChunks(const World& world) {
             continue;
         }
         
-        // Bind the appropriate texture for this block type
-        if (static_cast<size_t>(blockType) < m_blockTextures.size() && m_blockTextures[static_cast<int>(blockType)] != 0) {
-            glBindTexture(GL_TEXTURE_2D, m_blockTextures[static_cast<int>(blockType)]);
-            
-            // Render all chunks for this block type
+        // Handle grass blocks specially (different textures per face)
+        if (blockType == BlockType::GRASS) {
+            // Render grass top faces
+            glBindTexture(GL_TEXTURE_2D, m_grassTopTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
-                    // Convert array indices to chunk coordinates
-                    // Array indices 0-5 map to chunk coordinates -3 to +2
                     int chunkX = x - 3;
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh()) {
-                        chunk->RenderMeshForBlockType(blockType);
+                        chunk->RenderGrassFace(Chunk::GRASS_TOP);
+                    }
+                }
+            }
+            
+            // Render grass side faces
+            glBindTexture(GL_TEXTURE_2D, m_grassSideTexture);
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    int chunkX = x - 3;
+                    int chunkZ = z - 3;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                    if (chunk && chunk->HasMesh()) {
+                        chunk->RenderGrassFace(Chunk::GRASS_SIDE);
+                    }
+                }
+            }
+            
+            // Render grass bottom faces
+            glBindTexture(GL_TEXTURE_2D, m_grassBottomTexture);
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    int chunkX = x - 3;
+                    int chunkZ = z - 3;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                    if (chunk && chunk->HasMesh()) {
+                        chunk->RenderGrassFace(Chunk::GRASS_BOTTOM);
+                    }
+                }
+            }
+        } else {
+            // Bind the appropriate texture for this block type
+            if (static_cast<size_t>(blockType) < m_blockTextures.size() && m_blockTextures[static_cast<int>(blockType)] != 0) {
+                glBindTexture(GL_TEXTURE_2D, m_blockTextures[static_cast<int>(blockType)]);
+                
+                // Render all chunks for this block type
+                for (int x = 0; x < WORLD_SIZE; ++x) {
+                    for (int z = 0; z < WORLD_SIZE; ++z) {
+                        // Convert array indices to chunk coordinates
+                        // Array indices 0-5 map to chunk coordinates -3 to +2
+                        int chunkX = x - 3;
+                        int chunkZ = z - 3;
+                        const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                        if (chunk && chunk->HasMesh()) {
+                            chunk->RenderMeshForBlockType(blockType);
+                        }
                     }
                 }
             }
@@ -588,13 +630,21 @@ unsigned int Renderer::LoadTexture(const std::string& filepath) {
 
 bool Renderer::LoadBlockTextures() {
     // Initialize texture array with size for our block types
-    m_blockTextures.resize(3); // AIR, STONE, DIRT
+    m_blockTextures.resize(4); // AIR, STONE, DIRT, GRASS
     
     // Load stone texture (BlockType::STONE = 1)
     m_blockTextures[1] = LoadTexture("assets/block/stone.png");
     
     // Load dirt texture (BlockType::DIRT = 2)  
     m_blockTextures[2] = LoadTexture("assets/block/dirt.png");
+    
+    // Load grass textures (BlockType::GRASS = 3)
+    m_grassTopTexture = LoadTexture("assets/block/grass_block_top.png");
+    m_grassSideTexture = LoadTexture("assets/block/grass_block_side.png");
+    m_grassBottomTexture = LoadTexture("assets/block/dirt.png"); // Use dirt texture for grass bottom
+    
+    // For now, set grass block texture to side texture (will be overridden per face)
+    m_blockTextures[3] = m_grassSideTexture;
     
     // AIR doesn't need a texture (index 0 can remain 0)
     m_blockTextures[0] = 0;

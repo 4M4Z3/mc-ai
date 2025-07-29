@@ -55,6 +55,12 @@ private:
     
     // Texture management
     std::vector<unsigned int> m_blockTextures;
+    
+    // Special grass block textures (different per face)
+    unsigned int m_grassTopTexture;
+    unsigned int m_grassSideTexture;
+    unsigned int m_grassBottomTexture;
+    
     unsigned int LoadTexture(const std::string& filepath);
     bool LoadBlockTextures();
     
