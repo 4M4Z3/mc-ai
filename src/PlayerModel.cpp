@@ -65,14 +65,16 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     if (normalizedYaw < 0.0f) normalizedYaw += 360.0f;
     
     // Base transformation matrix for the entire player
-    // Correct order: rotate around model center first, then translate to world position
+    // Player position represents center at ground level (feet)
+    // Total player height is 2.0 blocks
     Mat4 translation = CreateTranslationMatrix(position.x, position.y, position.z);
     Mat4 yawRotation = CreateRotationYMatrix(normalizedYaw * M_PI / 180.0f);
     Mat4 playerTransform = MultiplyMatrices(translation, yawRotation);
     
-    // Render Head (0.5x0.5x0.5 blocks at top)
+    // Render Head (0.5x0.5x0.5 blocks) - top of player
+    // Position: y + 1.75 (center of head at 1.75 blocks above feet)
     {
-        Mat4 headTransform = CreateTranslationMatrix(0.0f, 1.55f, 0.0f); // 1.8 - 0.25 (half head height)
+        Mat4 headTransform = CreateTranslationMatrix(0.0f, 1.75f, 0.0f);
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, headTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -80,9 +82,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         glDrawArrays(GL_TRIANGLES, 0, 36); // 6 faces * 6 vertices
     }
     
-    // Render Torso (0.5x0.75x0.25 blocks)
+    // Render Torso (0.5x0.75x0.25 blocks) - middle of player
+    // Position: y + 1.125 (center of torso at 1.125 blocks above feet)
     {
-        Mat4 torsoTransform = CreateTranslationMatrix(0.0f, 1.0f, 0.0f); // Center at 1.0 blocks high
+        Mat4 torsoTransform = CreateTranslationMatrix(0.0f, 1.125f, 0.0f);
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, torsoTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -90,9 +93,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }
     
-    // Render Left Arm (0.25x0.75x0.25 blocks)
+    // Render Left Arm (0.25x0.75x0.25 blocks) - attached to torso
+    // Position: align with torso center at y + 1.125
     {
-        Mat4 armTransform = CreateTranslationMatrix(-0.375f, 1.0f, 0.0f); // -0.25 (torso half width) - 0.125 (arm half width)
+        Mat4 armTransform = CreateTranslationMatrix(-0.375f, 1.125f, 0.0f); // -0.25 (torso half width) - 0.125 (arm half width)
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, armTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -100,9 +104,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }
     
-    // Render Right Arm (0.25x0.75x0.25 blocks)
+    // Render Right Arm (0.25x0.75x0.25 blocks) - attached to torso
+    // Position: align with torso center at y + 1.125
     {
-        Mat4 armTransform = CreateTranslationMatrix(0.375f, 1.0f, 0.0f); // 0.25 (torso half width) + 0.125 (arm half width)
+        Mat4 armTransform = CreateTranslationMatrix(0.375f, 1.125f, 0.0f); // 0.25 (torso half width) + 0.125 (arm half width)
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, armTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -110,9 +115,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }
     
-    // Render Left Leg (0.25x0.75x0.25 blocks)
+    // Render Left Leg (0.25x0.75x0.25 blocks) - bottom of player
+    // Position: y + 0.375 (center of leg at 0.375 blocks above feet)
     {
-        Mat4 legTransform = CreateTranslationMatrix(-0.125f, 0.375f, 0.0f); // -0.125 (quarter torso width), 0.375 (half leg height)
+        Mat4 legTransform = CreateTranslationMatrix(-0.125f, 0.375f, 0.0f); // -0.125 (quarter torso width)
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, legTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -120,9 +126,10 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }
     
-    // Render Right Leg (0.25x0.75x0.25 blocks)
+    // Render Right Leg (0.25x0.75x0.25 blocks) - bottom of player
+    // Position: y + 0.375 (center of leg at 0.375 blocks above feet)
     {
-        Mat4 legTransform = CreateTranslationMatrix(0.125f, 0.375f, 0.0f); // 0.125 (quarter torso width), 0.375 (half leg height)
+        Mat4 legTransform = CreateTranslationMatrix(0.125f, 0.375f, 0.0f); // 0.125 (quarter torso width)
         Mat4 modelMatrix = MultiplyMatrices(playerTransform, legTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
@@ -216,54 +223,55 @@ std::vector<float> PlayerModel::CreateCubeVertices(float width, float height, fl
     float hd = depth * 0.5f;   // half depth
     
     // Cube vertices (6 faces, 2 triangles per face, 3 vertices per triangle)
+    // All faces wound counter-clockwise when viewed from outside the cube
     std::vector<float> vertices = {
-        // Front face
-        -hw + offsetX, -hh + offsetY,  hd + offsetZ,
-         hw + offsetX, -hh + offsetY,  hd + offsetZ,
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,
-        -hw + offsetX,  hh + offsetY,  hd + offsetZ,
-        -hw + offsetX, -hh + offsetY,  hd + offsetZ,
+        // Front face (+Z) - viewed from positive Z
+        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-left
+         hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-right
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-right
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-right
+        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-left
+        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-left
 
-        // Back face
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,
-         hw + offsetX, -hh + offsetY, -hd + offsetZ,
-         hw + offsetX,  hh + offsetY, -hd + offsetZ,
-         hw + offsetX,  hh + offsetY, -hd + offsetZ,
-        -hw + offsetX,  hh + offsetY, -hd + offsetZ,
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,
+        // Back face (-Z) - viewed from negative Z (reverse winding)
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-left
+        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-left
+         hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-right
+         hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-right
+         hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-right
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-left
 
-        // Left face
-        -hw + offsetX,  hh + offsetY,  hd + offsetZ,
-        -hw + offsetX,  hh + offsetY, -hd + offsetZ,
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,
-        -hw + offsetX, -hh + offsetY,  hd + offsetZ,
-        -hw + offsetX,  hh + offsetY,  hd + offsetZ,
+        // Left face (-X) - viewed from negative X
+        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-front
+        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-back
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-back
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-back
+        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-front
+        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-front
 
-        // Right face
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,
-         hw + offsetX,  hh + offsetY, -hd + offsetZ,
-         hw + offsetX, -hh + offsetY, -hd + offsetZ,
-         hw + offsetX, -hh + offsetY, -hd + offsetZ,
-         hw + offsetX, -hh + offsetY,  hd + offsetZ,
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,
+        // Right face (+X) - viewed from positive X
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-front
+         hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-front
+         hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-back
+         hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-back
+         hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-back
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-front
 
-        // Bottom face
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,
-         hw + offsetX, -hh + offsetY, -hd + offsetZ,
-         hw + offsetX, -hh + offsetY,  hd + offsetZ,
-         hw + offsetX, -hh + offsetY,  hd + offsetZ,
-        -hw + offsetX, -hh + offsetY,  hd + offsetZ,
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,
+        // Bottom face (-Y) - viewed from negative Y
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // back-left
+         hw + offsetX, -hh + offsetY, -hd + offsetZ,  // back-right
+         hw + offsetX, -hh + offsetY,  hd + offsetZ,  // front-right
+         hw + offsetX, -hh + offsetY,  hd + offsetZ,  // front-right
+        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  // front-left
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // back-left
 
-        // Top face
-        -hw + offsetX,  hh + offsetY, -hd + offsetZ,
-         hw + offsetX,  hh + offsetY, -hd + offsetZ,
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,
-        -hw + offsetX,  hh + offsetY,  hd + offsetZ,
-        -hw + offsetX,  hh + offsetY, -hd + offsetZ
+        // Top face (+Y) - viewed from positive Y
+        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  // back-left
+        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  // front-left
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // front-right
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // front-right
+         hw + offsetX,  hh + offsetY, -hd + offsetZ,  // back-right
+        -hw + offsetX,  hh + offsetY, -hd + offsetZ   // back-left
     };
     
     return vertices;
