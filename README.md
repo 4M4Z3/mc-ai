@@ -26,7 +26,7 @@ A cross-platform C++ game framework using ImGui for UI and OpenGL for rendering.
 
 - **GLFW3**: Window management and input handling
 - **OpenGL**: Graphics rendering
-- **ImGui**: Immediate mode GUI (included as submodule)
+- **ImGui**: Immediate mode GUI (automatically downloaded during build)
 
 ## Build Instructions
 
@@ -143,8 +143,9 @@ REM Run the executable
 
 ### General Issues
 - Make sure your graphics drivers support OpenGL 3.3+
-- ImGui is included as a git submodule - make sure it's properly downloaded
+- ImGui is automatically downloaded during build - ensure you have internet access for first build
 - Check that CMake version is 3.15 or higher
+- If build fails, try `make clean` followed by `make setup` to re-download dependencies
 
 ## License
 

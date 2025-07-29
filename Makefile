@@ -6,6 +6,13 @@ PROJECT_NAME = ImGuiOpenGLProject
 BUILD_DIR = build
 BIN_DIR = $(BUILD_DIR)/bin
 
+# Add homebrew to PATH for macOS
+ifeq ($(UNAME), Darwin)
+    export PATH := /opt/homebrew/bin:$(PATH)
+    export CC := /usr/bin/clang
+    export CXX := /usr/bin/clang++
+endif
+
 # Detect platform
 UNAME := $(shell uname)
 ifeq ($(UNAME), Darwin)
@@ -31,11 +38,15 @@ all: build
 configure:
 	@echo "Configuring for $(PLATFORM)..."
 	@mkdir -p $(BUILD_DIR)
+ifeq ($(PLATFORM), macos)
+	@cd $(BUILD_DIR) && CC=/usr/bin/clang CXX=/usr/bin/clang++ cmake .. -G $(CMAKE_GENERATOR)
+else
 	@cd $(BUILD_DIR) && cmake .. -G $(CMAKE_GENERATOR)
+endif
 
 # Build the project
 .PHONY: build
-build: configure
+build: setup configure
 	@echo "Building $(PROJECT_NAME)..."
 ifeq ($(PLATFORM), windows)
 	@cd $(BUILD_DIR) && cmake --build . --config Release
@@ -85,7 +96,13 @@ install-deps-win:
 .PHONY: setup
 setup:
 	@echo "Setting up project..."
-	@git submodule update --init --recursive 2>/dev/null || echo "No git submodules to update"
+	@mkdir -p third_party
+	@if [ ! -d "third_party/imgui" ]; then \
+		echo "Downloading ImGui..."; \
+		cd third_party && git clone https://github.com/ocornut/imgui.git; \
+	else \
+		echo "ImGui already exists"; \
+	fi
 	@echo "Setup complete!"
 
 # Help target
