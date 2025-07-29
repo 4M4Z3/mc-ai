@@ -340,14 +340,15 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     // Apply block break to server world
                     if (m_world) {
                         m_world->SetBlock(message.blockPos.x, message.blockPos.y, message.blockPos.z, BlockType::AIR);
-                        
-                        // Server doesn't need to generate meshes - only clients do
-                        // Mesh generation happens on each client when they receive the message
+                        std::cout << "[SERVER] Applied block break to server world" << std::endl;
                     }
                     
-                    // Broadcast block break to other clients (exclude sender to prevent echo-back)
+                    // Set the player ID for the message
                     message.playerId = playerId;
-                    BroadcastToAllClients(message, playerId);
+                    
+                    // Broadcast to ALL clients (including sender) - breaking already broken blocks is harmless
+                    BroadcastToAllClients(message);
+                    std::cout << "[SERVER] Broadcasted block break to all clients" << std::endl;
                     break;
                 }
                 

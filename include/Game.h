@@ -114,10 +114,6 @@ private:
     std::queue<PendingBlockBreak> m_pendingBlockBreaks;
     std::mutex m_pendingBlockBreaksMutex;
     
-    // Track blocks we broke locally to prevent double-processing from network
-    std::set<std::tuple<int32_t, int32_t, int32_t>> m_locallyBrokenBlocks;
-    std::mutex m_locallyBrokenBlocksMutex;
-    
     // Thread-safe queue for chunk data received from network
     struct PendingChunkData {
         int32_t chunkX, chunkZ;
@@ -189,9 +185,6 @@ private:
     void OnMyPlayerIdReceived(uint32_t myPlayerId); // Handle receiving own player ID
     void OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z);
     void OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData);
-    
-    // Helper method to clean up old locally broken blocks (prevent memory growth)
-    void CleanupLocallyBrokenBlocks();
     
     // Time utility methods
     bool IsDay() const;
