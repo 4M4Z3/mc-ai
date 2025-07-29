@@ -180,31 +180,52 @@ void NetworkClient::RequestChunk(int32_t chunkX, int32_t chunkZ) {
 }
 
 void NetworkClient::ReceiveMessages() {
-    NetworkMessage message;
-    
     std::cout << "[CLIENT] Starting message receive loop for " << m_serverIP << ":" << m_serverPort << std::endl;
+    std::cout << "[CLIENT] NetworkMessage size: " << sizeof(NetworkMessage) << " bytes" << std::endl;
     
     while (m_connected) {
-        int bytesReceived = recv(m_socket, (char*)&message, sizeof(NetworkMessage), 0);
-        if (bytesReceived <= 0) {
-            // Server disconnected or error
-            if (m_connected) {
-                std::cerr << "[CLIENT] Lost connection to server " << m_serverIP << ":" << m_serverPort 
-                          << " (bytes received: " << bytesReceived << ")" << std::endl;
-                
-                // Print errno for debugging
+        NetworkMessage message;
+        size_t totalBytesReceived = 0;
+        size_t messageSize = sizeof(NetworkMessage);
+        char* messageBuffer = reinterpret_cast<char*>(&message);
+        
+        // Receive complete message by handling TCP fragmentation
+        while (totalBytesReceived < messageSize && m_connected) {
+            int bytesReceived = recv(m_socket, 
+                                   messageBuffer + totalBytesReceived, 
+                                   messageSize - totalBytesReceived, 
+                                   0);
+            
+            if (bytesReceived <= 0) {
+                // Server disconnected or error
+                if (m_connected) {
+                    std::cerr << "[CLIENT] Lost connection to server " << m_serverIP << ":" << m_serverPort 
+                              << " (bytes received: " << bytesReceived << ", total: " << totalBytesReceived 
+                              << "/" << messageSize << ")" << std::endl;
+                    
+                    // Print errno for debugging
 #ifdef _WIN32
-                int error = WSAGetLastError();
-                std::cerr << "[CLIENT] Winsock error: " << error << std::endl;
+                    int error = WSAGetLastError();
+                    std::cerr << "[CLIENT] Winsock error: " << error << std::endl;
 #else
-                std::cerr << "[CLIENT] Socket error: " << strerror(errno) << " (" << errno << ")" << std::endl;
+                    std::cerr << "[CLIENT] Socket error: " << strerror(errno) << " (" << errno << ")" << std::endl;
 #endif
-                m_connected = false;
+                    m_connected = false;
+                }
+                return; // Exit the function completely
             }
-            break;
+            
+            totalBytesReceived += bytesReceived;
+            
+            // Log progress for large messages
+            if (messageSize > 1000 && totalBytesReceived < messageSize) {
+                std::cout << "[CLIENT] Receiving large message: " << totalBytesReceived 
+                          << "/" << messageSize << " bytes" << std::endl;
+            }
         }
         
-        if (bytesReceived == sizeof(NetworkMessage)) {
+        // Process complete message
+        if (totalBytesReceived == messageSize) {
             try {
                 ProcessMessage(message);
             } catch (const std::exception& e) {
@@ -212,8 +233,9 @@ void NetworkClient::ReceiveMessages() {
                 // Don't disconnect on message processing errors, just log them
             }
         } else {
-            std::cerr << "[CLIENT] Received incomplete message: " << bytesReceived 
-                      << " bytes (expected " << sizeof(NetworkMessage) << ")" << std::endl;
+            std::cerr << "[CLIENT] Failed to receive complete message: " << totalBytesReceived 
+                      << "/" << messageSize << " bytes" << std::endl;
+            break;
         }
     }
     

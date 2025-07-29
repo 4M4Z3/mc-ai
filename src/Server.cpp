@@ -358,9 +358,28 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
 void Server::BroadcastToAllClients(const NetworkMessage& message, uint32_t excludePlayerId) {
     std::lock_guard<std::mutex> lock(m_clientsMutex);
     
+    size_t messageSize = sizeof(NetworkMessage);
+    const char* messageBuffer = reinterpret_cast<const char*>(&message);
+    
     for (auto& client : m_clients) {
         if (client && client->active && client->playerId != excludePlayerId) {
-            send(client->socket, (const char*)&message, sizeof(NetworkMessage), 0);
+            size_t totalBytesSent = 0;
+            
+            // Send complete message handling fragmentation
+            while (totalBytesSent < messageSize) {
+                int bytesSent = send(client->socket, 
+                                   messageBuffer + totalBytesSent, 
+                                   messageSize - totalBytesSent, 
+                                   0);
+                
+                if (bytesSent == SOCKET_ERROR) {
+                    std::cerr << "[SERVER] Failed to broadcast to player " << client->playerId 
+                              << " (sent " << totalBytesSent << "/" << messageSize << " bytes)" << std::endl;
+                    break;
+                }
+                
+                totalBytesSent += bytesSent;
+            }
         }
     }
 }
@@ -376,7 +395,24 @@ void Server::SendPlayerList(socket_t clientSocket) {
             playerMessage.playerId = client->playerId;
             playerMessage.position = client->position;
             
-            send(clientSocket, (const char*)&playerMessage, sizeof(NetworkMessage), 0);
+            // Send with fragmentation handling
+            size_t messageSize = sizeof(NetworkMessage);
+            size_t totalBytesSent = 0;
+            const char* messageBuffer = reinterpret_cast<const char*>(&playerMessage);
+            
+            while (totalBytesSent < messageSize) {
+                int bytesSent = send(clientSocket, 
+                                   messageBuffer + totalBytesSent, 
+                                   messageSize - totalBytesSent, 
+                                   0);
+                
+                if (bytesSent == SOCKET_ERROR) {
+                    std::cerr << "[SERVER] Failed to send player list to client" << std::endl;
+                    break;
+                }
+                
+                totalBytesSent += bytesSent;
+            }
         }
     }
 }
@@ -387,12 +423,28 @@ void Server::SendWorldSeed(socket_t clientSocket) {
     seedMessage.playerId = 0; // Not relevant for seed message
     seedMessage.worldSeed = m_worldSeed;
     
-    int bytesSent = send(clientSocket, (const char*)&seedMessage, sizeof(NetworkMessage), 0);
-    if (bytesSent == SOCKET_ERROR) {
-        std::cerr << "Failed to send world seed to client" << std::endl;
-    } else {
-        std::cout << "Sent world seed " << m_worldSeed << " to client" << std::endl;
+    // Send with fragmentation handling
+    size_t messageSize = sizeof(NetworkMessage);
+    size_t totalBytesSent = 0;
+    const char* messageBuffer = reinterpret_cast<const char*>(&seedMessage);
+    
+    while (totalBytesSent < messageSize) {
+        int bytesSent = send(clientSocket, 
+                           messageBuffer + totalBytesSent, 
+                           messageSize - totalBytesSent, 
+                           0);
+        
+        if (bytesSent == SOCKET_ERROR) {
+            std::cerr << "[SERVER] Failed to send world seed to client (sent " 
+                      << totalBytesSent << "/" << messageSize << " bytes)" << std::endl;
+            return;
+        }
+        
+        totalBytesSent += bytesSent;
     }
+    
+    std::cout << "[SERVER] Sent complete world seed " << m_worldSeed 
+              << " to client (" << totalBytesSent << " bytes)" << std::endl;
 }
 
 int Server::GetPlayerCount() {
@@ -620,12 +672,28 @@ void Server::SendGameTime(socket_t clientSocket) {
     timeMessage.playerId = 0; // Not used for time sync
     timeMessage.gameTime = m_gameTime;
     
-    int bytesSent = send(clientSocket, (const char*)&timeMessage, sizeof(NetworkMessage), 0);
-    if (bytesSent == SOCKET_ERROR) {
-        std::cerr << "Failed to send game time to client" << std::endl;
-    } else {
-        std::cout << "Sent game time " << m_gameTime << " to new client" << std::endl;
+    // Send with fragmentation handling
+    size_t messageSize = sizeof(NetworkMessage);
+    size_t totalBytesSent = 0;
+    const char* messageBuffer = reinterpret_cast<const char*>(&timeMessage);
+    
+    while (totalBytesSent < messageSize) {
+        int bytesSent = send(clientSocket, 
+                           messageBuffer + totalBytesSent, 
+                           messageSize - totalBytesSent, 
+                           0);
+        
+        if (bytesSent == SOCKET_ERROR) {
+            std::cerr << "[SERVER] Failed to send game time to client (sent " 
+                      << totalBytesSent << "/" << messageSize << " bytes)" << std::endl;
+            return;
+        }
+        
+        totalBytesSent += bytesSent;
     }
+    
+    std::cout << "[SERVER] Sent complete game time " << m_gameTime 
+              << " to new client (" << totalBytesSent << " bytes)" << std::endl;
 }
 
 void Server::BroadcastGameTime() {
@@ -701,13 +769,37 @@ void Server::SendChunkData(socket_t clientSocket, int32_t chunkX, int32_t chunkZ
         }
     }
     
-    // Send chunk data to client
-    int bytesSent = send(clientSocket, (const char*)&message, sizeof(NetworkMessage), 0);
-    if (bytesSent == SOCKET_ERROR) {
-        std::cerr << "[SERVER] Failed to send chunk data to client" << std::endl;
-    } else {
-        std::cout << "[SERVER] Sent chunk data (" << chunkX << ", " << chunkZ << ") to client" << std::endl;
+    // Send chunk data to client - handle large message sending
+    size_t messageSize = sizeof(NetworkMessage);
+    size_t totalBytesSent = 0;
+    const char* messageBuffer = reinterpret_cast<const char*>(&message);
+    
+    std::cout << "[SERVER] Sending chunk data (" << chunkX << ", " << chunkZ 
+              << ") size: " << messageSize << " bytes" << std::endl;
+    
+    while (totalBytesSent < messageSize) {
+        int bytesSent = send(clientSocket, 
+                           messageBuffer + totalBytesSent, 
+                           messageSize - totalBytesSent, 
+                           0);
+        
+        if (bytesSent == SOCKET_ERROR) {
+            std::cerr << "[SERVER] Failed to send chunk data to client (sent " 
+                      << totalBytesSent << "/" << messageSize << " bytes)" << std::endl;
+            return;
+        }
+        
+        totalBytesSent += bytesSent;
+        
+        // Log progress for large messages
+        if (messageSize > 1000 && totalBytesSent < messageSize) {
+            std::cout << "[SERVER] Sending chunk progress: " << totalBytesSent 
+                      << "/" << messageSize << " bytes" << std::endl;
+        }
     }
+    
+    std::cout << "[SERVER] Successfully sent complete chunk data (" << chunkX << ", " << chunkZ 
+              << ") - " << totalBytesSent << " bytes" << std::endl;
 }
 
 void Server::UpdateGameTime() {  
