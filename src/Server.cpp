@@ -320,6 +320,7 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     
                     // Only broadcast if position changed significantly
                     if (shouldBroadcast) {
+                        std::cout << "[SERVER] Broadcasting position for player " << playerId << " (" << message.position.x << ", " << message.position.y << ", " << message.position.z << ") yaw=" << message.position.yaw << std::endl;
                         message.playerId = playerId;
                         // Don't exclude the sender for position updates - they need to see themselves in other clients' views
                         BroadcastToAllClients(message);

@@ -223,6 +223,12 @@ void NetworkClient::QueueMessage(const NetworkMessage& message) {
         return;
     }
     
+    std::cout << "[CLIENT] Queuing message type " << (int)message.type;
+    if (message.type == NetworkMessage::BLOCK_BREAK) {
+        std::cout << " - block break at (" << message.blockPos.x << ", " << message.blockPos.y << ", " << message.blockPos.z << ")";
+    }
+    std::cout << std::endl;
+    
     std::lock_guard<std::mutex> lock(m_outgoingMessagesMutex);
     m_outgoingMessages.push(message);
 }

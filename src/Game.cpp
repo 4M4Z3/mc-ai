@@ -1107,6 +1107,7 @@ void Game::SendPlayerPosition() {
         }
         
         if (shouldSend) {
+            std::cout << "[CLIENT] Sending position (" << playerPos.x << ", " << playerPos.y << ", " << playerPos.z << ") yaw=" << playerPos.yaw << std::endl;
             m_networkClient->SendPlayerPosition(playerPos);
             m_lastSentPlayerPosition = playerPos;
             m_hasLastSentPosition = true;
