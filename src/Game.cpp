@@ -2,6 +2,8 @@
 #include <iostream>
 #include <ctime>
 #include <cstring>
+#include <chrono>
+#include <algorithm>
 #ifdef __APPLE__
     #define GL_SILENCE_DEPRECATION
     #include <OpenGL/gl3.h>
@@ -317,9 +319,10 @@ void Game::RenderGame() {
         m_renderer.BeginFrame(*m_player);
         m_renderer.RenderWorld(*m_world);
         
-        // Render other players
+        // Render other players with interpolated positions
         if (m_networkClient && m_networkClient->IsConnected()) {
-            m_renderer.RenderOtherPlayers(m_otherPlayers);
+            auto interpolatedPositions = GetInterpolatedPlayerPositions();
+            m_renderer.RenderOtherPlayers(interpolatedPositions);
         }
         
         m_renderer.EndFrame();
@@ -342,48 +345,41 @@ void Game::RenderGame() {
         
         ImGui::Separator();
         
-        if (m_world) {
-            ImGui::Text("World Information:");
-            ImGui::Text("Seed: %d", m_world->GetSeed());
-            ImGui::Text("Single block at (0,0,0)");
+        if (m_networkClient && m_networkClient->IsConnected()) {
+            ImGui::Text("Connected Players: %zu", m_otherPlayers.size() + 1); // +1 for self
             
-            // Check if block exists
-            Block testBlock = m_world->GetBlock(0, 0, 0);
-            ImGui::Text("Block at (0,0,0): %s", testBlock.IsAir() ? "Air" : "Solid");
-            
-            if (ImGui::Button("Regenerate World")) {
-                m_world->RegenerateWithSeed(static_cast<int>(std::time(nullptr)));
+            // Show other players with interpolation info
+            for (const auto& pair : m_otherPlayers) {
+                const InterpolatedPlayer& player = pair.second;
+                PlayerPosition interpPos = player.GetInterpolatedPosition();
+                
+                ImGui::Text("Player %u:", pair.first);
+                ImGui::Text("  Pos: %.1f, %.1f, %.1f", interpPos.x, interpPos.y, interpPos.z);
+                
+                // Show interpolation debug info
+                auto now = std::chrono::steady_clock::now();
+                auto timeSinceUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(now - player.lastUpdateTime).count();
+                ImGui::Text("  Last update: %ldms ago", timeSinceUpdate);
             }
         } else {
-            ImGui::Text("No world loaded");
+            ImGui::Text("Single Player Mode");
         }
         
-        ImGui::Separator();
-        
-        // Multiplayer information
-        if (m_isHost && m_server) {
-            ImGui::Text("Hosting Server:");
-            ImGui::Text("  %s", m_server->GetServerInfo().c_str());
-            ImGui::Text("  Others join with: %s:8080", m_server->GetLocalIPAddress().c_str());
-        } else if (m_networkClient && m_networkClient->IsConnected()) {
-            ImGui::Text("Client Status:");
-            ImGui::Text("  %s", m_networkClient->GetConnectionInfo().c_str());
+        if (ImGui::Button("Back to Menu", ImVec2(280, 50))) {
+            SetState(GameState::MAIN_MENU);
         }
-        
-        ImGui::Text("Other Players: %d", (int)m_otherPlayers.size());
-        for (const auto& pair : m_otherPlayers) {
-            const PlayerPosition& pos = pair.second;
-            ImGui::Text("  Player %d: (%.1f, %.1f, %.1f)", pair.first, pos.x, pos.y, pos.z);
-        }
-        
-        ImGui::Separator();
-        ImGui::Text("Controls:");
-        ImGui::Text("WASD - Move");
-        ImGui::Text("Space/Shift - Up/Down");
-        ImGui::Text("Mouse - Look around");
-        ImGui::Text("ESC - Return to menu");
     }
     ImGui::End();
+}
+
+std::unordered_map<uint32_t, PlayerPosition> Game::GetInterpolatedPlayerPositions() const {
+    std::unordered_map<uint32_t, PlayerPosition> interpolatedPositions;
+    
+    for (const auto& pair : m_otherPlayers) {
+        interpolatedPositions[pair.first] = pair.second.GetInterpolatedPosition();
+    }
+    
+    return interpolatedPositions;
 }
 
 // Static callbacks
@@ -599,7 +595,13 @@ void Game::TestUDPConnectivity(const std::string& targetIP) {
 }
 
 void Game::OnPlayerJoin(uint32_t playerId, const PlayerPosition& position) {
-    m_otherPlayers[playerId] = position;
+    // Create new interpolated player
+    InterpolatedPlayer& player = m_otherPlayers[playerId];
+    player.currentPos = position;
+    player.previousPos = position; // Start with same position to avoid interpolation artifacts
+    player.lastUpdateTime = std::chrono::steady_clock::now();
+    player.previousUpdateTime = player.lastUpdateTime;
+    
     std::cout << "Player " << playerId << " joined at (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
 }
 
@@ -609,5 +611,12 @@ void Game::OnPlayerLeave(uint32_t playerId) {
 }
 
 void Game::OnPlayerPositionUpdate(uint32_t playerId, const PlayerPosition& position) {
-    m_otherPlayers[playerId] = position;
+    auto it = m_otherPlayers.find(playerId);
+    if (it != m_otherPlayers.end()) {
+        // Update existing player with smooth interpolation
+        it->second.UpdatePosition(position);
+    } else {
+        // Player doesn't exist yet, create them (shouldn't happen normally)
+        OnPlayerJoin(playerId, position);
+    }
 } 

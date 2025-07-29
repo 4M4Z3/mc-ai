@@ -10,10 +10,64 @@
 #include "ServerDiscovery.h"
 #include <memory>
 #include <unordered_map>
+#include <chrono>
 
 enum class GameState {
     MAIN_MENU,
     GAME
+};
+
+// Structure for smooth player interpolation
+struct InterpolatedPlayer {
+    PlayerPosition currentPos;
+    PlayerPosition previousPos;
+    std::chrono::steady_clock::time_point lastUpdateTime;
+    std::chrono::steady_clock::time_point previousUpdateTime;
+    
+    // Get interpolated position based on current time
+    PlayerPosition GetInterpolatedPosition() const {
+        auto now = std::chrono::steady_clock::now();
+        
+        // Calculate time since last update
+        auto timeSinceUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdateTime).count();
+        
+        // Don't interpolate if too much time has passed (player might be disconnected/lagging)
+        if (timeSinceUpdate > 1000) { // 1 second timeout
+            return currentPos;
+        }
+        
+        // Calculate interpolation time window
+        auto updateInterval = std::chrono::duration_cast<std::chrono::milliseconds>(lastUpdateTime - previousUpdateTime).count();
+        
+        if (updateInterval <= 0) {
+            return currentPos;
+        }
+        
+        // Calculate interpolation factor (0.0 = previous, 1.0 = current, >1.0 = extrapolate)
+        float t = static_cast<float>(timeSinceUpdate) / static_cast<float>(updateInterval);
+        
+        // Clamp to reasonable bounds for interpolation/light extrapolation
+        t = std::max(0.0f, std::min(t, 1.2f));
+        
+        // Linear interpolation
+        PlayerPosition interpolated;
+        interpolated.x = previousPos.x + t * (currentPos.x - previousPos.x);
+        interpolated.y = previousPos.y + t * (currentPos.y - previousPos.y);
+        interpolated.z = previousPos.z + t * (currentPos.z - previousPos.z);
+        interpolated.yaw = previousPos.yaw + t * (currentPos.yaw - previousPos.yaw);
+        interpolated.pitch = previousPos.pitch + t * (currentPos.pitch - previousPos.pitch);
+        interpolated.playerId = currentPos.playerId;
+        
+        return interpolated;
+    }
+    
+    // Update with new position data
+    void UpdatePosition(const PlayerPosition& newPos) {
+        previousPos = currentPos;
+        previousUpdateTime = lastUpdateTime;
+        currentPos = newPos;
+        lastUpdateTime = std::chrono::steady_clock::now();
+    }
 };
 
 class Game {
@@ -45,7 +99,7 @@ private:
     std::unique_ptr<NetworkClient> m_networkClient;
     std::unique_ptr<ServerDiscovery> m_serverDiscovery;
     bool m_isHost;
-    std::unordered_map<uint32_t, PlayerPosition> m_otherPlayers;
+    std::unordered_map<uint32_t, InterpolatedPlayer> m_otherPlayers;
     
     // Mouse input
     bool m_firstMouse;
@@ -61,6 +115,9 @@ private:
     void UpdateGame();
     void RenderMainMenu();
     void RenderGame();
+    
+    // Helper method to get current interpolated positions for rendering
+    std::unordered_map<uint32_t, PlayerPosition> GetInterpolatedPlayerPositions() const;
     
     // Networking
     void StartHost();
