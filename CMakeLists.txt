@@ -67,6 +67,7 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} ${IMGUI_SOURCES})
 target_link_libraries(${PROJECT_NAME} 
     OpenGL::GL
     glfw
+    epoxy
 )
 
 # Platform-specific settings
