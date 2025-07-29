@@ -329,8 +329,9 @@ void Renderer::RenderChunks(const World& world) {
                 }
             }
             
-            // Render grass side overlay on top - disable depth testing so it always renders over base
-            glDisable(GL_DEPTH_TEST);
+            // Render grass side overlay on top using polygon offset to avoid z-fighting
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(-1.0f, -1.0f); // Pull overlay slightly toward camera
             glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -342,7 +343,7 @@ void Renderer::RenderChunks(const World& world) {
                     }
                 }
             }
-            glEnable(GL_DEPTH_TEST); // Re-enable depth testing
+            glDisable(GL_POLYGON_OFFSET_FILL);
             
             // Render grass bottom faces
             glBindTexture(GL_TEXTURE_2D, m_grassBottomTexture);
