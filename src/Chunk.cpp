@@ -1,6 +1,7 @@
 #include "Chunk.h"
 #include "World.h"
 #include <cmath>
+#include <iostream>
 
 Chunk::Chunk() : m_chunkX(0), m_chunkZ(0), m_VAO(0), m_VBO(0), m_vertexCount(0), m_meshGenerated(false) {
     Clear();

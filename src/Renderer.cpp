@@ -56,6 +56,12 @@ bool Renderer::Initialize() {
 
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    
+    // Enable backface culling to hide faces facing away from camera
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW); // Counter-clockwise winding for front faces
     
     // Set initial viewport and projection
     SetViewport(m_viewportWidth, m_viewportHeight);
