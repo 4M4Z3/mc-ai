@@ -329,8 +329,8 @@ void Renderer::RenderChunks(const World& world) {
                 }
             }
             
-            // Render grass side overlay on top - disable depth writing so it renders over base
-            glDepthMask(GL_FALSE); // Don't write to depth buffer
+            // Render grass side overlay on top - disable depth testing so it always renders over base
+            glDisable(GL_DEPTH_TEST);
             glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -342,7 +342,7 @@ void Renderer::RenderChunks(const World& world) {
                     }
                 }
             }
-            glDepthMask(GL_TRUE); // Re-enable depth writing
+            glEnable(GL_DEPTH_TEST); // Re-enable depth testing
             
             // Render grass bottom faces
             glBindTexture(GL_TEXTURE_2D, m_grassBottomTexture);
@@ -642,7 +642,11 @@ unsigned int Renderer::LoadTexture(const std::string& filepath) {
     
     if (data) {
         GLenum format = GL_RGB;
-        if (nrChannels == 4) {
+        if (nrChannels == 1) {
+            format = GL_RED;
+        } else if (nrChannels == 2) {
+            format = GL_RG;
+        } else if (nrChannels == 4) {
             format = GL_RGBA;
         }
         
@@ -650,6 +654,37 @@ unsigned int Renderer::LoadTexture(const std::string& filepath) {
         glGenerateMipmap(GL_TEXTURE_2D);
         
         std::cout << "Loaded texture: " << filepath << " (" << width << "x" << height << ", " << nrChannels << " channels)" << std::endl;
+    } else {
+        std::cerr << "Failed to load texture: " << filepath << std::endl;
+        std::cerr << "STB Error: " << stbi_failure_reason() << std::endl;
+    }
+    
+    stbi_image_free(data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    return textureID;
+}
+
+unsigned int Renderer::LoadTextureWithAlpha(const std::string& filepath) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    
+    // Load image and force it to RGBA
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(filepath.c_str(), &width, &height, &nrChannels, 4); // Force 4 channels
+    
+    if (data) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        
+        std::cout << "Loaded texture with alpha: " << filepath << " (" << width << "x" << height << ", forced to 4 channels)" << std::endl;
     } else {
         std::cerr << "Failed to load texture: " << filepath << std::endl;
         std::cerr << "STB Error: " << stbi_failure_reason() << std::endl;
@@ -674,7 +709,8 @@ bool Renderer::LoadBlockTextures() {
     // Load grass textures (BlockType::GRASS = 3)
     m_grassTopTexture = LoadTexture("assets/block/grass_block_top.png");
     m_grassSideTexture = LoadTexture("assets/block/grass_block_side.png");
-    m_grassSideOverlayTexture = LoadTexture("assets/block/grass_block_side_overlay.png");
+    // Force overlay texture to load as RGBA for proper alpha handling
+    m_grassSideOverlayTexture = LoadTextureWithAlpha("assets/block/grass_block_side_overlay.png");
     m_grassBottomTexture = LoadTexture("assets/block/dirt.png"); // Use dirt texture for grass bottom
     
     // For now, set grass block texture to side texture (will be overridden per face)

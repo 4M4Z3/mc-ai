@@ -63,6 +63,7 @@ private:
     unsigned int m_grassBottomTexture;
     
     unsigned int LoadTexture(const std::string& filepath);
+    unsigned int LoadTextureWithAlpha(const std::string& filepath);
     bool LoadBlockTextures();
     
     // Projection matrix
