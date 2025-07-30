@@ -428,7 +428,7 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
         
         case NetworkMessage::BLOCK_UPDATE:
         {
-            std::cout << "Player " << message.playerId << " updated block at (" 
+            std::cout << "[CLIENT] *** PROCESSING BLOCK UPDATE MESSAGE *** Player " << message.playerId << " updated block at (" 
                       << message.blockUpdate.x << ", " << message.blockUpdate.y << ", " << message.blockUpdate.z 
                       << ") to type " << (int)message.blockUpdate.blockType << std::endl;
             

@@ -836,8 +836,10 @@ void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int m
                 
                 // Send to server for synchronization with other clients using the new streaming system
                 if (s_instance->m_networkClient && s_instance->m_networkClient->IsConnected()) {
-                    std::cout << "[CLIENT] Sending block update to server at (" << blockX << ", " << blockY << ", " << blockZ << ") to AIR" << std::endl;
+                    std::cout << "[CLIENT] *** SENDING BLOCK UPDATE *** to server at (" << blockX << ", " << blockY << ", " << blockZ << ") to AIR" << std::endl;
                     s_instance->m_networkClient->SendBlockUpdate(blockX, blockY, blockZ, static_cast<uint8_t>(BlockType::AIR));
+                } else {
+                    std::cout << "[CLIENT] *** WARNING *** Network client not connected, cannot send block update" << std::endl;
                 }
             }
         }
@@ -934,6 +936,14 @@ void Game::StartHost() {
                 OnBlockBreakReceived(playerId, x, y, z);
             } catch (const std::exception& e) {
                 std::cerr << "ERROR in OnBlockBreakReceived: " << e.what() << std::endl;
+            }
+        });
+        
+        m_networkClient->SetBlockUpdateCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType) {
+            try {
+                OnBlockUpdateReceived(playerId, x, y, z, blockType);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnBlockUpdateReceived: " << e.what() << std::endl;
             }
         });
         
@@ -1038,6 +1048,14 @@ void Game::JoinServer(const std::string& serverIP) {
                 OnBlockBreakReceived(playerId, x, y, z);
             } catch (const std::exception& e) {
                 std::cerr << "ERROR in OnBlockBreakReceived: " << e.what() << std::endl;
+            }
+        });
+        
+        m_networkClient->SetBlockUpdateCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType) {
+            try {
+                OnBlockUpdateReceived(playerId, x, y, z, blockType);
+            } catch (const std::exception& e) {
+                std::cerr << "ERROR in OnBlockUpdateReceived: " << e.what() << std::endl;
             }
         });
         
@@ -1278,7 +1296,7 @@ void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t
 }
 
 void Game::OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType) {
-    std::cout << "[CLIENT] Received block update from player " << playerId << " at (" << x << ", " << y << ", " << z << ") to type " << (int)blockType << std::endl;
+    std::cout << "[CLIENT] *** RECEIVED BLOCK UPDATE *** from player " << playerId << " at (" << x << ", " << y << ", " << z << ") to type " << (int)blockType << std::endl;
     
     // Apply block update to client world (this is from another player or server confirmation)
     if (m_world) {

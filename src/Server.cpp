@@ -373,7 +373,7 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                 
                 case NetworkMessage::BLOCK_UPDATE:
                 {
-                    std::cout << "[SERVER] Player " << playerId << " updated block at (" 
+                    std::cout << "[SERVER] *** RECEIVED BLOCK UPDATE *** from Player " << playerId << " at (" 
                               << message.blockUpdate.x << ", " << message.blockUpdate.y << ", " << message.blockUpdate.z 
                               << ") to type " << (int)message.blockUpdate.blockType << std::endl;
                     
@@ -389,7 +389,7 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     
                     // Broadcast to ALL clients (including sender for consistency)
                     BroadcastToAllClients(message);
-                    std::cout << "[SERVER] Broadcasted block update to all clients" << std::endl;
+                    std::cout << "[SERVER] *** BROADCASTED BLOCK UPDATE *** to all clients" << std::endl;
                     break;
                 }
                 
