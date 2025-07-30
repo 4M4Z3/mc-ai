@@ -20,6 +20,13 @@ public:
     void Shutdown();
     void Render(const Vec3& position, float yaw = 0.0f, float pitch = 0.0f);
     
+    // First-person arm rendering (like Minecraft)
+    void RenderFirstPersonArm(const Player& player);
+    
+    // First-person arm animation
+    void TriggerPunchAnimation();
+    void UpdateAnimation(float deltaTime);
+    
     // Set shader program (to be called from Renderer)
     void UseShaderProgram(unsigned int shaderProgram);
     
@@ -49,6 +56,11 @@ private:
     std::vector<unsigned int> m_skinTextures;
     unsigned int m_currentSkinTexture;
     std::mt19937 m_randomGenerator;
+    
+    // First-person arm animation
+    bool m_isPunching;
+    float m_punchAnimationTime;
+    float m_punchAnimationDuration;
     
     // Geometry generation
     void CreateHeadGeometry();

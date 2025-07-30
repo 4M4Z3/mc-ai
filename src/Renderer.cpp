@@ -1088,6 +1088,38 @@ void Renderer::RenderOtherPlayers(const std::vector<PlayerPosition>& playerPosit
 
 }
 
+void Renderer::RenderFirstPersonArm(const Player& player) {
+    // Set up the player shader program for first-person arm rendering
+    glUseProgram(m_playerShaderProgram);
+    
+    // For first-person arm, use identity view matrix so it's not affected by camera rotation
+    // This makes it stay fixed relative to the screen like in Minecraft
+    Mat4 identityView;
+    // Identity matrix is already initialized in Mat4 constructor
+    
+    glUniformMatrix4fv(m_playerViewLoc, 1, GL_FALSE, identityView.m);
+    glUniformMatrix4fv(m_playerProjLoc, 1, GL_FALSE, m_projectionMatrix.m);
+    
+    // Disable depth testing completely for the arm so it always shows up
+    glDisable(GL_DEPTH_TEST);
+    
+    // Debug output to verify arm is being rendered
+    static int renderCount = 0;
+    if (renderCount < 5) {
+        std::cout << "[DEBUG] Rendering first-person arm (frame " << renderCount << ")" << std::endl;
+        renderCount++;
+    }
+    
+    // Render the first-person arm using the player model
+    m_playerModel.RenderFirstPersonArm(player);
+    
+    // Re-enable depth testing for subsequent rendering
+    glEnable(GL_DEPTH_TEST);
+    
+    // Switch back to main shader program for subsequent rendering
+    glUseProgram(m_shaderProgram);
+}
+
 unsigned int Renderer::LoadTexture(const std::string& filepath) {
     unsigned int textureID;
     glGenTextures(1, &textureID);
@@ -1531,4 +1563,12 @@ unsigned int Renderer::GetItemTexture(const std::string& itemIconPath) {
     
     // If not loaded, load it now
     return LoadItemTexture(itemIconPath);
-} 
+}
+
+void Renderer::UpdateFirstPersonArm(float deltaTime) {
+    m_playerModel.UpdateAnimation(deltaTime);
+}
+
+void Renderer::TriggerArmPunch() {
+    m_playerModel.TriggerPunchAnimation();
+}
