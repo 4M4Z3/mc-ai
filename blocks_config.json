@@ -59,6 +59,7 @@
     "azalea_leaves": {
       "blockType": 11,
       "blockName": "Azalea Leaves",
+      "type": "transparent",
       "textures": {
         "all": "azalea_leaves.png"
       }
@@ -66,6 +67,7 @@
     "azalea_plant": {
       "blockType": 12,
       "blockName": "Azalea Plant",
+      "type": "ground",
       "textures": {
         "all": "azalea_plant.png"
       }
@@ -73,6 +75,7 @@
     "azure_bluet": {
       "blockType": 13,
       "blockName": "Azure Bluet",
+      "type": "ground",
       "textures": {
         "all": "azure_bluet.png"
       }
@@ -185,6 +188,7 @@
     "bricks": {
       "blockType": 28,
       "blockName": "Bricks",
+      "type": "solid",
       "textures": {
         "all": "bricks.png"
       }
@@ -220,6 +224,7 @@
     "brown_stained_glass": {
       "blockType": 33,
       "blockName": "Brown Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "brown_stained_glass.png"
       }
@@ -227,6 +232,7 @@
     "cherry_leaves": {
       "blockType": 34,
       "blockName": "Cherry Leaves",
+      "type": "transparent",
       "textures": {
         "all": "cherry_leaves.png"
       }
@@ -234,6 +240,7 @@
     "cherry_planks": {
       "blockType": 35,
       "blockName": "Cherry Planks",
+      "type": "solid",
       "textures": {
         "all": "cherry_planks.png"
       }
@@ -241,6 +248,7 @@
     "cherry_sapling": {
       "blockType": 36,
       "blockName": "Cherry Sapling",
+      "type": "ground",
       "textures": {
         "all": "cherry_sapling.png"
       }
@@ -402,6 +410,7 @@
     "cyan_stained_glass": {
       "blockType": 59,
       "blockName": "Cyan Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "cyan_stained_glass.png"
       }
@@ -417,6 +426,7 @@
     "dark_oak_sapling": {
       "blockType": 61,
       "blockName": "Dark Oak Sapling",
+      "type": "ground",
       "textures": {
         "all": "dark_oak_sapling.png"
       }
@@ -438,6 +448,7 @@
     "dead_bush": {
       "blockType": 64,
       "blockName": "Dead Bush",
+      "type": "ground",
       "textures": {
         "all": "dead_bush.png"
       }
@@ -574,6 +585,7 @@
     "gray_stained_glass": {
       "blockType": 83,
       "blockName": "Gray Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "gray_stained_glass.png"
       }
@@ -616,6 +628,7 @@
     "green_stained_glass": {
       "blockType": 89,
       "blockName": "Green Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "green_stained_glass.png"
       }
@@ -672,6 +685,7 @@
     "ice": {
       "blockType": 97,
       "blockName": "Ice",
+      "type": "transparent",
       "textures": {
         "all": "ice.png"
       }
@@ -707,6 +721,7 @@
     "jungle_leaves": {
       "blockType": 102,
       "blockName": "Jungle Leaves",
+      "type": "transparent",
       "textures": {
         "all": "jungle_leaves.png"
       }
@@ -714,6 +729,7 @@
     "jungle_planks": {
       "blockType": 103,
       "blockName": "Jungle Planks",
+      "type": "solid",
       "textures": {
         "all": "jungle_planks.png"
       }
@@ -721,6 +737,7 @@
     "jungle_sapling": {
       "blockType": 104,
       "blockName": "Jungle Sapling",
+      "type": "ground",
       "textures": {
         "all": "jungle_sapling.png"
       }
@@ -749,6 +766,7 @@
     "light_blue_stained_glass": {
       "blockType": 108,
       "blockName": "Light Blue Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "light_blue_stained_glass.png"
       }
@@ -791,6 +809,7 @@
     "light_gray_stained_glass": {
       "blockType": 114,
       "blockName": "Light Gray Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "light_gray_stained_glass.png"
       }
@@ -833,6 +852,7 @@
     "lime_stained_glass": {
       "blockType": 120,
       "blockName": "Lime Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "lime_stained_glass.png"
       }
@@ -840,6 +860,7 @@
     "magenta_stained_glass": {
       "blockType": 121,
       "blockName": "Magenta Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "magenta_stained_glass.png"
       }
@@ -847,6 +868,7 @@
     "mangrove_leaves": {
       "blockType": 122,
       "blockName": "Mangrove Leaves",
+      "type": "transparent",
       "textures": {
         "all": "mangrove_leaves.png"
       }
@@ -875,6 +897,7 @@
     "obsidian": {
       "blockType": 126,
       "blockName": "Obsidian",
+      "type": "solid",
       "textures": {
         "all": "obsidian.png"
       }
@@ -903,6 +926,7 @@
     "orange_stained_glass": {
       "blockType": 130,
       "blockName": "Orange Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "orange_stained_glass.png"
       }
@@ -973,6 +997,7 @@
     "pink_stained_glass": {
       "blockType": 140,
       "blockName": "Pink Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "pink_stained_glass.png"
       }
@@ -1141,6 +1166,7 @@
     "red_mushroom": {
       "blockType": 164,
       "blockName": "Red Mushroom",
+      "type": "ground",
       "textures": {
         "all": "red_mushroom.png"
       }
@@ -1302,6 +1328,7 @@
     "spruce_leaves": {
       "blockType": 187,
       "blockName": "Spruce Leaves",
+      "type": "transparent",
       "textures": {
         "all": "spruce_leaves.png"
       }
@@ -1309,6 +1336,7 @@
     "spruce_planks": {
       "blockType": 188,
       "blockName": "Spruce Planks",
+      "type": "solid",
       "textures": {
         "all": "spruce_planks.png"
       }
@@ -1316,6 +1344,7 @@
     "spruce_sapling": {
       "blockType": 189,
       "blockName": "Spruce Sapling",
+      "type": "ground",
       "textures": {
         "all": "spruce_sapling.png"
       }
@@ -1344,6 +1373,7 @@
     "tinted_glass": {
       "blockType": 194,
       "blockName": "Tinted Glass",
+      "type": "transparent",
       "textures": {
         "all": "tinted_glass.png"
       }
@@ -1512,6 +1542,7 @@
     "yellow_stained_glass": {
       "blockType": 218,
       "blockName": "Yellow Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "yellow_stained_glass.png"
       }
