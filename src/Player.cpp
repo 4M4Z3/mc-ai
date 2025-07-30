@@ -745,7 +745,67 @@ void Player::UpdateVectors() {
 void Player::InitializeTestInventory(ItemManager* itemManager) {
     // Clear inventory to start empty
     m_inventory.clear();
-    DEBUG_INVENTORY("Player inventory initialized as empty");
+    
+    if (!itemManager) {
+        DEBUG_WARNING("ItemManager is null, cannot populate inventory");
+        return;
+    }
+    
+    // Add crafting demo items
+    // Oak logs for crafting planks
+    Item* oakLog = itemManager->getItem("oak_log");
+    if (oakLog) {
+        m_inventory.addItem(oakLog, 16);
+        DEBUG_INVENTORY("Added 16x " << oakLog->itemName << " to inventory");
+    }
+    
+    // Oak planks for crafting sticks and other recipes
+    Item* oakPlanks = itemManager->getItem("oak_planks");
+    if (oakPlanks) {
+        m_inventory.addItem(oakPlanks, 32);
+        DEBUG_INVENTORY("Added 32x " << oakPlanks->itemName << " to inventory");
+    }
+    
+    // Sticks for various recipes
+    Item* stick = itemManager->getItem("stick");
+    if (stick) {
+        m_inventory.addItem(stick, 16);
+        DEBUG_INVENTORY("Added 16x " << stick->itemName << " to inventory");
+    }
+    
+    // Crafting blocks for testing
+    Item* craftingTable = itemManager->getItem("crafting_table");
+    if (craftingTable) {
+        m_inventory.addItem(craftingTable, 2);
+        DEBUG_INVENTORY("Added 2x " << craftingTable->itemName << " to inventory");
+    }
+    
+    Item* furnace = itemManager->getItem("furnace");
+    if (furnace) {
+        m_inventory.addItem(furnace, 2);
+        DEBUG_INVENTORY("Added 2x " << furnace->itemName << " to inventory");
+    }
+    
+    // Additional materials for pickaxe crafting
+    Item* cobblestone = itemManager->getItem("cobblestone");
+    if (cobblestone) {
+        m_inventory.addItem(cobblestone, 8);
+        DEBUG_INVENTORY("Added 8x " << cobblestone->itemName << " to inventory");
+    }
+    
+    Item* ironIngot = itemManager->getItem("iron_ingot");
+    if (ironIngot) {
+        m_inventory.addItem(ironIngot, 4);
+        DEBUG_INVENTORY("Added 4x " << ironIngot->itemName << " to inventory");
+    }
+    
+    Item* diamond = itemManager->getItem("diamond");
+    if (diamond) {
+        m_inventory.addItem(diamond, 4);
+        DEBUG_INVENTORY("Added 4x " << diamond->itemName << " to inventory");
+    }
+    
+    DEBUG_INVENTORY("Player inventory initialized with crafting demo items");
 }
 
 void Player::UpdateFOV(float deltaTime) {

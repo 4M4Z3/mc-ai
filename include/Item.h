@@ -83,6 +83,7 @@ public:
     Item* getItem(const std::string& key) const;
     Item* getItemById(int id) const;
     Item* getItemForBlock(BlockType blockType) const;  // New method
+    BlockType getBlockTypeForItem(const std::string& itemKey) const;  // Convert item key to BlockType for placement
     
     const std::unordered_map<std::string, std::unique_ptr<Item>>& getAllItems() const { return items; }
     

@@ -185,8 +185,16 @@ private:
     // Inventory menu
     bool m_showInventory;
     
+    // Crafting interfaces
+    bool m_showCraftingTable;
+    bool m_showFurnace;
+    
     // Hotbar selection
     int m_selectedHotbarSlot;
+    
+    // Block placement preview
+    Vec3 m_placementPreviewPosition;
+    bool m_showPlacementPreview;
 
     // State management
     void SetState(GameState newState);
@@ -196,6 +204,8 @@ private:
     void RenderGame();
     void RenderPauseMenu();
     void RenderInventory();
+    void RenderCraftingTable();
+    void RenderFurnace();
     void RenderCustomInventorySlot(const InventorySlot& slot, float x, float y, float size, int slotIndex);
     void RenderCustomHotbarSlot(const InventorySlot& slot, float x, float y, float size, int slotIndex, bool isSelected);
     void RenderCursorItem(); // Render item following mouse cursor
@@ -204,6 +214,12 @@ private:
     // Inventory interaction helpers
     void HandleSlotClick(int slotIndex);
     void SwapSlots(int slotA, int slotB);
+    
+    // Block placement system
+    void UpdateBlockPlacement();  // Check for placement preview and handle placement
+    Vec3 GetBlockPlacementPosition(const RaycastResult& raycast) const;  // Calculate placement position from raycast
+    bool CanPlaceBlock(const Vec3& position) const;  // Check if block can be placed at position
+    bool IsHoldingPlaceableItem() const;  // Check if currently selected item can be placed as block
     
     // Helper method to get current interpolated positions for rendering
     std::unordered_map<uint32_t, PlayerPosition> GetInterpolatedPlayerPositions() const;

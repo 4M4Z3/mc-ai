@@ -231,4 +231,8 @@ enum class BlockType : uint16_t {
     OAK_LOG = 221,
     BIRCH_LOG = 222,
     DARK_OAK_LOG = 223,
+    
+    // Crafting blocks
+    CRAFTING_TABLE = 236,
+    FURNACE = 237,
 };

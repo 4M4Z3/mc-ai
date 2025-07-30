@@ -1737,11 +1737,29 @@
         "tintG": 1.0,
         "tintB": 1.0
       }
+    },
+    "crafting_table": {
+      "blockType": 236,
+      "blockName": "Crafting Table",
+      "type": "solid",
+      "textures": {
+        "all": "crafting_table_top.png"
+      }
+    },
+    "furnace": {
+      "blockType": 237,
+      "blockName": "Furnace",
+      "type": "solid",
+      "textures": {
+        "top": "furnace_top.png",
+        "bottom": "furnace_top.png",
+        "sides": "furnace_side.png"
+      }
     }
   },
   "metadata": {
-    "total_blocks": 235,
-    "id_range": "4-235", 
+    "total_blocks": 237,
+    "id_range": "4-237", 
     "description": "Blocks with hierarchical texture system and type categories",
     "block_types": {
       "solid": "Regular opaque blocks (stone, wood, etc)",

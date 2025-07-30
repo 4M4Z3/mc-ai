@@ -70,6 +70,61 @@ void CraftingSystem::initializeRecipes() {
         }
     }
     
+    // Pickaxe recipes (simplified 2x2 patterns)
+    Item* woodenPickaxe = itemManager->getItem("wooden_pickaxe");
+    Item* stonePickaxe = itemManager->getItem("stone_pickaxe");
+    Item* ironPickaxe = itemManager->getItem("iron_pickaxe");
+    Item* diamondPickaxe = itemManager->getItem("diamond_pickaxe");
+    
+    // Materials
+    Item* cobblestone = itemManager->getItem("cobblestone");
+    Item* ironIngot = itemManager->getItem("iron_ingot");
+    Item* diamond = itemManager->getItem("diamond");
+    
+    // Wooden Pickaxe: Oak Planks (top row) + Sticks (bottom row)
+    if (oakPlanks && stick && woodenPickaxe) {
+        auto recipe = std::make_unique<CraftingRecipe>(woodenPickaxe, 1);
+        recipe->setInput(0, 0, oakPlanks, 1); // Top left
+        recipe->setInput(0, 1, oakPlanks, 1); // Top right
+        recipe->setInput(1, 0, stick, 1);     // Bottom left
+        recipe->setInput(1, 1, stick, 1);     // Bottom right
+        recipes.push_back(std::move(recipe));
+        std::cout << "Added recipe: 2 Oak Planks + 2 Sticks -> Wooden Pickaxe" << std::endl;
+    }
+    
+    // Stone Pickaxe: Cobblestone (top row) + Sticks (bottom row)
+    if (cobblestone && stick && stonePickaxe) {
+        auto recipe = std::make_unique<CraftingRecipe>(stonePickaxe, 1);
+        recipe->setInput(0, 0, cobblestone, 1); // Top left
+        recipe->setInput(0, 1, cobblestone, 1); // Top right
+        recipe->setInput(1, 0, stick, 1);       // Bottom left
+        recipe->setInput(1, 1, stick, 1);       // Bottom right
+        recipes.push_back(std::move(recipe));
+        std::cout << "Added recipe: 2 Cobblestone + 2 Sticks -> Stone Pickaxe" << std::endl;
+    }
+    
+    // Iron Pickaxe: Iron Ingots (top row) + Sticks (bottom row)
+    if (ironIngot && stick && ironPickaxe) {
+        auto recipe = std::make_unique<CraftingRecipe>(ironPickaxe, 1);
+        recipe->setInput(0, 0, ironIngot, 1); // Top left
+        recipe->setInput(0, 1, ironIngot, 1); // Top right
+        recipe->setInput(1, 0, stick, 1);     // Bottom left
+        recipe->setInput(1, 1, stick, 1);     // Bottom right
+        recipes.push_back(std::move(recipe));
+        std::cout << "Added recipe: 2 Iron Ingots + 2 Sticks -> Iron Pickaxe" << std::endl;
+    }
+    
+    // Diamond Pickaxe: Diamonds (top row) + Sticks (bottom row)
+    if (diamond && stick && diamondPickaxe) {
+        auto recipe = std::make_unique<CraftingRecipe>(diamondPickaxe, 1);
+        recipe->setInput(0, 0, diamond, 1); // Top left
+        recipe->setInput(0, 1, diamond, 1); // Top right
+        recipe->setInput(1, 0, stick, 1);   // Bottom left
+        recipe->setInput(1, 1, stick, 1);   // Bottom right
+        recipes.push_back(std::move(recipe));
+        std::cout << "Added recipe: 2 Diamonds + 2 Sticks -> Diamond Pickaxe" << std::endl;
+    }
+    
     std::cout << "Initialized " << recipes.size() << " crafting recipes" << std::endl;
 }
 

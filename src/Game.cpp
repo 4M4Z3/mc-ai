@@ -56,7 +56,11 @@ Game::Game() :
     m_fontTitle(nullptr),
     m_showPauseMenu(false),
     m_showInventory(false),
-    m_selectedHotbarSlot(0)
+    m_showCraftingTable(false),
+    m_showFurnace(false),
+    m_selectedHotbarSlot(0),
+    m_placementPreviewPosition(0, 0, 0),
+    m_showPlacementPreview(false)
 {
     s_instance = this;
 }
@@ -498,6 +502,9 @@ void Game::UpdateGame() {
         m_targetBlock = m_player->CastRay(m_world.get(), 5.0f);
     }
     
+    // Update block placement preview
+    UpdateBlockPlacement();
+    
     // Update local game time for smooth progression between server syncs
     if (m_gameTimeReceived) {
         static auto lastTimeUpdate = std::chrono::steady_clock::now();
@@ -759,6 +766,13 @@ void Game::RenderGame() {
             m_renderer.RenderBlockWireframe(m_targetBlock.blockPos, *m_world);
         }
         
+        // Render placement preview wireframe (green/different color for placement)
+        if (m_showPlacementPreview) {
+            // For now, use the same wireframe method but at the placement position
+            // TODO: Create a separate method for placement wireframe with different color
+            m_renderer.RenderBlockWireframe(m_placementPreviewPosition, *m_world);
+        }
+        
         // Render other players with interpolated positions
         if (m_networkClient && m_networkClient->IsConnected()) {
             auto interpolatedPositionsMap = GetInterpolatedPlayerPositions();
@@ -791,6 +805,18 @@ void Game::RenderGame() {
     if (m_showInventory) {
         RenderInventory();
         return; // Don't show game UI when inventory is open
+    }
+    
+    // Show crafting table interface if active
+    if (m_showCraftingTable) {
+        RenderCraftingTable();
+        return; // Don't show game UI when crafting table is open
+    }
+    
+    // Show furnace interface if active
+    if (m_showFurnace) {
+        RenderFurnace();
+        return; // Don't show game UI when furnace is open
     }
     
     // Show game UI
@@ -1459,14 +1485,21 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
     if (s_instance) {
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
             if (s_instance->m_currentState == GameState::GAME) {
-                // Toggle pause menu instead of immediately going to main menu
-                s_instance->m_showPauseMenu = !s_instance->m_showPauseMenu;
-                
-                // Update cursor visibility based on pause state
-                if (s_instance->m_showPauseMenu) {
-                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                } else {
+                // Close crafting interfaces first if open
+                if (s_instance->m_showCraftingTable || s_instance->m_showFurnace) {
+                    s_instance->m_showCraftingTable = false;
+                    s_instance->m_showFurnace = false;
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                } else {
+                    // Toggle pause menu instead of immediately going to main menu
+                    s_instance->m_showPauseMenu = !s_instance->m_showPauseMenu;
+                    
+                    // Update cursor visibility based on pause state
+                    if (s_instance->m_showPauseMenu) {
+                        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                    } else {
+                        glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                    }
                 }
             }
         }
@@ -1492,6 +1525,12 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
             if (s_instance->m_currentState == GameState::GAME && !s_instance->m_showPauseMenu) {
                 s_instance->m_showInventory = !s_instance->m_showInventory;
                 
+                // If opening inventory, close other interfaces
+                if (s_instance->m_showInventory) {
+                    s_instance->m_showCraftingTable = false;
+                    s_instance->m_showFurnace = false;
+                }
+                
                 // Update cursor visibility based on inventory state
                 if (s_instance->m_showInventory) {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -1513,7 +1552,7 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
 }
 
 void Game::MouseCallback(GLFWwindow* window, double xpos, double ypos) {
-    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player && !s_instance->m_showPauseMenu && !s_instance->m_showInventory) {
+    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player && !s_instance->m_showPauseMenu && !s_instance->m_showInventory && !s_instance->m_showCraftingTable && !s_instance->m_showFurnace) {
         if (s_instance->m_firstMouse) {
             s_instance->m_lastX = xpos;
             s_instance->m_lastY = ypos;
@@ -1577,6 +1616,82 @@ void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int m
                 // Send to server for synchronization with other clients using the new streaming system
                 if (s_instance->m_networkClient && s_instance->m_networkClient->IsConnected()) {
                     s_instance->m_networkClient->SendBlockUpdate(blockX, blockY, blockZ, static_cast<uint16_t>(BlockType::AIR));
+                }
+            }
+        }
+        
+        // Right-click handling for block placement and interactions
+        if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS) {
+            // First check if we're holding a placeable item for block placement
+            if (s_instance->IsHoldingPlaceableItem() && s_instance->m_showPlacementPreview) {
+                // Get currently selected hotbar item
+                const InventorySlot& selectedSlot = s_instance->m_player->GetInventory().getHotbarSlot(s_instance->m_selectedHotbarSlot);
+                
+                // Find the item key to get the corresponding block type
+                std::string itemKey = "";
+                const auto& allItems = s_instance->m_itemManager->getAllItems();
+                for (const auto& pair : allItems) {
+                    if (pair.second.get() == selectedSlot.item) {
+                        itemKey = pair.first;
+                        break;
+                    }
+                }
+                
+                if (!itemKey.empty()) {
+                    BlockType blockTypeToPlace = s_instance->m_itemManager->getBlockTypeForItem(itemKey);
+                    if (blockTypeToPlace != BlockType::AIR) {
+                        // Place the block at the preview position
+                        int placeX = (int)s_instance->m_placementPreviewPosition.x;
+                        int placeY = (int)s_instance->m_placementPreviewPosition.y;
+                        int placeZ = (int)s_instance->m_placementPreviewPosition.z;
+                        
+                        std::cout << "Placing " << itemKey << " block at (" << placeX << ", " << placeY << ", " << placeZ << ")" << std::endl;
+                        
+                        // Place the block in the world with efficient mesh update
+                        s_instance->m_world->SetBlockWithMeshUpdate(placeX, placeY, placeZ, blockTypeToPlace, &(s_instance->m_renderer.m_blockManager));
+                        
+                        // Remove one item from inventory
+                        s_instance->m_player->GetInventory().getHotbarSlot(s_instance->m_selectedHotbarSlot).removeItems(1);
+                        
+                        // Send to server for synchronization
+                        if (s_instance->m_networkClient && s_instance->m_networkClient->IsConnected()) {
+                            s_instance->m_networkClient->SendBlockUpdate(placeX, placeY, placeZ, static_cast<uint16_t>(blockTypeToPlace));
+                        }
+                        
+                        return; // Don't handle block interactions when placing
+                    }
+                }
+            }
+            
+            // If not placing blocks, handle block interactions
+            RaycastResult raycast = s_instance->m_player->CastRay(s_instance->m_world.get(), 5.0f);
+            
+            if (raycast.hit) {
+                int blockX = (int)raycast.blockPos.x;
+                int blockY = (int)raycast.blockPos.y;
+                int blockZ = (int)raycast.blockPos.z;
+                
+                // Get the block type to check for interactable blocks
+                Block targetBlock = s_instance->m_world->GetBlock(blockX, blockY, blockZ);
+                BlockType blockType = targetBlock.GetType();
+                
+                std::cout << "Right-clicking block type: " << static_cast<int>(blockType) << std::endl;
+                
+                // Handle block interactions
+                if (blockType == BlockType::CRAFTING_TABLE) {
+                    s_instance->m_showCraftingTable = true;
+                    s_instance->m_showInventory = false;
+                    s_instance->m_showFurnace = false;
+                    // Enable cursor for UI interaction
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                    std::cout << "Opened crafting table interface" << std::endl;
+                } else if (blockType == BlockType::FURNACE) {
+                    s_instance->m_showFurnace = true;
+                    s_instance->m_showInventory = false;
+                    s_instance->m_showCraftingTable = false;
+                    // Enable cursor for UI interaction
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                    std::cout << "Opened furnace interface" << std::endl;
                 }
             }
         }
@@ -2162,3 +2277,327 @@ Vec3 Game::CalculateSpawnPosition() const {
     
     return Vec3(0.0f, spawnY, 0.0f);
 }
+
+void Game::RenderCraftingTable() {
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Create a semi-transparent background overlay
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(io.DisplaySize);
+    
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.4f));
+    if (ImGui::Begin("CraftingTableBackground", nullptr, 
+                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | 
+                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
+                     ImGuiWindowFlags_NoInputs)) {
+        // Empty window just for background
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+    
+    // GUI dimensions
+    const float slotSize = 64.0f;
+    const float slotSpacing = 4.0f;
+    const float padding = 20.0f;
+    const float titleHeight = 40.0f;
+    const float sectionSpacing = 20.0f;
+    
+    // Calculate window dimensions (3x3 crafting grid + result slot + player inventory)
+    const float craftingGridWidth = (3 * slotSize) + (2 * slotSpacing);
+    const float craftingAreaWidth = craftingGridWidth + slotSize + (3 * slotSpacing); // grid + result + spacing
+    const float inventoryWidth = std::max((9 * slotSize) + (8 * slotSpacing), craftingAreaWidth) + (2 * padding);
+    const float craftingHeight = (3 * slotSize) + (2 * slotSpacing);
+    const float inventoryHeight = titleHeight + craftingHeight + sectionSpacing + 
+                                 (3 * slotSize) + (2 * slotSpacing) + sectionSpacing + // main inventory
+                                 slotSize + (2 * padding); // hotbar + padding
+    
+    // Center the window
+    float centerX = (io.DisplaySize.x - inventoryWidth) * 0.5f;
+    float centerY = (io.DisplaySize.y - inventoryHeight) * 0.5f;
+    
+    ImGui::SetNextWindowSize(ImVec2(inventoryWidth, inventoryHeight), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(ImVec2(centerX, centerY), ImGuiCond_Always);
+    
+    // Style the window
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.15f, 0.15f, 0.2f, 0.95f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.4f, 0.4f, 0.5f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBg, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
+    
+    if (ImGui::Begin("Crafting Table", nullptr, 
+                     ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
+                     ImGuiWindowFlags_NoCollapse)) {
+        
+        if (m_player) {
+            // Crafting area
+            ImGui::Text("Crafting");
+            ImGui::Separator();
+            
+            // 3x3 crafting grid (placeholder for now)
+            for (int row = 0; row < 3; row++) {
+                if (row > 0) ImGui::SameLine();
+                for (int col = 0; col < 3; col++) {
+                    if (col > 0) ImGui::SameLine();
+                    
+                    // Create unique ID for each slot
+                    std::string slotId = "craft_" + std::to_string(row * 3 + col);
+                    ImGui::PushID(slotId.c_str());
+                    
+                    // Draw empty crafting slot
+                    ImVec2 cursorPos = ImGui::GetCursorPos();
+                    ImGui::Button("", ImVec2(slotSize, slotSize));
+                    
+                    ImGui::PopID();
+                }
+                ImGui::NewLine();
+            }
+            
+            // Result slot (to the right of crafting grid)
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + slotSpacing * 2);
+            ImGui::Button("Result", ImVec2(slotSize, slotSize));
+            
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+            
+            // Player inventory
+            ImGui::Text("Inventory");
+            const Inventory& inventory = m_player->GetInventory();
+            
+            // Main inventory (3 rows of 9 slots each)
+            for (int row = 0; row < 3; row++) {
+                for (int col = 0; col < 9; col++) {
+                    if (col > 0) ImGui::SameLine(0, slotSpacing);
+                    
+                    int slotIndex = row * 9 + col;
+                    const InventorySlot& slot = inventory.getSlot(slotIndex);
+                    RenderCustomInventorySlot(slot, 0, 0, slotSize, slotIndex);
+                }
+                if (row < 2) ImGui::Spacing();
+            }
+            
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+            
+            // Hotbar
+            ImGui::Text("Hotbar");
+            for (int i = 0; i < 9; i++) {
+                if (i > 0) ImGui::SameLine(0, slotSpacing);
+                
+                int slotIndex = 27 + i; // Hotbar starts at slot 27
+                const InventorySlot& slot = inventory.getSlot(slotIndex);
+                bool isSelected = (i == m_selectedHotbarSlot);
+                RenderCustomHotbarSlot(slot, 0, 0, slotSize, slotIndex, isSelected);
+            }
+        }
+    }
+    ImGui::End();
+    
+    // Pop all style modifications
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar(3);
+}
+
+// Block placement system implementation
+void Game::UpdateBlockPlacement() {
+    if (!m_player || !m_world || !m_itemManager) {
+        m_showPlacementPreview = false;
+        return;
+    }
+    
+    // Check if player is holding a placeable item
+    if (!IsHoldingPlaceableItem()) {
+        m_showPlacementPreview = false;
+        return;
+    }
+    
+    // Cast ray to find placement position
+    RaycastResult raycast = m_player->CastRay(m_world.get(), 5.0f);
+    if (!raycast.hit) {
+        m_showPlacementPreview = false;
+        return;
+    }
+    
+    // Calculate placement position (adjacent to hit surface)
+    Vec3 placementPos = GetBlockPlacementPosition(raycast);
+    
+    // Check if block can be placed at this position
+    if (!CanPlaceBlock(placementPos)) {
+        m_showPlacementPreview = false;
+        return;
+    }
+    
+    // Show placement preview
+    m_placementPreviewPosition = placementPos;
+    m_showPlacementPreview = true;
+}
+
+Vec3 Game::GetBlockPlacementPosition(const RaycastResult& raycast) const {
+    // Place block adjacent to the hit surface using the normal
+    Vec3 placementPos;
+    placementPos.x = raycast.blockPos.x + raycast.normal.x;
+    placementPos.y = raycast.blockPos.y + raycast.normal.y;
+    placementPos.z = raycast.blockPos.z + raycast.normal.z;
+    return placementPos;
+}
+
+bool Game::CanPlaceBlock(const Vec3& position) const {
+    if (!m_world) return false;
+    
+    // Check if the position is already occupied by a solid block
+    Block existingBlock = m_world->GetBlock((int)position.x, (int)position.y, (int)position.z);
+    if (existingBlock.IsSolid()) {
+        return false; // Can't place block where there's already a solid block
+    }
+    
+    // Check if player would intersect with the placed block
+    if (m_player) {
+        Vec3 playerPos = m_player->GetPosition();
+        float playerHeight = m_player->GetPlayerHeight();
+        float playerWidth = m_player->GetPlayerWidth();
+        
+        // Check if player's bounding box intersects with the block to be placed
+        // Player extends from playerPos.y to playerPos.y + playerHeight
+        // Player width extends from playerPos +/- playerWidth/2 in X and Z
+        
+        if (position.x >= playerPos.x - playerWidth/2 && position.x < playerPos.x + playerWidth/2 &&
+            position.z >= playerPos.z - playerWidth/2 && position.z < playerPos.z + playerWidth/2 &&
+            position.y >= playerPos.y && position.y < playerPos.y + playerHeight) {
+            return false; // Would intersect with player
+        }
+    }
+    
+    return true;
+}
+
+bool Game::IsHoldingPlaceableItem() const {
+    if (!m_player || !m_itemManager) return false;
+    
+    // Get currently selected hotbar item
+    const InventorySlot& selectedSlot = m_player->GetInventory().getHotbarSlot(m_selectedHotbarSlot);
+    if (selectedSlot.isEmpty() || !selectedSlot.item) {
+        return false;
+    }
+    
+    // Check if the item has a corresponding block type (can be placed)
+    // We try to convert the item to a block type - if it returns AIR, it's not placeable
+    std::string itemKey = ""; // We need to get the item key from the item
+    
+    // Find the item key by searching the ItemManager's items
+    const auto& allItems = m_itemManager->getAllItems();
+    for (const auto& pair : allItems) {
+        if (pair.second.get() == selectedSlot.item) {
+            itemKey = pair.first;
+            break;
+        }
+    }
+    
+    if (itemKey.empty()) return false;
+    
+    BlockType blockType = m_itemManager->getBlockTypeForItem(itemKey);
+    return blockType != BlockType::AIR;
+}
+
+void Game::RenderFurnace() {
+    // Placeholder furnace interface - similar to crafting table but simpler
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Style constants
+    const float padding = 20.0f;
+    const float slotSize = 64.0f;
+    const float slotSpacing = 8.0f;
+    const float titleHeight = 40.0f;
+    const float sectionSpacing = 20.0f;
+    
+    // Calculate window dimensions for furnace interface
+    const float furnaceWidth = (3 * slotSize) + (2 * slotSpacing) + (2 * padding); // 3 slots: input, fuel, output
+    const float inventoryWidth = std::max((9 * slotSize) + (8 * slotSpacing), furnaceWidth) + (2 * padding);
+    const float furnaceHeight = titleHeight + slotSize + sectionSpacing + 
+                               (3 * slotSize) + (2 * slotSpacing) + sectionSpacing + // main inventory
+                               slotSize + (2 * padding); // hotbar + padding
+    
+    // Center the window
+    float centerX = (io.DisplaySize.x - inventoryWidth) * 0.5f;
+    float centerY = (io.DisplaySize.y - furnaceHeight) * 0.5f;
+    
+    ImGui::SetNextWindowSize(ImVec2(inventoryWidth, furnaceHeight), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(ImVec2(centerX, centerY), ImGuiCond_Always);
+    
+    // Style the window
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.15f, 0.15f, 0.2f, 0.95f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.4f, 0.4f, 0.5f, 0.8f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBg, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
+    
+    if (ImGui::Begin("Furnace", nullptr, 
+                     ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
+                     ImGuiWindowFlags_NoCollapse)) {
+        
+        // Furnace area
+        ImGui::Text("Furnace");
+        ImGui::Separator();
+        
+        // Simple 3-slot furnace layout: Input -> Fuel -> Output
+        for (int i = 0; i < 3; i++) {
+            if (i > 0) ImGui::SameLine();
+            
+            std::string slotId = "furnace_" + std::to_string(i);
+            ImGui::PushID(slotId.c_str());
+            
+            // Draw empty furnace slot
+            ImGui::Button("", ImVec2(slotSize, slotSize));
+            
+            ImGui::PopID();
+        }
+        
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        
+        if (m_player) {
+            const auto& inventory = m_player->GetInventory();
+            
+            // Main inventory (3 rows of 9)
+            ImGui::Text("Inventory");
+            for (int row = 0; row < 3; row++) {
+                for (int col = 0; col < 9; col++) {
+                    if (col > 0) ImGui::SameLine(0, slotSpacing);
+                    
+                    int slotIndex = row * 9 + col;
+                    const InventorySlot& slot = inventory.getSlot(slotIndex);
+                    RenderCustomInventorySlot(slot, 0, 0, slotSize, slotIndex);
+                }
+            }
+            
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+            
+            // Hotbar
+            ImGui::Text("Hotbar");
+            for (int i = 0; i < 9; i++) {
+                if (i > 0) ImGui::SameLine(0, slotSpacing);
+                
+                int slotIndex = 27 + i; // Hotbar starts at slot 27
+                const InventorySlot& slot = inventory.getSlot(slotIndex);
+                bool isSelected = (i == m_selectedHotbarSlot);
+                RenderCustomHotbarSlot(slot, 0, 0, slotSize, slotIndex, isSelected);
+            }
+        }
+    }
+    ImGui::End();
+    
+    // Pop all style modifications
+    ImGui::PopStyleColor(4);
+    ImGui::PopStyleVar(3);
+}
+

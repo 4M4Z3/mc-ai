@@ -44,6 +44,11 @@ Item* ItemManager::getItemForBlock(BlockType blockType) const {
             return getItem("birch_log");
         case BlockType::DARK_OAK_LOG:
             return getItem("dark_oak_log");
+        
+        case BlockType::CRAFTING_TABLE:
+            return getItem("crafting_table");
+        case BlockType::FURNACE:
+            return getItem("furnace");
             
         // Leaves
         case BlockType::ACACIA_LEAVES:
@@ -533,6 +538,135 @@ Item* ItemManager::getItemForBlock(BlockType blockType) const {
     }
 }
 
+BlockType ItemManager::getBlockTypeForItem(const std::string& itemKey) const {
+    // Comprehensive mapping of item keys to BlockType for placement
+    // This is the reverse of getItemForBlock mapping
+    
+    // Core blocks
+    if (itemKey == "stone") return BlockType::STONE;
+    if (itemKey == "dirt") return BlockType::DIRT;
+    if (itemKey == "grass_block") return BlockType::GRASS;
+    
+    // Wood logs
+    if (itemKey == "oak_log") return BlockType::OAK_LOG;
+    if (itemKey == "birch_log") return BlockType::BIRCH_LOG;
+    if (itemKey == "dark_oak_log") return BlockType::DARK_OAK_LOG;
+    
+    // Functional blocks
+    if (itemKey == "crafting_table") return BlockType::CRAFTING_TABLE;
+    if (itemKey == "furnace") return BlockType::FURNACE;
+    
+    // Leaves
+    if (itemKey == "acacia_leaves") return BlockType::ACACIA_LEAVES;
+    if (itemKey == "azalea_leaves") return BlockType::AZALEA_LEAVES;
+    if (itemKey == "birch_leaves") return BlockType::BIRCH_LEAVES;
+    if (itemKey == "cherry_leaves") return BlockType::CHERRY_LEAVES;
+    if (itemKey == "jungle_leaves") return BlockType::JUNGLE_LEAVES;
+    if (itemKey == "mangrove_leaves") return BlockType::MANGROVE_LEAVES;
+    if (itemKey == "spruce_leaves") return BlockType::SPRUCE_LEAVES;
+    
+    // Planks
+    if (itemKey == "acacia_planks") return BlockType::ACACIA_PLANKS;
+    if (itemKey == "birch_planks") return BlockType::BIRCH_PLANKS;
+    if (itemKey == "cherry_planks") return BlockType::CHERRY_PLANKS;
+    if (itemKey == "jungle_planks") return BlockType::JUNGLE_PLANKS;
+    if (itemKey == "spruce_planks") return BlockType::SPRUCE_PLANKS;
+    // Oak planks - use a different existing plank type or remove this line
+    // if (itemKey == "oak_planks") return BlockType::OAK_PLANKS; // OAK_PLANKS doesn't exist
+    
+    // Saplings
+    if (itemKey == "acacia_sapling") return BlockType::ACACIA_SAPLING;
+    if (itemKey == "birch_sapling") return BlockType::BIRCH_SAPLING;
+    if (itemKey == "cherry_sapling") return BlockType::CHERRY_SAPLING;
+    if (itemKey == "dark_oak_sapling") return BlockType::DARK_OAK_SAPLING;
+    if (itemKey == "jungle_sapling") return BlockType::JUNGLE_SAPLING;
+    if (itemKey == "spruce_sapling") return BlockType::SPRUCE_SAPLING;
+    
+    // Common blocks
+    // if (itemKey == "cobblestone") return BlockType::COBBLESTONE; // COBBLESTONE doesn't exist, maybe use STONE
+    if (itemKey == "andesite") return BlockType::ANDESITE;
+    if (itemKey == "granite") return BlockType::GRANITE;
+    if (itemKey == "gravel") return BlockType::GRAVEL;
+    if (itemKey == "sand") return BlockType::SAND;
+    if (itemKey == "red_sand") return BlockType::RED_SAND;
+    if (itemKey == "glass") return BlockType::GLASS;
+    if (itemKey == "obsidian") return BlockType::OBSIDIAN;
+    if (itemKey == "bedrock") return BlockType::BEDROCK;
+    if (itemKey == "tinted_glass") return BlockType::TINTED_GLASS;
+    if (itemKey == "smooth_stone") return BlockType::SMOOTH_STONE;
+    if (itemKey == "smooth_basalt") return BlockType::SMOOTH_BASALT;
+    if (itemKey == "dripstone_block") return BlockType::DRIPSTONE_BLOCK;
+    if (itemKey == "amethyst_block") return BlockType::AMETHYST_BLOCK;
+    if (itemKey == "amethyst_cluster") return BlockType::AMETHYST_CLUSTER;
+    
+    // Ores
+    if (itemKey == "copper_ore") return BlockType::COPPER_ORE;
+    if (itemKey == "iron_ore") return BlockType::IRON_ORE;
+    if (itemKey == "gold_ore") return BlockType::GOLD_ORE;
+    if (itemKey == "emerald_ore") return BlockType::EMERALD_ORE;
+    
+    // Metal blocks
+    if (itemKey == "copper_block") return BlockType::COPPER_BLOCK;
+    if (itemKey == "iron_block") return BlockType::IRON_BLOCK;
+    if (itemKey == "gold_block") return BlockType::GOLD_BLOCK;
+    if (itemKey == "emerald_block") return BlockType::EMERALD_BLOCK;
+    
+    // Bricks and stone variants
+    if (itemKey == "bricks") return BlockType::BRICKS;
+    if (itemKey == "stone_bricks") return BlockType::STONE_BRICKS;
+    
+    // Wool blocks - only use existing ones
+    if (itemKey == "blue_wool") return BlockType::BLUE_WOOL;
+    if (itemKey == "green_wool") return BlockType::GREEN_WOOL;
+    if (itemKey == "yellow_wool") return BlockType::YELLOW_WOOL; 
+    // Other wool colors don't exist in BlockType enum
+    
+    // Special blocks
+    if (itemKey == "glowstone") return BlockType::GLOWSTONE;
+    if (itemKey == "ice") return BlockType::ICE;
+    if (itemKey == "snow") return BlockType::SNOW;
+    if (itemKey == "powder_snow") return BlockType::POWDER_SNOW;
+    if (itemKey == "sea_lantern") return BlockType::SEA_LANTERN;
+    if (itemKey == "lantern") return BlockType::LANTERN;
+    if (itemKey == "soul_lantern") return BlockType::SOUL_LANTERN;
+    if (itemKey == "soul_torch") return BlockType::SOUL_TORCH;
+    if (itemKey == "soul_sand") return BlockType::SOUL_SAND;
+    if (itemKey == "soul_soil") return BlockType::SOUL_SOIL;
+    if (itemKey == "beacon") return BlockType::BEACON;
+    if (itemKey == "conduit") return BlockType::CONDUIT;
+    if (itemKey == "spawner") return BlockType::SPAWNER;
+    if (itemKey == "sponge") return BlockType::SPONGE;
+    if (itemKey == "slime_block") return BlockType::SLIME_BLOCK;
+    
+    // Plant blocks
+    if (itemKey == "allium") return BlockType::ALLIUM;
+    if (itemKey == "azure_bluet") return BlockType::AZURE_BLUET;
+    if (itemKey == "dandelion") return BlockType::DANDELION;
+    if (itemKey == "dead_bush") return BlockType::DEAD_BUSH;
+    if (itemKey == "azalea_plant") return BlockType::AZALEA_PLANT;
+    if (itemKey == "spore_blossom") return BlockType::SPORE_BLOSSOM;
+    if (itemKey == "spore_blossom_base") return BlockType::SPORE_BLOSSOM_BASE;
+    if (itemKey == "pink_petals") return BlockType::PINK_PETALS;
+    if (itemKey == "pink_petals_stem") return BlockType::PINK_PETALS_STEM;
+    if (itemKey == "twisting_vines") return BlockType::TWISTING_VINES;
+    if (itemKey == "twisting_vines_plant") return BlockType::TWISTING_VINES_PLANT;
+    if (itemKey == "kelp") return BlockType::KELP;
+    
+    // Misc utility blocks
+    if (itemKey == "moss_block") return BlockType::MOSS_BLOCK;
+    if (itemKey == "mud") return BlockType::MUD;
+    if (itemKey == "rooted_dirt") return BlockType::ROOTED_DIRT;
+    if (itemKey == "item_frame") return BlockType::ITEM_FRAME;
+    if (itemKey == "rail") return BlockType::RAIL;
+    if (itemKey == "tripwire") return BlockType::TRIPWIRE;
+    if (itemKey == "tripwire_hook") return BlockType::TRIPWIRE_HOOK;
+    if (itemKey == "spruce_trapdoor") return BlockType::SPRUCE_TRAPDOOR;
+    
+    // Items that can't be placed as blocks
+    DEBUG_INVENTORY("Warning: Item key '" << itemKey << "' cannot be placed as a block");
+    return BlockType::AIR; // Default for non-placeable items
+}
+
 void ItemManager::addItem(const std::string& key, std::unique_ptr<Item> item) {
     if (item) {
         itemsById[item->itemId] = item.get();
@@ -668,6 +802,37 @@ void ItemManager::InitializeTestItems() {
     auto stick = std::make_unique<Item>(itemId++, "Stick", ItemType::ITEM, "item/stick.png", true, 64);
     itemsById[stick->itemId] = stick.get();
     items["stick"] = std::move(stick);
+    
+    // Additional materials for crafting
+    auto cobblestone = std::make_unique<Item>(itemId++, "Cobblestone", ItemType::ITEM, "item/cobblestone.png", true, 64);
+    itemsById[cobblestone->itemId] = cobblestone.get();
+    items["cobblestone"] = std::move(cobblestone);
+    
+    auto iron_ingot = std::make_unique<Item>(itemId++, "Iron Ingot", ItemType::ITEM, "item/iron_ingot.png", true, 64);
+    itemsById[iron_ingot->itemId] = iron_ingot.get();
+    items["iron_ingot"] = std::move(iron_ingot);
+    
+    // Pickaxes
+    auto wooden_pickaxe = std::make_unique<Item>(itemId++, "Wooden Pickaxe", ItemType::ITEM, "item/wooden_pickaxe.png", true, 1);
+    itemsById[wooden_pickaxe->itemId] = wooden_pickaxe.get();
+    items["wooden_pickaxe"] = std::move(wooden_pickaxe);
+    
+    auto stone_pickaxe = std::make_unique<Item>(itemId++, "Stone Pickaxe", ItemType::ITEM, "item/stone_pickaxe.png", true, 1);
+    itemsById[stone_pickaxe->itemId] = stone_pickaxe.get();
+    items["stone_pickaxe"] = std::move(stone_pickaxe);
+    
+    auto iron_pickaxe = std::make_unique<Item>(itemId++, "Iron Pickaxe", ItemType::ITEM, "item/iron_pickaxe.png", true, 1);
+    itemsById[iron_pickaxe->itemId] = iron_pickaxe.get();
+    items["iron_pickaxe"] = std::move(iron_pickaxe);
+    
+    // Crafting blocks
+    auto crafting_table = std::make_unique<Item>(itemId++, "Crafting Table", ItemType::ITEM, "item/crafting_table.png", true, 64);
+    itemsById[crafting_table->itemId] = crafting_table.get();
+    items["crafting_table"] = std::move(crafting_table);
+    
+    auto furnace = std::make_unique<Item>(itemId++, "Furnace", ItemType::ITEM, "item/furnace.png", true, 64);
+    itemsById[furnace->itemId] = furnace.get();
+    items["furnace"] = std::move(furnace);
     
     // Common blocks
     auto andesite = std::make_unique<Item>(itemId++, "Andesite", ItemType::ITEM, "item/andesite.png", true, 64);
