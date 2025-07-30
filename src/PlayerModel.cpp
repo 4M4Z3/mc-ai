@@ -479,113 +479,119 @@ unsigned int PlayerModel::LoadSkinTexture(const std::string& skinPath) {
 std::vector<std::vector<float>> PlayerModel::GetHeadUVMapping() {
     // Head mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
+    // Each face: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (head front) - (8, 8) to (16, 16)
-        {0.125f, 0.125f,  0.25f, 0.125f,  0.25f, 0.25f,  0.25f, 0.25f,  0.125f, 0.25f,  0.125f, 0.125f},
-        // Back face (head back) - (24, 8) to (32, 16)
-        {0.375f, 0.125f,  0.5f, 0.125f,  0.5f, 0.25f,  0.5f, 0.25f,  0.375f, 0.25f,  0.375f, 0.125f},
+        {0.125f, 0.25f,  0.25f, 0.25f,  0.25f, 0.125f,  0.25f, 0.125f,  0.125f, 0.125f,  0.125f, 0.25f},
+        // Back face (head back) - (24, 8) to (32, 16) - flipped horizontally
+        {0.5f, 0.25f,  0.375f, 0.25f,  0.375f, 0.125f,  0.375f, 0.125f,  0.5f, 0.125f,  0.5f, 0.25f},
         // Left face (head left) - (16, 8) to (24, 16)
-        {0.25f, 0.125f,  0.375f, 0.125f,  0.375f, 0.25f,  0.375f, 0.25f,  0.25f, 0.25f,  0.25f, 0.125f},
-        // Right face (head right) - (0, 8) to (8, 16)
-        {0.0f, 0.125f,  0.125f, 0.125f,  0.125f, 0.25f,  0.125f, 0.25f,  0.0f, 0.25f,  0.0f, 0.125f},
+        {0.25f, 0.25f,  0.375f, 0.25f,  0.375f, 0.125f,  0.375f, 0.125f,  0.25f, 0.125f,  0.25f, 0.25f},
+        // Right face (head right) - (0, 8) to (8, 16) - flipped horizontally  
+        {0.125f, 0.25f,  0.0f, 0.25f,  0.0f, 0.125f,  0.0f, 0.125f,  0.125f, 0.125f,  0.125f, 0.25f},
         // Bottom face (head bottom) - (16, 0) to (24, 8)
-        {0.25f, 0.0f,  0.375f, 0.0f,  0.375f, 0.125f,  0.375f, 0.125f,  0.25f, 0.125f,  0.25f, 0.0f},
+        {0.25f, 0.125f,  0.375f, 0.125f,  0.375f, 0.0f,  0.375f, 0.0f,  0.25f, 0.0f,  0.25f, 0.125f},
         // Top face (head top) - (8, 0) to (16, 8)
-        {0.125f, 0.0f,  0.25f, 0.0f,  0.25f, 0.125f,  0.25f, 0.125f,  0.125f, 0.125f,  0.125f, 0.0f}
+        {0.125f, 0.125f,  0.25f, 0.125f,  0.25f, 0.0f,  0.25f, 0.0f,  0.125f, 0.0f,  0.125f, 0.125f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetTorsoUVMapping() {
     // Torso mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
+    // Each face: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (torso front) - (20, 20) to (28, 32)
-        {0.3125f, 0.3125f,  0.4375f, 0.3125f,  0.4375f, 0.5f,  0.4375f, 0.5f,  0.3125f, 0.5f,  0.3125f, 0.3125f},
-        // Back face (torso back) - (32, 20) to (40, 32)
-        {0.5f, 0.3125f,  0.625f, 0.3125f,  0.625f, 0.5f,  0.625f, 0.5f,  0.5f, 0.5f,  0.5f, 0.3125f},
+        {0.3125f, 0.5f,  0.4375f, 0.5f,  0.4375f, 0.3125f,  0.4375f, 0.3125f,  0.3125f, 0.3125f,  0.3125f, 0.5f},
+        // Back face (torso back) - (32, 20) to (40, 32) - flipped horizontally
+        {0.625f, 0.5f,  0.5f, 0.5f,  0.5f, 0.3125f,  0.5f, 0.3125f,  0.625f, 0.3125f,  0.625f, 0.5f},
         // Left face (torso left) - (28, 20) to (32, 32)
-        {0.4375f, 0.3125f,  0.5f, 0.3125f,  0.5f, 0.5f,  0.5f, 0.5f,  0.4375f, 0.5f,  0.4375f, 0.3125f},
-        // Right face (torso right) - (16, 20) to (20, 32)
-        {0.25f, 0.3125f,  0.3125f, 0.3125f,  0.3125f, 0.5f,  0.3125f, 0.5f,  0.25f, 0.5f,  0.25f, 0.3125f},
+        {0.4375f, 0.5f,  0.5f, 0.5f,  0.5f, 0.3125f,  0.5f, 0.3125f,  0.4375f, 0.3125f,  0.4375f, 0.5f},
+        // Right face (torso right) - (16, 20) to (20, 32) - flipped horizontally
+        {0.3125f, 0.5f,  0.25f, 0.5f,  0.25f, 0.3125f,  0.25f, 0.3125f,  0.3125f, 0.3125f,  0.3125f, 0.5f},
         // Bottom face (torso bottom) - (28, 16) to (36, 20)
-        {0.4375f, 0.25f,  0.5625f, 0.25f,  0.5625f, 0.3125f,  0.5625f, 0.3125f,  0.4375f, 0.3125f,  0.4375f, 0.25f},
+        {0.4375f, 0.3125f,  0.5625f, 0.3125f,  0.5625f, 0.25f,  0.5625f, 0.25f,  0.4375f, 0.25f,  0.4375f, 0.3125f},
         // Top face (torso top) - (20, 16) to (28, 20)
-        {0.3125f, 0.25f,  0.4375f, 0.25f,  0.4375f, 0.3125f,  0.4375f, 0.3125f,  0.3125f, 0.3125f,  0.3125f, 0.25f}
+        {0.3125f, 0.3125f,  0.4375f, 0.3125f,  0.4375f, 0.25f,  0.4375f, 0.25f,  0.3125f, 0.25f,  0.3125f, 0.3125f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetRightArmUVMapping() {
     // Right arm mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
+    // Each face: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (right arm front) - (44, 20) to (48, 32)
-        {0.6875f, 0.3125f,  0.75f, 0.3125f,  0.75f, 0.5f,  0.75f, 0.5f,  0.6875f, 0.5f,  0.6875f, 0.3125f},
-        // Back face (right arm back) - (52, 20) to (56, 32)
-        {0.8125f, 0.3125f,  0.875f, 0.3125f,  0.875f, 0.5f,  0.875f, 0.5f,  0.8125f, 0.5f,  0.8125f, 0.3125f},
+        {0.6875f, 0.5f,  0.75f, 0.5f,  0.75f, 0.3125f,  0.75f, 0.3125f,  0.6875f, 0.3125f,  0.6875f, 0.5f},
+        // Back face (right arm back) - (52, 20) to (56, 32) - flipped horizontally
+        {0.875f, 0.5f,  0.8125f, 0.5f,  0.8125f, 0.3125f,  0.8125f, 0.3125f,  0.875f, 0.3125f,  0.875f, 0.5f},
         // Left face (right arm left) - (48, 20) to (52, 32)
-        {0.75f, 0.3125f,  0.8125f, 0.3125f,  0.8125f, 0.5f,  0.8125f, 0.5f,  0.75f, 0.5f,  0.75f, 0.3125f},
-        // Right face (right arm right) - (40, 20) to (44, 32)
-        {0.625f, 0.3125f,  0.6875f, 0.3125f,  0.6875f, 0.5f,  0.6875f, 0.5f,  0.625f, 0.5f,  0.625f, 0.3125f},
+        {0.75f, 0.5f,  0.8125f, 0.5f,  0.8125f, 0.3125f,  0.8125f, 0.3125f,  0.75f, 0.3125f,  0.75f, 0.5f},
+        // Right face (right arm right) - (40, 20) to (44, 32) - flipped horizontally
+        {0.6875f, 0.5f,  0.625f, 0.5f,  0.625f, 0.3125f,  0.625f, 0.3125f,  0.6875f, 0.3125f,  0.6875f, 0.5f},
         // Bottom face (right arm bottom) - (48, 16) to (52, 20)
-        {0.75f, 0.25f,  0.8125f, 0.25f,  0.8125f, 0.3125f,  0.8125f, 0.3125f,  0.75f, 0.3125f,  0.75f, 0.25f},
+        {0.75f, 0.3125f,  0.8125f, 0.3125f,  0.8125f, 0.25f,  0.8125f, 0.25f,  0.75f, 0.25f,  0.75f, 0.3125f},
         // Top face (right arm top) - (44, 16) to (48, 20)
-        {0.6875f, 0.25f,  0.75f, 0.25f,  0.75f, 0.3125f,  0.75f, 0.3125f,  0.6875f, 0.3125f,  0.6875f, 0.25f}
+        {0.6875f, 0.3125f,  0.75f, 0.3125f,  0.75f, 0.25f,  0.75f, 0.25f,  0.6875f, 0.25f,  0.6875f, 0.3125f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetLeftArmUVMapping() {
     // Left arm mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
+    // Each face: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (left arm front) - (36, 52) to (40, 64)
-        {0.5625f, 0.8125f,  0.625f, 0.8125f,  0.625f, 1.0f,  0.625f, 1.0f,  0.5625f, 1.0f,  0.5625f, 0.8125f},
-        // Back face (left arm back) - (44, 52) to (48, 64)
-        {0.6875f, 0.8125f,  0.75f, 0.8125f,  0.75f, 1.0f,  0.75f, 1.0f,  0.6875f, 1.0f,  0.6875f, 0.8125f},
+        {0.5625f, 1.0f,  0.625f, 1.0f,  0.625f, 0.8125f,  0.625f, 0.8125f,  0.5625f, 0.8125f,  0.5625f, 1.0f},
+        // Back face (left arm back) - (44, 52) to (48, 64) - flipped horizontally
+        {0.75f, 1.0f,  0.6875f, 1.0f,  0.6875f, 0.8125f,  0.6875f, 0.8125f,  0.75f, 0.8125f,  0.75f, 1.0f},
         // Left face (left arm left) - (40, 52) to (44, 64)
-        {0.625f, 0.8125f,  0.6875f, 0.8125f,  0.6875f, 1.0f,  0.6875f, 1.0f,  0.625f, 1.0f,  0.625f, 0.8125f},
-        // Right face (left arm right) - (32, 52) to (36, 64)
-        {0.5f, 0.8125f,  0.5625f, 0.8125f,  0.5625f, 1.0f,  0.5625f, 1.0f,  0.5f, 1.0f,  0.5f, 0.8125f},
+        {0.625f, 1.0f,  0.6875f, 1.0f,  0.6875f, 0.8125f,  0.6875f, 0.8125f,  0.625f, 0.8125f,  0.625f, 1.0f},
+        // Right face (left arm right) - (32, 52) to (36, 64) - flipped horizontally
+        {0.5625f, 1.0f,  0.5f, 1.0f,  0.5f, 0.8125f,  0.5f, 0.8125f,  0.5625f, 0.8125f,  0.5625f, 1.0f},
         // Bottom face (left arm bottom) - (40, 48) to (44, 52)
-        {0.625f, 0.75f,  0.6875f, 0.75f,  0.6875f, 0.8125f,  0.6875f, 0.8125f,  0.625f, 0.8125f,  0.625f, 0.75f},
+        {0.625f, 0.8125f,  0.6875f, 0.8125f,  0.6875f, 0.75f,  0.6875f, 0.75f,  0.625f, 0.75f,  0.625f, 0.8125f},
         // Top face (left arm top) - (36, 48) to (40, 52)
-        {0.5625f, 0.75f,  0.625f, 0.75f,  0.625f, 0.8125f,  0.625f, 0.8125f,  0.5625f, 0.8125f,  0.5625f, 0.75f}
+        {0.5625f, 0.8125f,  0.625f, 0.8125f,  0.625f, 0.75f,  0.625f, 0.75f,  0.5625f, 0.75f,  0.5625f, 0.8125f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetRightLegUVMapping() {
     // Right leg mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
+    // Each face: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (right leg front) - (4, 20) to (8, 32)
-        {0.0625f, 0.3125f,  0.125f, 0.3125f,  0.125f, 0.5f,  0.125f, 0.5f,  0.0625f, 0.5f,  0.0625f, 0.3125f},
-        // Back face (right leg back) - (12, 20) to (16, 32)
-        {0.1875f, 0.3125f,  0.25f, 0.3125f,  0.25f, 0.5f,  0.25f, 0.5f,  0.1875f, 0.5f,  0.1875f, 0.3125f},
+        {0.0625f, 0.5f,  0.125f, 0.5f,  0.125f, 0.3125f,  0.125f, 0.3125f,  0.0625f, 0.3125f,  0.0625f, 0.5f},
+        // Back face (right leg back) - (12, 20) to (16, 32) - flipped horizontally
+        {0.25f, 0.5f,  0.1875f, 0.5f,  0.1875f, 0.3125f,  0.1875f, 0.3125f,  0.25f, 0.3125f,  0.25f, 0.5f},
         // Left face (right leg left) - (8, 20) to (12, 32)
-        {0.125f, 0.3125f,  0.1875f, 0.3125f,  0.1875f, 0.5f,  0.1875f, 0.5f,  0.125f, 0.5f,  0.125f, 0.3125f},
-        // Right face (right leg right) - (0, 20) to (4, 32)
-        {0.0f, 0.3125f,  0.0625f, 0.3125f,  0.0625f, 0.5f,  0.0625f, 0.5f,  0.0f, 0.5f,  0.0f, 0.3125f},
+        {0.125f, 0.5f,  0.1875f, 0.5f,  0.1875f, 0.3125f,  0.1875f, 0.3125f,  0.125f, 0.3125f,  0.125f, 0.5f},
+        // Right face (right leg right) - (0, 20) to (4, 32) - flipped horizontally
+        {0.0625f, 0.5f,  0.0f, 0.5f,  0.0f, 0.3125f,  0.0f, 0.3125f,  0.0625f, 0.3125f,  0.0625f, 0.5f},
         // Bottom face (right leg bottom) - (8, 16) to (12, 20)
-        {0.125f, 0.25f,  0.1875f, 0.25f,  0.1875f, 0.3125f,  0.1875f, 0.3125f,  0.125f, 0.3125f,  0.125f, 0.25f},
+        {0.125f, 0.3125f,  0.1875f, 0.3125f,  0.1875f, 0.25f,  0.1875f, 0.25f,  0.125f, 0.25f,  0.125f, 0.3125f},
         // Top face (right leg top) - (4, 16) to (8, 20)
-        {0.0625f, 0.25f,  0.125f, 0.25f,  0.125f, 0.3125f,  0.125f, 0.3125f,  0.0625f, 0.3125f,  0.0625f, 0.25f}
+        {0.0625f, 0.3125f,  0.125f, 0.3125f,  0.125f, 0.25f,  0.125f, 0.25f,  0.0625f, 0.25f,  0.0625f, 0.3125f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetLeftLegUVMapping() {
     // Left leg mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
+    // Each face: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (left leg front) - (20, 52) to (24, 64)
-        {0.3125f, 0.8125f,  0.375f, 0.8125f,  0.375f, 1.0f,  0.375f, 1.0f,  0.3125f, 1.0f,  0.3125f, 0.8125f},
-        // Back face (left leg back) - (28, 52) to (32, 64)
-        {0.4375f, 0.8125f,  0.5f, 0.8125f,  0.5f, 1.0f,  0.5f, 1.0f,  0.4375f, 1.0f,  0.4375f, 0.8125f},
+        {0.3125f, 1.0f,  0.375f, 1.0f,  0.375f, 0.8125f,  0.375f, 0.8125f,  0.3125f, 0.8125f,  0.3125f, 1.0f},
+        // Back face (left leg back) - (28, 52) to (32, 64) - flipped horizontally
+        {0.5f, 1.0f,  0.4375f, 1.0f,  0.4375f, 0.8125f,  0.4375f, 0.8125f,  0.5f, 0.8125f,  0.5f, 1.0f},
         // Left face (left leg left) - (24, 52) to (28, 64)
-        {0.375f, 0.8125f,  0.4375f, 0.8125f,  0.4375f, 1.0f,  0.4375f, 1.0f,  0.375f, 1.0f,  0.375f, 0.8125f},
-        // Right face (left leg right) - (16, 52) to (20, 64)
-        {0.25f, 0.8125f,  0.3125f, 0.8125f,  0.3125f, 1.0f,  0.3125f, 1.0f,  0.25f, 1.0f,  0.25f, 0.8125f},
+        {0.375f, 1.0f,  0.4375f, 1.0f,  0.4375f, 0.8125f,  0.4375f, 0.8125f,  0.375f, 0.8125f,  0.375f, 1.0f},
+        // Right face (left leg right) - (16, 52) to (20, 64) - flipped horizontally
+        {0.3125f, 1.0f,  0.25f, 1.0f,  0.25f, 0.8125f,  0.25f, 0.8125f,  0.3125f, 0.8125f,  0.3125f, 1.0f},
         // Bottom face (left leg bottom) - (24, 48) to (28, 52)
-        {0.375f, 0.75f,  0.4375f, 0.75f,  0.4375f, 0.8125f,  0.4375f, 0.8125f,  0.375f, 0.8125f,  0.375f, 0.75f},
+        {0.375f, 0.8125f,  0.4375f, 0.8125f,  0.4375f, 0.75f,  0.4375f, 0.75f,  0.375f, 0.75f,  0.375f, 0.8125f},
         // Top face (left leg top) - (20, 48) to (24, 52)
-        {0.3125f, 0.75f,  0.375f, 0.75f,  0.375f, 0.8125f,  0.375f, 0.8125f,  0.3125f, 0.8125f,  0.3125f, 0.75f}
+        {0.3125f, 0.8125f,  0.375f, 0.8125f,  0.375f, 0.75f,  0.375f, 0.75f,  0.3125f, 0.75f,  0.3125f, 0.8125f}
     };
 } 
