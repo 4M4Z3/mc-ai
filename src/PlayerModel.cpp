@@ -98,31 +98,16 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Base transformation matrix for the entire player
     // Player position represents center at ground level (feet)
     // Total player height is 1.8 blocks
-    
-    float yawRad = normalizedYaw * M_PI / 180.0f;
-    float cosYaw = cos(yawRad);
-    float sinYaw = sin(yawRad);
+    // Transformation order: Translate to world position, then rotate, then apply body part offset
+    Mat4 translation = CreateTranslationMatrix(position.x, position.y, position.z);
+    Mat4 yawRotation = CreateRotationYMatrix(normalizedYaw * M_PI / 180.0f);
+    Mat4 playerTransform = MultiplyMatrices(translation, yawRotation);
     
     // Render Head (0.5x0.45x0.5 blocks) - top of player
     // Position: y + 1.575 (center of head at 1.575 blocks above feet)
     {
-        // Calculate final position: playerPos + rotate(localOffset, yaw)
-        float localX = 0.0f;
-        float localY = 1.575f;
-        float localZ = 0.0f;
-        
-        // Rotate local position by yaw
-        float rotatedX = localX * cosYaw - localZ * sinYaw;
-        float rotatedZ = localX * sinYaw + localZ * cosYaw;
-        
-        // Final world position
-        float finalX = position.x + rotatedX;
-        float finalY = position.y + localY; // Y doesn't rotate
-        float finalZ = position.z + rotatedZ;
-        
-        Mat4 headTransform = CreateTranslationMatrix(finalX, finalY, finalZ);
-        Mat4 yawRotation = CreateRotationYMatrix(yawRad);
-        Mat4 modelMatrix = MultiplyMatrices(headTransform, yawRotation);
+        Mat4 headTransform = CreateTranslationMatrix(0.0f, 1.575f, 0.0f);
+        Mat4 modelMatrix = MultiplyMatrices(playerTransform, headTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_headVAO);
@@ -132,20 +117,8 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Render Torso (0.5x0.675x0.25 blocks) - middle of player
     // Position: y + 1.0125 (center of torso at 1.0125 blocks above feet)
     {
-        float localX = 0.0f;
-        float localY = 1.0125f;
-        float localZ = 0.0f;
-        
-        float rotatedX = localX * cosYaw - localZ * sinYaw;
-        float rotatedZ = localX * sinYaw + localZ * cosYaw;
-        
-        float finalX = position.x + rotatedX;
-        float finalY = position.y + localY;
-        float finalZ = position.z + rotatedZ;
-        
-        Mat4 torsoTransform = CreateTranslationMatrix(finalX, finalY, finalZ);
-        Mat4 yawRotation = CreateRotationYMatrix(yawRad);
-        Mat4 modelMatrix = MultiplyMatrices(torsoTransform, yawRotation);
+        Mat4 torsoTransform = CreateTranslationMatrix(0.0f, 1.0125f, 0.0f);
+        Mat4 modelMatrix = MultiplyMatrices(playerTransform, torsoTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_torsoVAO);
@@ -155,20 +128,8 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Render Left Arm (0.25x0.675x0.25 blocks) - attached to torso
     // Position: align with torso center at y + 1.0125
     {
-        float localX = -0.375f; // -0.25 (torso half width) - 0.125 (arm half width)
-        float localY = 1.0125f;
-        float localZ = 0.0f;
-        
-        float rotatedX = localX * cosYaw - localZ * sinYaw;
-        float rotatedZ = localX * sinYaw + localZ * cosYaw;
-        
-        float finalX = position.x + rotatedX;
-        float finalY = position.y + localY;
-        float finalZ = position.z + rotatedZ;
-        
-        Mat4 armTransform = CreateTranslationMatrix(finalX, finalY, finalZ);
-        Mat4 yawRotation = CreateRotationYMatrix(yawRad);
-        Mat4 modelMatrix = MultiplyMatrices(armTransform, yawRotation);
+        Mat4 armTransform = CreateTranslationMatrix(-0.375f, 1.0125f, 0.0f); // -0.25 (torso half width) - 0.125 (arm half width)
+        Mat4 modelMatrix = MultiplyMatrices(playerTransform, armTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_leftArmVAO);
@@ -178,20 +139,8 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Render Right Arm (0.25x0.675x0.25 blocks) - attached to torso
     // Position: align with torso center at y + 1.0125
     {
-        float localX = 0.375f; // 0.25 (torso half width) + 0.125 (arm half width)
-        float localY = 1.0125f;
-        float localZ = 0.0f;
-        
-        float rotatedX = localX * cosYaw - localZ * sinYaw;
-        float rotatedZ = localX * sinYaw + localZ * cosYaw;
-        
-        float finalX = position.x + rotatedX;
-        float finalY = position.y + localY;
-        float finalZ = position.z + rotatedZ;
-        
-        Mat4 armTransform = CreateTranslationMatrix(finalX, finalY, finalZ);
-        Mat4 yawRotation = CreateRotationYMatrix(yawRad);
-        Mat4 modelMatrix = MultiplyMatrices(armTransform, yawRotation);
+        Mat4 armTransform = CreateTranslationMatrix(0.375f, 1.0125f, 0.0f); // 0.25 (torso half width) + 0.125 (arm half width)
+        Mat4 modelMatrix = MultiplyMatrices(playerTransform, armTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_rightArmVAO);
@@ -201,20 +150,8 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Render Left Leg (0.25x0.675x0.25 blocks) - bottom of player
     // Position: y + 0.3375 (center of leg at 0.3375 blocks above feet)
     {
-        float localX = -0.125f; // -0.125 (quarter torso width)
-        float localY = 0.3375f;
-        float localZ = 0.0f;
-        
-        float rotatedX = localX * cosYaw - localZ * sinYaw;
-        float rotatedZ = localX * sinYaw + localZ * cosYaw;
-        
-        float finalX = position.x + rotatedX;
-        float finalY = position.y + localY;
-        float finalZ = position.z + rotatedZ;
-        
-        Mat4 legTransform = CreateTranslationMatrix(finalX, finalY, finalZ);
-        Mat4 yawRotation = CreateRotationYMatrix(yawRad);
-        Mat4 modelMatrix = MultiplyMatrices(legTransform, yawRotation);
+        Mat4 legTransform = CreateTranslationMatrix(-0.125f, 0.3375f, 0.0f); // -0.125 (quarter torso width)
+        Mat4 modelMatrix = MultiplyMatrices(playerTransform, legTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_leftLegVAO);
@@ -224,20 +161,8 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Render Right Leg (0.25x0.675x0.25 blocks) - bottom of player
     // Position: y + 0.3375 (center of leg at 0.3375 blocks above feet)
     {
-        float localX = 0.125f; // 0.125 (quarter torso width)
-        float localY = 0.3375f;
-        float localZ = 0.0f;
-        
-        float rotatedX = localX * cosYaw - localZ * sinYaw;
-        float rotatedZ = localX * sinYaw + localZ * cosYaw;
-        
-        float finalX = position.x + rotatedX;
-        float finalY = position.y + localY;
-        float finalZ = position.z + rotatedZ;
-        
-        Mat4 legTransform = CreateTranslationMatrix(finalX, finalY, finalZ);
-        Mat4 yawRotation = CreateRotationYMatrix(yawRad);
-        Mat4 modelMatrix = MultiplyMatrices(legTransform, yawRotation);
+        Mat4 legTransform = CreateTranslationMatrix(0.125f, 0.3375f, 0.0f); // 0.125 (quarter torso width)
+        Mat4 modelMatrix = MultiplyMatrices(playerTransform, legTransform);
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_rightLegVAO);
