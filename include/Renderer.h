@@ -62,8 +62,13 @@ public:
     void RenderChunks(const World& world, float gameTime);  // New chunk-based rendering
     void RenderCube(float x, float y, float z);  // Legacy individual cube rendering
     void RenderOtherPlayers(const std::vector<PlayerPosition>& playerPositions);
+    void RenderFirstPersonArm(const Player& player); // First-person arm like in Minecraft
     void RenderSky(float gameTime); // Render sky with sun/moon based on time
     void EndFrame();
+    
+    // First-person arm animation
+    void UpdateFirstPersonArm(float deltaTime);
+    void TriggerArmPunch();
     
     // Block targeting wireframe
     void RenderBlockWireframe(const Vec3& blockPos, const World& world);

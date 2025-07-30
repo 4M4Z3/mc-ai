@@ -17,7 +17,8 @@ PlayerModel::PlayerModel() :
     m_shaderProgram(0),
     m_modelLoc(-1), m_viewLoc(-1), m_projLoc(-1), m_skinTextureLoc(-1),
     m_currentSkinTexture(0),
-    m_randomGenerator(std::chrono::steady_clock::now().time_since_epoch().count()) {
+    m_randomGenerator(std::chrono::steady_clock::now().time_since_epoch().count()),
+    m_isPunching(false), m_punchAnimationTime(0.0f), m_punchAnimationDuration(0.3f) {
 }
 
 PlayerModel::~PlayerModel() {
@@ -171,6 +172,101 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     }
     
     glBindVertexArray(0);
+}
+
+void PlayerModel::RenderFirstPersonArm(const Player& player) {
+    if (m_shaderProgram == 0) return;
+    
+    // Bind the current skin texture
+    if (m_currentSkinTexture != 0 && m_skinTextureLoc != -1) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_currentSkinTexture);
+        glUniform1i(m_skinTextureLoc, 0);
+    }
+    
+    // Render arm in view space - it should stay fixed relative to the screen
+    // Position it in the bottom-right area of the view, like Minecraft
+    
+    // Position the arm in view space coordinates - TEMPORARILY IN CENTER FOR DEBUGGING
+    // X: positive = right side of screen
+    // Y: negative = bottom of screen  
+    // Z: negative = closer to camera
+    float armX = 0.0f;      // CENTER of screen for debugging
+    float armY = 0.0f;      // CENTER of screen for debugging  
+    float armZ = -0.5f;     // Very close to camera
+    
+    // Apply punch animation if active
+    if (m_isPunching) {
+        // Calculate animation progress (0.0 to 1.0)
+        float animProgress = m_punchAnimationTime / m_punchAnimationDuration;
+        
+        // Use smooth animation curve (ease-out)
+        float animValue = 1.0f - (1.0f - animProgress) * (1.0f - animProgress);
+        
+        // During first half, punch forward; during second half, return
+        if (animProgress < 0.5f) {
+            // Punch forward and slightly up
+            armZ += animValue * -0.3f;  // Move closer to camera
+            armY += animValue * 0.1f;   // Move slightly up
+        } else {
+            // Return to original position
+            animValue = (1.0f - animProgress) * 2.0f;  // Reverse animation for second half
+            armZ += animValue * -0.3f;
+            armY += animValue * 0.1f;
+        }
+    }
+    
+    // Create scale matrix to make the arm bigger and more visible
+    float scale = 2.0f;     // Made VERY large for debugging visibility
+    Mat4 scaleMatrix;
+    scaleMatrix.m[0] = scale; scaleMatrix.m[4] = 0.0f;  scaleMatrix.m[8] = 0.0f;   scaleMatrix.m[12] = 0.0f;
+    scaleMatrix.m[1] = 0.0f;  scaleMatrix.m[5] = scale; scaleMatrix.m[9] = 0.0f;   scaleMatrix.m[13] = 0.0f;
+    scaleMatrix.m[2] = 0.0f;  scaleMatrix.m[6] = 0.0f;  scaleMatrix.m[10] = scale; scaleMatrix.m[14] = 0.0f;
+    scaleMatrix.m[3] = 0.0f;  scaleMatrix.m[7] = 0.0f;  scaleMatrix.m[11] = 0.0f;  scaleMatrix.m[15] = 1.0f;
+    
+    // Create translation matrix in view space
+    Mat4 translationMatrix;
+    translationMatrix.m[0] = 1.0f; translationMatrix.m[4] = 0.0f; translationMatrix.m[8] = 0.0f;  translationMatrix.m[12] = armX;
+    translationMatrix.m[1] = 0.0f; translationMatrix.m[5] = 1.0f; translationMatrix.m[9] = 0.0f;  translationMatrix.m[13] = armY;
+    translationMatrix.m[2] = 0.0f; translationMatrix.m[6] = 0.0f; translationMatrix.m[10] = 1.0f; translationMatrix.m[14] = armZ;
+    translationMatrix.m[3] = 0.0f; translationMatrix.m[7] = 0.0f; translationMatrix.m[11] = 0.0f; translationMatrix.m[15] = 1.0f;
+    
+    // Apply minimal rotation for now to debug positioning
+    // Just a slight angle inward so it looks natural
+    float rotationY = -0.2f;  // Slight angle inward toward center
+    
+    // Y rotation matrix (turn left/right)
+    Mat4 rotationYMatrix;
+    rotationYMatrix.m[0] = cos(rotationY);  rotationYMatrix.m[4] = 0.0f; rotationYMatrix.m[8] = sin(rotationY);   rotationYMatrix.m[12] = 0.0f;
+    rotationYMatrix.m[1] = 0.0f;            rotationYMatrix.m[5] = 1.0f; rotationYMatrix.m[9] = 0.0f;             rotationYMatrix.m[13] = 0.0f;
+    rotationYMatrix.m[2] = -sin(rotationY); rotationYMatrix.m[6] = 0.0f; rotationYMatrix.m[10] = cos(rotationY);  rotationYMatrix.m[14] = 0.0f;
+    rotationYMatrix.m[3] = 0.0f;            rotationYMatrix.m[7] = 0.0f; rotationYMatrix.m[11] = 0.0f;            rotationYMatrix.m[15] = 1.0f;
+    
+    // Combine transformations: Translation * Rotation * Scale
+    Mat4 tempMatrix = MultiplyMatrices(rotationYMatrix, scaleMatrix);
+    Mat4 finalMatrix = MultiplyMatrices(translationMatrix, tempMatrix);
+    
+    // Set the model matrix and render the right arm
+    glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, finalMatrix.m);
+    glBindVertexArray(m_rightArmVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    
+    glBindVertexArray(0);
+}
+
+void PlayerModel::TriggerPunchAnimation() {
+    m_isPunching = true;
+    m_punchAnimationTime = 0.0f;
+}
+
+void PlayerModel::UpdateAnimation(float deltaTime) {
+    if (m_isPunching) {
+        m_punchAnimationTime += deltaTime;
+        if (m_punchAnimationTime >= m_punchAnimationDuration) {
+            m_isPunching = false;
+            m_punchAnimationTime = 0.0f;
+        }
+    }
 }
 
 void PlayerModel::CreateHeadGeometry() {

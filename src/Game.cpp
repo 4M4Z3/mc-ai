@@ -393,6 +393,9 @@ void Game::UpdateGame() {
         m_player->Update(m_deltaTime, m_world.get(), &(m_renderer.m_blockManager));
     }
     
+    // Update first-person arm animation
+    m_renderer.UpdateFirstPersonArm(m_deltaTime);
+    
     // Update target block for wireframe rendering
     if (m_player && m_world) {
         m_targetBlock = m_player->CastRay(m_world.get(), 5.0f);
@@ -639,6 +642,9 @@ void Game::RenderGame() {
             }
             m_renderer.RenderOtherPlayers(interpolatedPositions);
         }
+        
+        // Render first-person arm (like in Minecraft)
+        m_renderer.RenderFirstPersonArm(*m_player);
         
         m_renderer.EndFrame();
     }
@@ -1265,6 +1271,11 @@ void Game::MouseCallback(GLFWwindow* window, double xpos, double ypos) {
 
 void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
     if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player && s_instance->m_world && !s_instance->m_showPauseMenu && !s_instance->m_showInventory) {
+        // Trigger punch animation for left or right click
+        if ((button == GLFW_MOUSE_BUTTON_LEFT || button == GLFW_MOUSE_BUTTON_RIGHT) && action == GLFW_PRESS) {
+            s_instance->m_renderer.TriggerArmPunch();
+        }
+        
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
             // Cast ray to find target block
             RaycastResult raycast = s_instance->m_player->CastRay(s_instance->m_world.get(), 5.0f);
