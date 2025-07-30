@@ -1,0 +1,218 @@
+block_key,block_name,texture_file
+acacia_leaves,Acacia Leaves,acacia_leaves.png
+acacia_planks,Acacia Planks,acacia_planks.png
+acacia_sapling,Acacia Sapling,acacia_sapling.png
+allium,Allium,allium.png
+amethyst_block,Amethyst Block,amethyst_block.png
+amethyst_cluster,Amethyst Cluster,amethyst_cluster.png
+andesite,Andesite,andesite.png
+azalea_leaves,Azalea Leaves,azalea_leaves.png
+azalea_plant,Azalea Plant,azalea_plant.png
+azure_bluet,Azure Bluet,azure_bluet.png
+beacon,Beacon,beacon.png
+bedrock,Bedrock,bedrock.png
+birch_leaves,Birch Leaves,birch_leaves.png
+birch_planks,Birch Planks,birch_planks.png
+birch_sapling,Birch Sapling,birch_sapling.png
+black_candle,Black Candle,black_candle.png
+black_candle_lit,Black Candle (Lit),black_candle_lit.png
+blue_candle,Blue Candle,blue_candle.png
+blue_candle_lit,Blue Candle (Lit),blue_candle_lit.png
+blue_stained_glass,Blue Stained Glass,blue_stained_glass.png
+blue_terracotta,Blue Terracotta,blue_terracotta.png
+blue_wool,Blue Wool,blue_wool.png
+brain_coral,Brain Coral,brain_coral.png
+brain_coral_block,Brain Coral Block,brain_coral_block.png
+bricks,Bricks,bricks.png
+brown_concrete,Brown Concrete,brown_concrete.png
+brown_concrete_powder,Brown Concrete Powder,brown_concrete_powder.png
+brown_glazed_terracotta,Brown Glazed Terracotta,brown_glazed_terracotta.png
+brown_mushroom_block,Brown Mushroom Block,brown_mushroom_block.png
+brown_stained_glass,Brown Stained Glass,brown_stained_glass.png
+cherry_leaves,Cherry Leaves,cherry_leaves.png
+cherry_planks,Cherry Planks,cherry_planks.png
+cherry_sapling,Cherry Sapling,cherry_sapling.png
+chiseled_copper,Chiseled Copper,chiseled_copper.png
+chiseled_deepslate,Chiseled Deepslate,chiseled_deepslate.png
+chiseled_nether_bricks,Chiseled Nether Bricks,chiseled_nether_bricks.png
+chiseled_polished_blackstone,Chiseled Polished Blackstone,chiseled_polished_blackstone.png
+chiseled_red_sandstone,Chiseled Red Sandstone,chiseled_red_sandstone.png
+chiseled_resin_bricks,Chiseled Resin Bricks,chiseled_resin_bricks.png
+chiseled_sandstone,Chiseled Sandstone,chiseled_sandstone.png
+chiseled_stone_bricks,Chiseled Stone Bricks,chiseled_stone_bricks.png
+conduit,Conduit,conduit.png
+copper_block,Copper Block,copper_block.png
+copper_bulb,Copper Bulb,copper_bulb.png
+copper_bulb_lit,Copper Bulb Lit,copper_bulb_lit.png
+copper_bulb_lit_powered,Copper Bulb Lit Powered,copper_bulb_lit_powered.png
+copper_bulb_powered,Copper Bulb Powered,copper_bulb_powered.png
+copper_grate,Copper Grate,copper_grate.png
+copper_ore,Copper Ore,copper_ore.png
+copper_trapdoor,Copper Trapdoor,copper_trapdoor.png
+cracked_deepslate_bricks,Cracked Deepslate Bricks,cracked_deepslate_bricks.png
+cracked_deepslate_tiles,Cracked Deepslate Tiles,cracked_deepslate_tiles.png
+cracked_nether_bricks,Cracked Nether Bricks,cracked_nether_bricks.png
+cracked_polished_blackstone_bricks,Cracked Polished Blackstone Bricks,cracked_polished_blackstone_bricks.png
+cracked_stone_bricks,Cracked Stone Bricks,cracked_stone_bricks.png
+cyan_stained_glass,Cyan Stained Glass,cyan_stained_glass.png
+dandelion,Dandelion,dandelion.png
+dark_oak_sapling,Dark Oak Sapling,dark_oak_sapling.png
+dead_brain_coral_fan,Dead Brain Coral Fan,dead_brain_coral_fan.png
+dead_bubble_coral_fan,Dead Bubble Coral Fan,dead_bubble_coral_fan.png
+dead_bush,Dead Bush,dead_bush.png
+dead_fire_coral_fan,Dead Fire Coral Fan,dead_fire_coral_fan.png
+destroy_stage_7,Destroy Stage 7,destroy_stage_7.png
+destroy_stage_8,Destroy Stage 8,destroy_stage_8.png
+destroy_stage_9,Destroy Stage 9,destroy_stage_9.png
+dripstone_block,Dripstone Block,dripstone_block.png
+emerald_block,Emerald Block,emerald_block.png
+emerald_ore,Emerald Ore,emerald_ore.png
+frosted_ice,Frosted Ice,"frosted_ice_0.png, frosted_ice_1.png, frosted_ice_2.png, frosted_ice_3.png"
+glass,Glass,glass.png
+glowstone,Glowstone,glowstone.png
+gold_block,Gold Block,gold_block.png
+gold_ore,Gold Ore,gold_ore.png
+granite,Granite,granite.png
+gravel,Gravel,gravel.png
+gray_concrete,Gray Concrete,gray_concrete.png
+gray_concrete_powder,Gray Concrete Powder,gray_concrete_powder.png
+gray_glazed_terracotta,Gray Glazed Terracotta,gray_glazed_terracotta.png
+gray_shulker_box,Gray Shulker Box,gray_shulker_box.png
+gray_stained_glass,Gray Stained Glass,gray_stained_glass.png
+gray_terracotta,Gray Terracotta,gray_terracotta.png
+gray_wool,Gray Wool,gray_wool.png
+green_concrete,Green Concrete,green_concrete.png
+green_concrete_powder,Green Concrete Powder,green_concrete_powder.png
+green_glazed_terracotta,Green Glazed Terracotta,green_glazed_terracotta.png
+green_stained_glass,Green Stained Glass,green_stained_glass.png
+green_terracotta,Green Terracotta,green_terracotta.png
+green_wool,Green Wool,green_wool.png
+heavy_core,Heavy Core,heavy_core.png
+honeycomb_block,Honeycomb Block,honeycomb_block.png
+horn_coral,Horn Coral,horn_coral.png
+horn_coral_block,Horn Coral Block,horn_coral_block.png
+horn_coral_fan,Horn Coral Fan,horn_coral_fan.png
+ice,Ice,ice.png
+iron_block,Iron Block,iron_block.png
+iron_ore,Iron Ore,iron_ore.png
+item_frame,Item Frame,item_frame.png
+jack_o_lantern,Jack o' Lantern,jack_o_lantern.png
+jungle_leaves,Jungle Leaves,jungle_leaves.png
+jungle_planks,Jungle Planks,jungle_planks.png
+jungle_sapling,Jungle Sapling,jungle_sapling.png
+kelp,Kelp,kelp.png
+kelp_meta,Kelp Meta,kelp.png.mcmeta
+lantern,Lantern,lantern.png
+light_blue_stained_glass,Light Blue Stained Glass,light_blue_stained_glass.png
+light_blue_terracotta,Light Blue Terracotta,light_blue_terracotta.png
+light_blue_wool,Light Blue Wool,light_blue_wool.png
+light_gray_concrete,Light Gray Concrete,light_gray_concrete.png
+light_gray_concrete_powder,Light Gray Concrete Powder,light_gray_concrete_powder.png
+light_gray_glazed_terracotta,Light Gray Glazed Terracotta,light_gray_glazed_terracotta.png
+light_gray_stained_glass,Light Gray Stained Glass,light_gray_stained_glass.png
+light_gray_terracotta,Light Gray Terracotta,light_gray_terracotta.png
+light_gray_wool,Light Gray Wool,light_gray_wool.png
+lime_concrete,Lime Concrete,lime_concrete.png
+lime_concrete_powder,Lime Concrete Powder,lime_concrete_powder.png
+lime_glazed_terracotta,Lime Glazed Terracotta,lime_glazed_terracotta.png
+lime_stained_glass,Lime Stained Glass,lime_stained_glass.png
+magenta_stained_glass,Magenta Stained Glass,magenta_stained_glass.png
+mangrove_leaves,Mangrove Leaves,mangrove_leaves.png
+moss_block,Moss Block,moss_block.png
+mud,Mud,mud.png
+nether_portal,Nether Portal,nether_portal.png
+obsidian,Obsidian,obsidian.png
+orange_concrete,Orange Concrete,orange_concrete.png
+orange_concrete_powder,Orange Concrete Powder,orange_concrete_powder.png
+orange_glazed_terracotta,Orange Glazed Terracotta,orange_glazed_terracotta.png
+orange_stained_glass,Orange Stained Glass,orange_stained_glass.png
+orange_terracotta,Orange Terracotta,orange_terracotta.png
+orange_wool,Orange Wool,orange_wool.png
+oxidized_chiseled_copper,Oxidized Chiseled Copper,oxidized_chiseled_copper.png
+oxidized_copper,Oxidized Copper,oxidized_copper.png
+pink_concrete,Pink Concrete,pink_concrete.png
+pink_concrete_powder,Pink Concrete Powder,pink_concrete_powder.png
+pink_glazed_terracotta,Pink Glazed Terracotta,pink_glazed_terracotta.png
+pink_petals,Pink Petals,pink_petals.png
+pink_petals_stem,Pink Petals Stem,pink_petals_stem.png
+pink_stained_glass,Pink Stained Glass,pink_stained_glass.png
+pink_terracotta,Pink Terracotta,pink_terracotta.png
+pink_wool,Pink Wool,pink_wool.png
+polished_blackstone,Polished Blackstone,polished_blackstone.png
+polished_blackstone_bricks,Polished Blackstone Bricks,polished_blackstone_bricks.png
+polished_deepslate,Polished Deepslate,polished_deepslate.png
+polished_diorite,Polished Diorite,polished_diorite.png
+polished_granite,Polished Granite,polished_granite.png
+polished_tuff,Polished Tuff,polished_tuff.png
+potatoes_stage3,Potatoes Stage 3,potatoes_stage3.png
+powder_snow,Powder Snow,powder_snow.png
+purple_wool,Purple Wool,purple_wool.png
+purpur_block,Purpur Block,purpur_block.png
+quartz_bricks,Quartz Bricks,quartz_bricks.png
+rail,Rail,rail.png
+rail_corner,Rail Corner,rail_corner.png
+raw_copper_block,Raw Copper Block,raw_copper_block.png
+raw_gold_block,Raw Gold Block,raw_gold_block.png
+raw_iron_block,Raw Iron Block,raw_iron_block.png
+red_candle,Red Candle,red_candle.png
+red_candle_lit,Lit Red Candle,red_candle_lit.png
+red_concrete,Red Concrete,red_concrete.png
+red_concrete_powder,Red Concrete Powder,red_concrete_powder.png
+red_glazed_terracotta,Red Glazed Terracotta,red_glazed_terracotta.png
+red_mushroom,Red Mushroom,red_mushroom.png
+red_mushroom_block,Red Mushroom Block,red_mushroom_block.png
+red_nether_bricks,Red Nether Bricks,red_nether_bricks.png
+red_sand,Red Sand,red_sand.png
+resin_block,Resin Block,resin_block.png
+resin_bricks,Resin Bricks,resin_bricks.png
+resin_clump,Resin Clump,resin_clump.png
+rooted_dirt,Rooted Dirt,rooted_dirt.png
+sand,Sand,sand.png
+sea_lantern,Sea Lantern,sea_lantern.png
+shroomlight,Shroomlight,shroomlight.png
+slime_block,Slime Block,slime_block.png
+smooth_basalt,Smooth Basalt,smooth_basalt.png
+smooth_stone,Smooth Stone,smooth_stone.png
+snow,Snow,snow.png
+soul_lantern,Soul Lantern,soul_lantern.png
+soul_sand,Soul Sand,soul_sand.png
+soul_soil,Soul Soil,soul_soil.png
+soul_torch,Soul Torch,soul_torch.png
+spawner,Spawner,spawner.png
+sponge,Sponge,sponge.png
+spore_blossom,Spore Blossom,spore_blossom.png
+spore_blossom_base,Spore Blossom Base,spore_blossom_base.png
+spruce_leaves,Spruce Leaves,spruce_leaves.png
+spruce_planks,Spruce Planks,spruce_planks.png
+spruce_sapling,Spruce Sapling,spruce_sapling.png
+spruce_trapdoor,Spruce Trapdoor,spruce_trapdoor.png
+stone,Stone,stone.png
+stone_bricks,Stone Bricks,stone_bricks.png
+terracotta,Terracotta,terracotta.png
+tinted_glass,Tinted Glass,tinted_glass.png
+tripwire,Tripwire,tripwire.png
+tripwire_hook,Tripwire Hook,tripwire_hook.png
+tube_coral,Tube Coral,tube_coral.png
+tube_coral_block,Tube Coral Block,tube_coral_block.png
+tube_coral_fan,Tube Coral Fan,tube_coral_fan.png
+tuff,Tuff,tuff.png
+tuff_bricks,Tuff Bricks,tuff_bricks.png
+twisting_vines,Twisting Vines,twisting_vines.png
+twisting_vines_plant,Twisting Vines Plant,twisting_vines_plant.png
+water_flow,Water Flow,water_flow.png
+water_still,Water Still,water_still.png
+wheat_stage0,Wheat Stage 0,wheat_stage0.png
+wheat_stage1,Wheat Stage 1,wheat_stage1.png
+wheat_stage_2,Wheat Stage 2,wheat_stage2.png
+wheat_stage_3,Wheat Stage 3,wheat_stage3.png
+wheat_stage_4,Wheat Stage 4,wheat_stage4.png
+wheat_stage_5,Wheat Stage 5,wheat_stage5.png
+wheat_stage_6,Wheat Stage 6,wheat_stage6.png
+wheat_stage_7,Wheat Stage 7,wheat_stage7.png
+white_candle,White Candle,white_candle.png
+white_candle_lit,White Candle Lit,white_candle_lit.png
+yellow_candle,Yellow Candle,yellow_candle.png
+yellow_candle_lit,Yellow Candle Lit,yellow_candle_lit.png
+yellow_stained_glass,Yellow Stained Glass,yellow_stained_glass.png
+yellow_terracotta,Yellow Terracotta,yellow_terracotta.png
+yellow_wool,Yellow Wool,yellow_wool.png
