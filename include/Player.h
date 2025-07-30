@@ -9,7 +9,9 @@
     #include <epoxy/gl.h>
 #endif
 #include <GLFW/glfw3.h>
+#include "Block.h"
 #include "Inventory.h"
+#include <iostream>
 
 // Forward declarations
 class World;
@@ -95,13 +97,18 @@ public:
     // Ray casting for block targeting
     RaycastResult CastRay(World* world, float maxDistance = 5.0f) const;
     
-    // Survival mode
+    // Survival mode management
     bool IsSurvivalMode() const { return m_isSurvivalMode; }
-    void SetSurvivalMode(bool enabled) { m_isSurvivalMode = enabled; }
     bool CanEnterSurvivalMode() const;
-    bool CanEnterSurvivalMode(class World* world) const;
+    bool CanEnterSurvivalMode(World* world) const;
     void ToggleSurvivalMode();
-    void ToggleSurvivalMode(class World* world);
+    void ToggleSurvivalMode(World* world);
+    
+    // Safe mode physics management
+    void EnablePhysics() { m_isPhysicsEnabled = true; std::cout << "Player physics enabled - gravity and collisions active" << std::endl; }
+    void DisablePhysics() { m_isPhysicsEnabled = false; m_verticalVelocity = 0.0f; std::cout << "Player physics disabled - safe mode active" << std::endl; }
+    bool IsPhysicsEnabled() const { return m_isPhysicsEnabled; }
+    bool VerifyTerrainSafety(World* world) const; // Check if terrain below player is safe
     
     // Physics for survival mode
     void ApplyGravity(float deltaTime);
@@ -153,6 +160,7 @@ private:
     
     // Survival mode physics
     bool m_isSurvivalMode;
+    bool m_isPhysicsEnabled;      // New: Temporarily disable physics until terrain is safe
     float m_verticalVelocity;  // For gravity
     bool m_isOnGround;
     float m_lastJumpTime;      // Time of last jump (for jump delay)

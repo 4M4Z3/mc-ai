@@ -10,13 +10,15 @@
 #include <chrono> // Added for jump delay timing
 
 Player::Player() : m_position(0.0f, 0.0f, 0.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
-                   m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f) {
+                   m_isSurvivalMode(true), m_isPhysicsEnabled(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f) {
     UpdateVectors();
+    std::cout << "Player spawned in survival mode with physics disabled - safe mode active until terrain verified" << std::endl;
 }
 
 Player::Player(float x, float y, float z) : m_position(x, y, z), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
-                                            m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f) {
+                                            m_isSurvivalMode(true), m_isPhysicsEnabled(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f) {
     UpdateVectors();
+    std::cout << "Player spawned in survival mode with physics disabled - safe mode active until terrain verified" << std::endl;
 }
 
 void Player::SetRotation(float yaw, float pitch) {
@@ -185,17 +187,27 @@ void Player::ToggleSurvivalMode(World* world) {
     m_isSurvivalMode = !m_isSurvivalMode;
     
     if (m_isSurvivalMode) {
-        // Reset physics when entering survival mode
+        // Entering survival mode - start with physics disabled for safety
+        m_isPhysicsEnabled = false;
         m_verticalVelocity = 0.0f;
         m_isOnGround = false;
-        std::cout << "Survival mode activated - gravity and collisions enabled" << std::endl;
+        
+        // Verify terrain safety before enabling physics
+        if (world && VerifyTerrainSafety(world)) {
+            EnablePhysics();
+        } else {
+            std::cout << "Survival mode activated - physics disabled until terrain is verified safe" << std::endl;
+        }
     } else {
+        // Entering creative mode - physics not needed
+        m_isPhysicsEnabled = false;
+        m_verticalVelocity = 0.0f;
         std::cout << "Creative mode activated - free flight enabled" << std::endl;
     }
 }
 
 void Player::ApplyGravity(float deltaTime) {
-    if (!m_isSurvivalMode) return;
+    if (!m_isSurvivalMode || !m_isPhysicsEnabled) return;
     
     // Apply gravity acceleration
     m_verticalVelocity -= GRAVITY * deltaTime;
@@ -207,9 +219,23 @@ void Player::ApplyGravity(float deltaTime) {
 }
 
 void Player::Update(float deltaTime, World* world, const BlockManager* blockManager) {
-    if (!m_isSurvivalMode || !world) return;
+    if (!m_isSurvivalMode || !m_isPhysicsEnabled || !world) return;
     
     ApplyGravity(deltaTime);
+    
+    // Emergency safety check: if player is falling very fast or is deep underground, teleport to safety
+    if (m_verticalVelocity < -20.0f || m_position.y < 10.0f) {
+        std::cout << "[EMERGENCY SAFETY] Player falling too fast (" << m_verticalVelocity << ") or too deep (y=" << m_position.y << ") - teleporting to safety!" << std::endl;
+        
+        // Find safe spawn position
+        int safeY = world->FindHighestBlock(static_cast<int>(m_position.x), static_cast<int>(m_position.z));
+        m_position.y = static_cast<float>(safeY + 3); // 3 blocks above terrain
+        m_verticalVelocity = 0.0f; // Stop falling
+        m_isOnGround = false;
+        
+        std::cout << "[EMERGENCY SAFETY] Teleported player to safe position (y=" << m_position.y << ")" << std::endl;
+        return; // Skip normal physics this frame
+    }
     
     // Apply vertical movement from gravity
     if (std::abs(m_verticalVelocity) > 0.001f) {
@@ -568,22 +594,22 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world, con
     }
     
     // Handle vertical movement based on mode
-    if (!m_isSurvivalMode) {
-        // Creative mode - free vertical movement
+    if (!m_isSurvivalMode || !m_isPhysicsEnabled) {
+        // Creative mode OR safe mode - free vertical movement
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
             intendedPosition.y += velocity;
         if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
             intendedPosition.y -= velocity;
     } else {
-        // Survival mode - jumping only
+        // Survival mode with physics enabled - jumping only
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
             Jump(world, blockManager);
         }
     }
     
     // Apply collision detection
-    if (m_isSurvivalMode && world) {
-        // For survival mode, apply gravity in Update() method
+    if (m_isSurvivalMode && m_isPhysicsEnabled && world) {
+        // For survival mode with physics, apply gravity in Update() method
         // Here we only handle player input movement with collision
         Vec3 movementResult = HandleCollision(intendedPosition, world, blockManager);
         
@@ -599,7 +625,7 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world, con
             m_verticalVelocity = 0.0f;
         }
     } else {
-        // Creative mode - free movement
+        // Creative mode or safe mode - free movement
         m_position = intendedPosition;
     }
 }
@@ -710,4 +736,73 @@ void Player::InitializeTestInventory(ItemManager* itemManager) {
     // Clear inventory to start empty
     m_inventory.clear();
     DEBUG_INVENTORY("Player inventory initialized as empty");
+} 
+
+bool Player::VerifyTerrainSafety(World* world) const {
+    if (!world) return false;
+    
+    // Check multiple points around the player spawn area to ensure terrain is solid
+    const float checkRadius = 3.0f; // Expanded to check 3 blocks around player
+    const std::vector<std::pair<float, float>> testPoints = {
+        {0.0f, 0.0f},        // Center (player position)
+        
+        // Inner ring (1 block radius)
+        {-1.0f, -1.0f}, {0.0f, -1.0f}, {1.0f, -1.0f},
+        {-1.0f,  0.0f},                  {1.0f,  0.0f},
+        {-1.0f,  1.0f}, {0.0f,  1.0f}, {1.0f,  1.0f},
+        
+        // Outer ring (3 block radius - corners and cardinal directions)
+        {-checkRadius, -checkRadius}, // Corners
+        {checkRadius, -checkRadius},
+        {checkRadius, checkRadius},
+        {-checkRadius, checkRadius},
+        {-checkRadius, 0.0f},   // Cardinal directions
+        {checkRadius, 0.0f},
+        {0.0f, -checkRadius},
+        {0.0f, checkRadius},
+        
+        // Mid-ring points for better coverage
+        {-2.0f, -2.0f}, {0.0f, -2.0f}, {2.0f, -2.0f},
+        {-2.0f,  0.0f},                  {2.0f,  0.0f},
+        {-2.0f,  2.0f}, {0.0f,  2.0f}, {2.0f,  2.0f}
+    };
+    
+    int safePoints = 0;
+    int totalPoints = testPoints.size();
+    
+    for (const auto& offset : testPoints) {
+        float testX = m_position.x + offset.first;
+        float testZ = m_position.z + offset.second;
+        
+        // Check that we have solid ground below this point (within 8 blocks down for more thorough check)
+        bool foundGround = false;
+        for (int yOffset = 0; yOffset >= -8; yOffset--) {
+            int blockX = static_cast<int>(std::round(testX));
+            int blockY = static_cast<int>(std::floor(m_position.y + yOffset));
+            int blockZ = static_cast<int>(std::round(testZ));
+            
+            Block block = world->GetBlock(blockX, blockY, blockZ);
+            if (block.IsSolid()) {
+                foundGround = true;
+                break;
+            }
+        }
+        
+        if (foundGround) {
+            safePoints++;
+        }
+    }
+    
+    // More strict requirement: terrain safe if at least 85% of test points have solid ground
+    bool isSafe = (safePoints >= (totalPoints * 85 / 100));
+    
+    if (isSafe) {
+        std::cout << "[TERRAIN SAFETY] Verified " << safePoints << "/" << totalPoints 
+                 << " points have solid ground within 8 blocks - terrain is SAFE" << std::endl;
+    } else {
+        std::cout << "[TERRAIN SAFETY] Only " << safePoints << "/" << totalPoints 
+                 << " points have solid ground - terrain is NOT SAFE (need " << (totalPoints * 85 / 100) << ")" << std::endl;
+    }
+    
+    return isSafe;
 } 

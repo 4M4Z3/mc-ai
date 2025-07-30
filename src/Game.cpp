@@ -41,6 +41,7 @@ Game::Game() :
     m_myPlayerId(0), // Initialize own player ID
     m_worldSeed(0),
     m_worldSeedReceived(false),
+    m_waitingForSpawnChunks(false), // Initialize spawn chunk tracking
     m_gameTime(0.0f),
     m_gameTimeReceived(false),
     m_hasLastSentPosition(false),
@@ -317,6 +318,14 @@ void Game::SetState(GameState newState) {
             m_player->InitializeTestInventory(m_itemManager.get());
             
             std::cout << "Created player at terrain spawn position (" << spawnPos.x << ", " << spawnPos.y << ", " << spawnPos.z << ")" << std::endl;
+            
+            // For single player, terrain should be ready immediately, but verify anyway
+            if (m_player->VerifyTerrainSafety(m_world.get())) {
+                m_player->EnablePhysics();
+                std::cout << "Single player terrain verified - physics enabled!" << std::endl;
+            } else {
+                std::cout << "Single player terrain not safe - keeping physics disabled until verified" << std::endl;
+            }
         }
     }
 }
@@ -335,20 +344,8 @@ void Game::UpdateMainMenu() {
             m_world->RegenerateWithSeed(m_worldSeed, &(m_renderer.m_blockManager));
             DEBUG_INFO("World created with colorful blocks!");
             
-            // Create player immediately after world creation
-            if (!m_player) {
-                DEBUG_INFO("Creating player at spawn position...");
-                // Create player at terrain-based spawn position
-                Vec3 spawnPos = CalculateSpawnPosition();
-                m_player = std::make_unique<Player>(spawnPos.x, spawnPos.y, spawnPos.z);
-                
-                // Initialize player's inventory with test items
-                m_player->InitializeTestInventory(m_itemManager.get());
-                
-                DEBUG_INFO("Player created at terrain spawn position (" << spawnPos.x << ", " << spawnPos.y << ", " << spawnPos.z << ")");
-            }
-            
-            // Request initial chunks around spawn position from server
+            // DON'T create player immediately - wait for chunks to load first
+            // Set up waiting state for multiplayer chunk loading
             if (m_networkClient && m_networkClient->IsConnected()) {
                 std::cout << "Requesting initial chunks from server..." << std::endl;
                 
@@ -359,17 +356,50 @@ void Game::UpdateMainMenu() {
                     }
                 }
                 
-                // For now, immediately change to game state
-                // TODO: Wait for chunks to load before changing state
+                // Initialize spawn chunk tracking
+                m_pendingSpawnChunks.clear();
+                for (int chunkX = -1; chunkX <= 1; ++chunkX) {
+                    for (int chunkZ = -1; chunkZ <= 1; ++chunkZ) {
+                        m_pendingSpawnChunks.insert({chunkX, chunkZ});
+                    }
+                }
+                m_waitingForSpawnChunks = true;
+                
+                std::cout << "Waiting for " << m_pendingSpawnChunks.size() << " spawn chunks to load..." << std::endl;
+            } else {
+                // Single player mode - create player immediately since world is generated locally
+                if (!m_player) {
+                    DEBUG_INFO("Creating player at spawn position...");
+                    // Create player at terrain-based spawn position
+                    Vec3 spawnPos = CalculateSpawnPosition();
+                    m_player = std::make_unique<Player>(spawnPos.x, spawnPos.y, spawnPos.z);
+                    
+                    // Initialize player's inventory with test items
+                    m_player->InitializeTestInventory(m_itemManager.get());
+                    
+                    DEBUG_INFO("Player created at terrain spawn position (" << spawnPos.x << ", " << spawnPos.y << ", " << spawnPos.z << ")");
+                    
+                    // For single player, terrain should be ready immediately, but verify anyway
+                    if (m_player->VerifyTerrainSafety(m_world.get())) {
+                        m_player->EnablePhysics();
+                        std::cout << "Single player terrain verified - physics enabled!" << std::endl;
+                    } else {
+                        std::cout << "Single player terrain not safe - keeping physics disabled until verified" << std::endl;
+                    }
+                }
+                
+                // Immediately change to game state for single player
                 DEBUG_INFO("Setting state to GAME...");
                 SetState(GameState::GAME);
-                DEBUG_INFO("World created with server chunks, entering game!");
+                DEBUG_INFO("Single player world ready, entering game!");
             }
         } catch (const std::exception& e) {
-            std::cerr << "ERROR: Failed to create world or player: " << e.what() << std::endl;
+            std::cerr << "ERROR: Failed to create world: " << e.what() << std::endl;
             
             // Reset flags to prevent infinite retry
             m_worldSeedReceived = false;
+            m_waitingForSpawnChunks = false;
+            m_pendingSpawnChunks.clear();
             
             // Disconnect from server if connection failed during world creation
             if (m_networkClient) {
@@ -384,6 +414,64 @@ void Game::UpdateMainMenu() {
                 m_server->Stop();
                 m_server.reset();
                 m_isHost = false;
+            }
+        }
+    }
+    
+    // Check if we're waiting for spawn chunks and if they're ready
+    if (m_waitingForSpawnChunks && m_world && !m_player) {
+        // Check if all spawn chunks have been loaded
+        bool allChunksLoaded = true;
+        for (const auto& chunkCoord : m_pendingSpawnChunks) {
+            const Chunk* chunk = m_world->GetChunk(chunkCoord.first, chunkCoord.second);
+            if (!chunk) {
+                allChunksLoaded = false;
+                break;
+            }
+        }
+        
+        if (allChunksLoaded) {
+            std::cout << "All spawn chunks loaded! Creating player..." << std::endl;
+            
+            // Create player at terrain-based spawn position
+            Vec3 spawnPos = CalculateSpawnPosition();
+            m_player = std::make_unique<Player>(spawnPos.x, spawnPos.y, spawnPos.z);
+            
+            // Initialize player's inventory with test items
+            m_player->InitializeTestInventory(m_itemManager.get());
+            
+            DEBUG_INFO("Player created at terrain spawn position (" << spawnPos.x << ", " << spawnPos.y << ", " << spawnPos.z << ")");
+            
+            // Verify terrain safety before enabling physics
+            if (m_player->VerifyTerrainSafety(m_world.get())) {
+                m_player->EnablePhysics();
+                std::cout << "Terrain verified safe - physics enabled!" << std::endl;
+            } else {
+                std::cout << "Terrain not yet safe - keeping physics disabled. Will retry in game loop." << std::endl;
+            }
+            
+            // Clear waiting state
+            m_waitingForSpawnChunks = false;
+            m_pendingSpawnChunks.clear();
+            
+            // Now it's safe to enter the game
+            DEBUG_INFO("Setting state to GAME...");
+            SetState(GameState::GAME);
+            DEBUG_INFO("World and player ready, entering game!");
+        } else {
+            // Show loading progress
+            int loadedChunks = 0;
+            for (const auto& chunkCoord : m_pendingSpawnChunks) {
+                const Chunk* chunk = m_world->GetChunk(chunkCoord.first, chunkCoord.second);
+                if (chunk) loadedChunks++;
+            }
+            
+            static int lastProgress = -1;
+            int currentProgress = (loadedChunks * 100) / m_pendingSpawnChunks.size();
+            if (currentProgress != lastProgress) {
+                std::cout << "Loading spawn chunks: " << loadedChunks << "/" << m_pendingSpawnChunks.size() 
+                         << " (" << currentProgress << "%)" << std::endl;
+                lastProgress = currentProgress;
             }
         }
     }
@@ -416,6 +504,31 @@ void Game::UpdateGame() {
         m_gameTime += deltaSeconds; // Real-time progression
         
         lastTimeUpdate = now;
+    }
+    
+    // Periodic terrain safety check for players with physics disabled
+    if (m_player && m_player->IsSurvivalMode() && !m_player->IsPhysicsEnabled() && m_world) {
+        static float lastSafetyCheck = 0.0f;
+        static int consecutiveSafeChecks = 0;
+        const float safetyCheckInterval = 2.0f; // Check every 2 seconds
+        const int requiredConsecutiveChecks = 3; // Require 3 consecutive safe checks before enabling physics
+        
+        if (glfwGetTime() - lastSafetyCheck > safetyCheckInterval) {
+            if (m_player->VerifyTerrainSafety(m_world.get())) {
+                consecutiveSafeChecks++;
+                std::cout << "[TERRAIN SAFETY] Consecutive safe checks: " << consecutiveSafeChecks << "/" << requiredConsecutiveChecks << std::endl;
+                
+                if (consecutiveSafeChecks >= requiredConsecutiveChecks) {
+                    m_player->EnablePhysics();
+                    std::cout << "Terrain safety verified with " << consecutiveSafeChecks << " consecutive checks - physics enabled!" << std::endl;
+                    consecutiveSafeChecks = 0; // Reset counter
+                }
+            } else {
+                consecutiveSafeChecks = 0; // Reset if terrain is not safe
+                std::cout << "[TERRAIN SAFETY] Terrain not safe - resetting consecutive check counter" << std::endl;
+            }
+            lastSafetyCheck = glfwGetTime();
+        }
     }
     
     // Send player position updates to server
@@ -489,6 +602,16 @@ void Game::UpdateGame() {
                     chunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
                     
                     std::cout << "[CLIENT] Updated chunk (" << chunkX << ", " << chunkZ << ") with server data" << std::endl;
+                    
+                    // If we're waiting for spawn chunks, remove this chunk from the pending set
+                    if (m_waitingForSpawnChunks) {
+                        auto chunkPair = std::make_pair(chunkX, chunkZ);
+                        if (m_pendingSpawnChunks.find(chunkPair) != m_pendingSpawnChunks.end()) {
+                            m_pendingSpawnChunks.erase(chunkPair);
+                            std::cout << "[CLIENT] Spawn chunk (" << chunkX << ", " << chunkZ << ") loaded. " 
+                                     << m_pendingSpawnChunks.size() << " remaining." << std::endl;
+                        }
+                    }
                 } else {
                     std::cerr << "[CLIENT] Failed to get chunk (" << chunkX << ", " << chunkZ << ")" << std::endl;
                 }
@@ -685,6 +808,19 @@ void Game::RenderGame() {
             ImGui::Text("Player Position:");
             ImGui::Text("  X: %.1f, Y: %.1f, Z: %.1f", pos.x, pos.y, pos.z);
             ImGui::Text("Yaw: %.1f, Pitch: %.1f", m_player->GetYaw(), m_player->GetPitch());
+            
+            // Show survival mode and physics status
+            if (m_player->IsSurvivalMode()) {
+                if (m_player->IsPhysicsEnabled()) {
+                    ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Mode: Survival (Physics Enabled)");
+                } else {
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Mode: Survival (SAFE MODE - Physics Disabled)");
+                    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "  Enhanced terrain verification in progress...");
+                    ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "  Spawned 5 blocks above terrain for safety");
+                }
+            } else {
+                ImGui::TextColored(ImVec4(0.5f, 0.5f, 1.0f, 1.0f), "Mode: Creative");
+            }
         }
         
         ImGui::Separator();
@@ -1886,12 +2022,22 @@ void Game::RenderHotbar() {
 Vec3 Game::CalculateSpawnPosition() const {
     if (!m_world) {
         // No world available, use default safe height
-        return Vec3(0.0f, 65.0f, 0.0f);
+        std::cout << "[SPAWN] No world available, using default height 75" << std::endl;
+        return Vec3(0.0f, 75.0f, 0.0f);
     }
     
     // Find highest block at world origin (0, 0)
     int highestY = m_world->FindHighestBlock(0, 0);
     
-    // Spawn player 1 block above the highest block
-    return Vec3(0.0f, static_cast<float>(highestY + 1), 0.0f);
+    // Safety check: if terrain height seems wrong, use a safe fallback
+    if (highestY < 10 || highestY > 200) {
+        std::cout << "[SPAWN] Detected unusual terrain height " << highestY << ", using safe fallback" << std::endl;
+        return Vec3(0.0f, 80.0f, 0.0f); // Safe height above typical terrain
+    }
+    
+    // Spawn player 5 blocks above the highest block for extra safety in survival mode
+    float spawnY = static_cast<float>(highestY + 5);
+    std::cout << "[SPAWN] Calculated spawn position at (0, " << spawnY << ", 0) based on terrain height " << highestY << " (5-block safety buffer)" << std::endl;
+    
+    return Vec3(0.0f, spawnY, 0.0f);
 }

@@ -147,6 +147,10 @@ private:
     int32_t m_worldSeed;
     bool m_worldSeedReceived;
     
+    // Spawn chunk loading state management
+    bool m_waitingForSpawnChunks;
+    std::set<std::pair<int, int>> m_pendingSpawnChunks; // Set of (chunkX, chunkZ) pairs we're waiting for
+    
     // Game time synchronization
     float m_gameTime; // Current game time (0-900 seconds)
     bool m_gameTimeReceived;
