@@ -174,6 +174,7 @@
     "brain_coral": {
       "blockType": 26,
       "blockName": "Brain Coral",
+      "type": "ground",
       "textures": {
         "all": "brain_coral.png"
       }
@@ -181,6 +182,7 @@
     "brain_coral_block": {
       "blockType": 27,
       "blockName": "Brain Coral Block",
+      "type": "solid",
       "textures": {
         "all": "brain_coral_block.png"
       }
@@ -434,6 +436,7 @@
     "dead_brain_coral_fan": {
       "blockType": 62,
       "blockName": "Dead Brain Coral Fan",
+      "type": "ground",
       "textures": {
         "all": "dead_brain_coral_fan.png"
       }
@@ -441,6 +444,7 @@
     "dead_bubble_coral_fan": {
       "blockType": 63,
       "blockName": "Dead Bubble Coral Fan",
+      "type": "ground",
       "textures": {
         "all": "dead_bubble_coral_fan.png"
       }
@@ -456,6 +460,7 @@
     "dead_fire_coral_fan": {
       "blockType": 65,
       "blockName": "Dead Fire Coral Fan",
+      "type": "ground",
       "textures": {
         "all": "dead_fire_coral_fan.png"
       }
@@ -664,6 +669,7 @@
     "horn_coral": {
       "blockType": 94,
       "blockName": "Horn Coral",
+      "type": "ground",
       "textures": {
         "all": "horn_coral.png"
       }
@@ -671,6 +677,7 @@
     "horn_coral_block": {
       "blockType": 95,
       "blockName": "Horn Coral Block",
+      "type": "solid",
       "textures": {
         "all": "horn_coral_block.png"
       }
@@ -678,6 +685,7 @@
     "horn_coral_fan": {
       "blockType": 96,
       "blockName": "Horn Coral Fan",
+      "type": "ground",
       "textures": {
         "all": "horn_coral_fan.png"
       }
@@ -745,6 +753,7 @@
     "kelp": {
       "blockType": 105,
       "blockName": "Kelp",
+      "type": "ground",
       "textures": {
         "all": "kelp.png"
       }
@@ -759,6 +768,7 @@
     "lantern": {
       "blockType": 107,
       "blockName": "Lantern",
+      "type": "ground",
       "textures": {
         "all": "lantern.png"
       }
@@ -983,6 +993,7 @@
     "pink_petals": {
       "blockType": 138,
       "blockName": "Pink Petals",
+      "type": "ground",
       "textures": {
         "all": "pink_petals.png"
       }
@@ -990,6 +1001,7 @@
     "pink_petals_stem": {
       "blockType": 139,
       "blockName": "Pink Petals Stem",
+      "type": "ground",
       "textures": {
         "all": "pink_petals_stem.png"
       }
@@ -1272,6 +1284,7 @@
     "soul_lantern": {
       "blockType": 179,
       "blockName": "Soul Lantern",
+      "type": "ground",
       "textures": {
         "all": "soul_lantern.png"
       }
@@ -1293,6 +1306,7 @@
     "soul_torch": {
       "blockType": 182,
       "blockName": "Soul Torch",
+      "type": "ground",
       "textures": {
         "all": "soul_torch.png"
       }
@@ -1314,6 +1328,7 @@
     "spore_blossom": {
       "blockType": 185,
       "blockName": "Spore Blossom",
+      "type": "ground",
       "textures": {
         "all": "spore_blossom.png"
       }
@@ -1321,6 +1336,7 @@
     "spore_blossom_base": {
       "blockType": 186,
       "blockName": "Spore Blossom Base",
+      "type": "ground",
       "textures": {
         "all": "spore_blossom_base.png"
       }
@@ -1395,6 +1411,7 @@
     "tube_coral": {
       "blockType": 197,
       "blockName": "Tube Coral",
+      "type": "ground",
       "textures": {
         "all": "tube_coral.png"
       }
@@ -1402,6 +1419,7 @@
     "tube_coral_block": {
       "blockType": 198,
       "blockName": "Tube Coral Block",
+      "type": "solid",
       "textures": {
         "all": "tube_coral_block.png"
       }
@@ -1409,6 +1427,7 @@
     "tube_coral_fan": {
       "blockType": 199,
       "blockName": "Tube Coral Fan",
+      "type": "ground",
       "textures": {
         "all": "tube_coral_fan.png"
       }
@@ -1430,6 +1449,7 @@
     "twisting_vines": {
       "blockType": 202,
       "blockName": "Twisting Vines",
+      "type": "ground",
       "textures": {
         "all": "twisting_vines.png"
       }
@@ -1437,6 +1457,7 @@
     "twisting_vines_plant": {
       "blockType": 203,
       "blockName": "Twisting Vines Plant",
+      "type": "ground",
       "textures": {
         "all": "twisting_vines_plant.png"
       }

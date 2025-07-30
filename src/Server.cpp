@@ -890,7 +890,7 @@ void Server::SendChunkData(socket_t clientSocket, int32_t chunkX, int32_t chunkZ
 
 void Server::UpdateGameTime() {  
     const float DAY_CYCLE_SECONDS = 900.0f; // 15 minutes in seconds
-    const float TIME_SYNC_INTERVAL = 5.0f; // 5 seconds for testing (was 30 seconds)
+    const float TIME_SYNC_INTERVAL = 30.0f; // 30 seconds
     
     std::cout << "[SERVER] Time update thread started" << std::endl;
     
@@ -908,13 +908,12 @@ void Server::UpdateGameTime() {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_gameStartTime);
         float totalElapsed = elapsed.count() / 1000.0f; // Convert to seconds
         
-        // Update game time (cycles every 15 minutes) - speed up for testing
-        float acceleratedElapsed = totalElapsed * 10.0f; // 10x speed for testing
-        m_gameTime = fmod(acceleratedElapsed, DAY_CYCLE_SECONDS);
+        // Update game time (cycles every 15 minutes)
+        m_gameTime = fmod(totalElapsed, DAY_CYCLE_SECONDS);
         
-        // Debug output every 2 seconds for better visibility
+        // Debug output every 60 seconds for production
         auto timeSinceDebug = std::chrono::duration_cast<std::chrono::seconds>(now - lastDebugTime);
-        if (timeSinceDebug.count() >= 2) {
+        if (timeSinceDebug.count() >= 60) {
             std::cout << "[SERVER] Game time: " << m_gameTime << " seconds (elapsed: " << totalElapsed 
                       << "s, " << (IsDay() ? "DAY" : "NIGHT") << ")" << std::endl;
             lastDebugTime = now;
