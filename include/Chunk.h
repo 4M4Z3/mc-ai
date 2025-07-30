@@ -102,6 +102,7 @@ private:
     bool ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world, const BlockManager* blockManager = nullptr) const;
     Block GetNeighborBlock(int x, int y, int z, int faceDirection, const World* world) const;
     void AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world, bool flipTextureV = false) const;
+    void AddCrossToMesh(std::vector<float>& vertices, int x, int y, int z, const World* world) const;
     
     // Ambient occlusion calculation
     float CalculateVertexAO(int x, int y, int z, int faceDirection, int vertexIndex, const World* world) const;

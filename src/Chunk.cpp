@@ -111,9 +111,14 @@ void Chunk::GenerateMesh(const World* world, const BlockManager* blockManager) {
             for (int z = 0; z < CHUNK_DEPTH; ++z) {
                 BlockType blockType = m_blocks[x][y][z].GetType();
                 if (blockType != BlockType::AIR) {
-                    // Check each face for visibility
-                    for (int face = 0; face < 6; ++face) {
-                        if (ShouldRenderFace(x, y, z, face, world, blockManager)) {
+                    // Check if this is a ground block (should render as cross)
+                    if (blockManager && blockManager->IsGround(blockType)) {
+                        // Render ground blocks as diagonal cross sprites
+                        AddCrossToMesh(blockVertices[blockType], x, y, z, world);
+                    } else {
+                        // Check each face for visibility (standard cube rendering)
+                        for (int face = 0; face < 6; ++face) {
+                            if (ShouldRenderFace(x, y, z, face, world, blockManager)) {
                             // Handle grass blocks specially
                             if (blockType == BlockType::GRASS) {
                                 // Group grass faces by face type for different textures
@@ -131,6 +136,7 @@ void Chunk::GenerateMesh(const World* world, const BlockManager* blockManager) {
                             }
                         }
                     }
+                    } // end else (standard cube rendering)
                 }
             }
         }
@@ -473,6 +479,73 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             break;
         }
     }
+}
+
+void Chunk::AddCrossToMesh(std::vector<float>& vertices, int x, int y, int z, const World* world) const {
+    // Convert local chunk coordinates to world position for rendering
+    float worldX = static_cast<float>(m_chunkX * CHUNK_WIDTH + x);
+    float worldY = static_cast<float>(y);
+    float worldZ = static_cast<float>(m_chunkZ * CHUNK_DEPTH + z);
+    
+    // For cross sprites, we don't need complex AO calculation, use a simple value
+    float ao = 1.0f; // Full brightness for plants
+    
+    // Create four quads (two diagonal planes, each with front and back faces) to form a cross
+    // Each plane shows the full texture (0,0) to (1,1)
+    
+    // First diagonal plane FRONT FACE: from bottom-left-back to top-right-front
+    float plane1FrontVertices[] = {
+        // Triangle 1: x, y, z, ao, u, v
+        worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao, 0.0f, 1.0f, // Bottom-left-back
+        worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao, 1.0f, 1.0f, // Bottom-right-front
+        worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao, 1.0f, 0.0f, // Top-right-front
+        // Triangle 2
+        worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao, 1.0f, 0.0f, // Top-right-front
+        worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao, 0.0f, 0.0f, // Top-left-back
+        worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao, 0.0f, 1.0f  // Bottom-left-back
+    };
+    
+    // First diagonal plane BACK FACE: reverse winding order for backface culling
+    float plane1BackVertices[] = {
+        // Triangle 1: x, y, z, ao, u, v (reversed winding)
+        worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao, 0.0f, 1.0f, // Bottom-left-back
+        worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao, 0.0f, 0.0f, // Top-left-back
+        worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao, 1.0f, 0.0f, // Top-right-front
+        // Triangle 2
+        worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao, 1.0f, 0.0f, // Top-right-front
+        worldX + 0.5f, worldY - 0.5f, worldZ + 0.5f, ao, 1.0f, 1.0f, // Bottom-right-front
+        worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao, 0.0f, 1.0f  // Bottom-left-back
+    };
+    
+    // Second diagonal plane FRONT FACE: from bottom-left-front to top-right-back
+    float plane2FrontVertices[] = {
+        // Triangle 1: x, y, z, ao, u, v
+        worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao, 0.0f, 1.0f, // Bottom-left-front
+        worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao, 0.0f, 0.0f, // Top-left-front
+        worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao, 1.0f, 0.0f, // Top-right-back
+        // Triangle 2
+        worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao, 1.0f, 0.0f, // Top-right-back
+        worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao, 1.0f, 1.0f, // Bottom-right-back
+        worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao, 0.0f, 1.0f  // Bottom-left-front
+    };
+    
+    // Second diagonal plane BACK FACE: reverse winding order for backface culling
+    float plane2BackVertices[] = {
+        // Triangle 1: x, y, z, ao, u, v (reversed winding)
+        worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao, 0.0f, 1.0f, // Bottom-left-front
+        worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao, 1.0f, 0.0f, // Top-right-back
+        worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao, 0.0f, 0.0f, // Top-left-front
+        // Triangle 2
+        worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao, 1.0f, 0.0f, // Top-right-back
+        worldX - 0.5f, worldY - 0.5f, worldZ + 0.5f, ao, 0.0f, 1.0f, // Bottom-left-front
+        worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao, 1.0f, 1.0f  // Bottom-right-back
+    };
+    
+    // Add all four quads to the vertex buffer
+    vertices.insert(vertices.end(), plane1FrontVertices, plane1FrontVertices + 36); // 6 vertices * 6 floats each
+    vertices.insert(vertices.end(), plane1BackVertices, plane1BackVertices + 36);   // 6 vertices * 6 floats each
+    vertices.insert(vertices.end(), plane2FrontVertices, plane2FrontVertices + 36); // 6 vertices * 6 floats each
+    vertices.insert(vertices.end(), plane2BackVertices, plane2BackVertices + 36);   // 6 vertices * 6 floats each
 }
 
 void Chunk::Generate(int seed, const BlockManager* blockManager) {
