@@ -113,6 +113,12 @@ private:
     unsigned int m_playerShaderProgram;
     int m_playerModelLoc, m_playerViewLoc, m_playerProjLoc;
     
+    // Sky rendering
+    unsigned int m_skyVAO;
+    unsigned int m_skyVBO;
+    unsigned int m_skyShaderProgram;
+    int m_skyViewLoc, m_skyProjLoc, m_skyGameTimeLoc, m_skySunDirLoc;
+    
     // Texture management
     std::unordered_map<BlockType, unsigned int> m_blockTextures;
     
@@ -163,8 +169,10 @@ private:
     bool CreateShaders();
     bool CreatePlayerShaders();
     bool CreateWireframeShaders();
+    bool CreateSkyShaders();
     bool CreateCubeGeometry();
     bool CreateWireframeGeometry();
+    bool CreateSkyGeometry();
     std::string LoadShaderSource(const std::string& filepath);
     unsigned int CompileShader(unsigned int type, const char* source);
     bool CheckShaderCompilation(unsigned int shader, const char* type);

@@ -404,14 +404,9 @@ void Game::UpdateGame() {
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTimeUpdate);
         
-        // Add elapsed time (accelerated for testing like server)
+        // Add elapsed time at normal speed (no acceleration, no wrapping)
         float deltaSeconds = elapsed.count() / 1000.0f;
-        m_gameTime += deltaSeconds * 10.0f; // 10x speed to match server
-        
-        // Wrap around every 15 minutes (900 seconds)
-        if (m_gameTime >= 900.0f) {
-            m_gameTime = fmod(m_gameTime, 900.0f);
-        }
+        m_gameTime += deltaSeconds; // Real-time progression
         
         lastTimeUpdate = now;
     }

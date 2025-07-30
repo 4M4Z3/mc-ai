@@ -10,6 +10,10 @@
 #include <fstream>
 #include <sstream>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "../third_party/stb_image.h"
 
@@ -19,6 +23,8 @@ Renderer::Renderer() : m_cubeVAO(0), m_cubeVBO(0), m_shaderProgram(0),
                        m_wireframeModelLoc(-1), m_wireframeViewLoc(-1), m_wireframeProjLoc(-1),
                        m_playerShaderProgram(0),
                        m_playerModelLoc(-1), m_playerViewLoc(-1), m_playerProjLoc(-1),
+                       m_skyVAO(0), m_skyVBO(0), m_skyShaderProgram(0),
+                       m_skyViewLoc(-1), m_skyProjLoc(-1), m_skyGameTimeLoc(-1), m_skySunDirLoc(-1),
                        m_sunTexture(0), m_moonTexture(0),
                        m_viewportWidth(1280), m_viewportHeight(720) {
 }
@@ -77,6 +83,18 @@ bool Renderer::Initialize() {
         std::cerr << "Failed to create wireframe geometry" << std::endl;
         return false;
     }
+    
+    // Create sky shaders
+    if (!CreateSkyShaders()) {
+        std::cerr << "Failed to create sky shaders" << std::endl;
+        return false;
+    }
+    
+    // Create sky geometry
+    if (!CreateSkyGeometry()) {
+        std::cerr << "Failed to create sky geometry" << std::endl;
+        return false;
+    }
 
     // Get uniform locations for block shaders
     m_modelLoc = glGetUniformLocation(m_shaderProgram, "model");
@@ -90,8 +108,14 @@ bool Renderer::Initialize() {
     
     // Get uniform locations for wireframe shaders
     m_wireframeModelLoc = glGetUniformLocation(m_wireframeShaderProgram, "model");
-    m_wireframeViewLoc = glGetUniformLocation(m_wireframeShaderProgram, "view");
+    m_wireframeViewLoc = glGetUniformLocation(m_wireframeShaderProgram, "view");  
     m_wireframeProjLoc = glGetUniformLocation(m_wireframeShaderProgram, "projection");
+    
+    // Get uniform locations for sky shaders
+    m_skyViewLoc = glGetUniformLocation(m_skyShaderProgram, "view");
+    m_skyProjLoc = glGetUniformLocation(m_skyShaderProgram, "projection");
+    m_skyGameTimeLoc = glGetUniformLocation(m_skyShaderProgram, "gameTime");
+    m_skySunDirLoc = glGetUniformLocation(m_skyShaderProgram, "sunDirection");
 
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
@@ -270,6 +294,20 @@ void Renderer::Shutdown() {
         m_wireframeShaderProgram = 0;
     }
     
+    // Clean up sky resources
+    if (m_skyVAO) {
+        glDeleteVertexArrays(1, &m_skyVAO);
+        m_skyVAO = 0;
+    }
+    if (m_skyVBO) {
+        glDeleteBuffers(1, &m_skyVBO);
+        m_skyVBO = 0;
+    }
+    if (m_skyShaderProgram) {
+        glDeleteProgram(m_skyShaderProgram);
+        m_skyShaderProgram = 0;
+    }
+    
     // Clean up player model
     m_playerModel.Shutdown();
     
@@ -312,12 +350,10 @@ void Renderer::Shutdown() {
 }
 
 void Renderer::Clear() {
-    // Dynamic sky color will be handled in RenderSky()
-    // For now, use a neutral color that will be overridden
-    glClearColor(0.529f, 0.808f, 0.922f, 1.0f); // Sky blue background (#87CEEB)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Sky color and clearing will be handled in RenderSky()
+    // Don't clear color buffer here to avoid overriding sky rendering
     
-    // Ensure depth testing is enabled
+    // Just ensure depth testing is configured properly
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 }
@@ -808,6 +844,54 @@ bool Renderer::CreateWireframeShaders() {
     return true;
 }
 
+bool Renderer::CreateSkyShaders() {
+    // Load sky vertex shader source from file
+    std::string vertexShaderSource = LoadShaderSource("shaders/sky_vertex.glsl");
+    if (vertexShaderSource.empty()) {
+        std::cerr << "Failed to load sky vertex shader" << std::endl;
+        return false;
+    }
+
+    // Load sky fragment shader source from file  
+    std::string fragmentShaderSource = LoadShaderSource("shaders/sky_fragment.glsl");
+    if (fragmentShaderSource.empty()) {
+        std::cerr << "Failed to load sky fragment shader" << std::endl;
+        return false;
+    }
+
+    // Compile sky shaders
+    unsigned int vertexShader = CompileShader(GL_VERTEX_SHADER, vertexShaderSource.c_str());
+    if (vertexShader == 0) return false;
+
+    unsigned int fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource.c_str());
+    if (fragmentShader == 0) {
+        glDeleteShader(vertexShader);
+        return false;
+    }
+
+    // Create sky shader program
+    m_skyShaderProgram = glCreateProgram();
+    glAttachShader(m_skyShaderProgram, vertexShader);
+    glAttachShader(m_skyShaderProgram, fragmentShader);
+    glLinkProgram(m_skyShaderProgram);
+
+    // Check for linking errors
+    if (!CheckProgramLinking(m_skyShaderProgram)) {
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+        glDeleteProgram(m_skyShaderProgram);
+        m_skyShaderProgram = 0;
+        return false;
+    }
+
+    // Clean up shaders
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    DEBUG_SHADER("Sky shaders loaded and compiled successfully!");
+    return true;
+}
+
 bool Renderer::CreateWireframeGeometry() {
     // Wireframe cube edges (12 lines for cube outline)
     float wireframeVertices[] = {
@@ -844,6 +928,77 @@ bool Renderer::CreateWireframeGeometry() {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    return true;
+}
+
+bool Renderer::CreateSkyGeometry() {
+    // Create a proper skybox cube with correct winding order for inside viewing
+    // Using unit cube coordinates - shader will handle making it infinite
+    float skyVertices[] = {        
+        // Right face (+X) - viewed from inside
+        1.0f, -1.0f, -1.0f,
+        1.0f, -1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f, -1.0f,
+        1.0f, -1.0f, -1.0f,
+
+        // Left face (-X) - viewed from inside
+        -1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        // Top face (+Y) - viewed from inside
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        // Bottom face (-Y) - viewed from inside
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        // Back face (+Z) - viewed from inside
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        // Front face (-Z) - viewed from inside
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f
+    };
+
+    glGenVertexArrays(1, &m_skyVAO);
+    glBindVertexArray(m_skyVAO);
+
+    glGenBuffers(1, &m_skyVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_skyVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyVertices), skyVertices, GL_STATIC_DRAW);
+
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    DEBUG_SHADER("Sky geometry created successfully!");
     return true;
 }
 
@@ -1134,63 +1289,53 @@ void Renderer::RenderSky(float gameTime) {
         lastDebugTime = gameTime;
     }
     
-    // Calculate time factor (0.0 = start of day, 1.0 = end of day cycle)
-    float timeFactor = gameTime / 900.0f; // 900 seconds = 15 minutes
+    // Set a neutral clear color as fallback (will be overridden by sky rendering)
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    // Determine sky color based on time
-    float r, g, b;
-    if (gameTime < 450.0f) {
-        // Day time (0-450 seconds) - bright blue sky
-        float dayProgress = gameTime / 450.0f;
-        
-        // Sunrise/sunset transitions
-        if (dayProgress < 0.1f) {
-            // Sunrise (orange to blue)
-            float sunrise = dayProgress / 0.1f;
-            r = 1.0f - (sunrise * 0.471f); // 1.0 to 0.529
-            g = 0.5f + (sunrise * 0.308f); // 0.5 to 0.808  
-            b = 0.2f + (sunrise * 0.722f); // 0.2 to 0.922
-        } else if (dayProgress > 0.9f) {
-            // Sunset (blue to orange)
-            float sunset = (dayProgress - 0.9f) / 0.1f;
-            r = 0.529f + (sunset * 0.471f); // 0.529 to 1.0
-            g = 0.808f - (sunset * 0.308f); // 0.808 to 0.5
-            b = 0.922f - (sunset * 0.722f); // 0.922 to 0.2
-        } else {
-            // Midday - bright blue
-            r = 0.529f; g = 0.808f; b = 0.922f;
-        }
-    } else {
-        // Night time (450-900 seconds) - dark blue/black sky
-        float nightProgress = (gameTime - 450.0f) / 450.0f;
-        
-        if (nightProgress < 0.1f) {
-            // Transition from sunset to night
-            float transition = nightProgress / 0.1f;
-            r = 1.0f - (transition * 0.9f); // 1.0 to 0.1
-            g = 0.5f - (transition * 0.4f); // 0.5 to 0.1
-            b = 0.2f - (transition * 0.1f); // 0.2 to 0.1
-        } else if (nightProgress > 0.9f) {
-            // Transition from night to sunrise
-            float transition = (nightProgress - 0.9f) / 0.1f;
-            r = 0.1f + (transition * 0.9f); // 0.1 to 1.0
-            g = 0.1f + (transition * 0.4f); // 0.1 to 0.5
-            b = 0.1f + (transition * 0.1f); // 0.1 to 0.2
-        } else {
-            // Midnight - dark blue
-            r = 0.1f; g = 0.1f; b = 0.2f;
-        }
+    // Save current rendering state
+    bool depthTestEnabled = glIsEnabled(GL_DEPTH_TEST);
+    bool cullFaceEnabled = glIsEnabled(GL_CULL_FACE);
+    
+    // Disable depth testing, depth writing, and face culling for sky rendering
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_CULL_FACE); // Disable culling so we can see inside faces of skybox
+    
+    // Use sky shader program
+    glUseProgram(m_skyShaderProgram);
+    
+    // Set uniforms
+    glUniformMatrix4fv(m_skyViewLoc, 1, GL_FALSE, m_viewMatrix.m);
+    glUniformMatrix4fv(m_skyProjLoc, 1, GL_FALSE, m_projectionMatrix.m);
+    glUniform1f(m_skyGameTimeLoc, gameTime);
+    
+    // Calculate sun direction based on time (for potential future use)
+    float cycleTime = fmod(gameTime, 900.0f); // Get position within 15-minute cycle
+    float timeAngle = (cycleTime / 900.0f) * 2.0f * M_PI; // Full circle over day cycle
+    Vec3 sunDirection(
+        sin(timeAngle),
+        cos(timeAngle),
+        0.0f
+    );
+    glUniform3f(m_skySunDirLoc, sunDirection.x, sunDirection.y, sunDirection.z);
+    
+    // Render sky geometry
+    glBindVertexArray(m_skyVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36); // 36 vertices for cube (6 faces * 6 vertices per face)
+    glBindVertexArray(0);
+    
+    // Restore rendering state
+    glDepthMask(GL_TRUE);
+    if (depthTestEnabled) {
+        glEnable(GL_DEPTH_TEST);
+    }
+    if (cullFaceEnabled) {
+        glEnable(GL_CULL_FACE);
     }
     
-    // Set the clear color to our calculated sky color
-    glClearColor(r, g, b, 1.0f);
-    
-    // Clear the color buffer with the new sky color
-    glClear(GL_COLOR_BUFFER_BIT);
-    
-    // TODO: Add actual sun/moon rendering with textured quads
-    // For now, we're just changing the sky color
-    // Future implementation will render sun/moon sprites positioned in the sky
+    // Switch back to main shader program for subsequent rendering
+    glUseProgram(m_shaderProgram);
 }
 
 // ============== FRUSTUM CULLING IMPLEMENTATION ==============

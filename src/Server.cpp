@@ -852,11 +852,13 @@ void Server::BroadcastGameTime() {
 }
 
 bool Server::IsDay() const {
-    return m_gameTime < 450.0f; // First 7.5 minutes (450 seconds) is day
+    float cycleTime = fmod(m_gameTime, 900.0f); // Get position within 15-minute cycle
+    return cycleTime < 450.0f; // First 7.5 minutes (450 seconds) is day
 }
 
 bool Server::IsNight() const {
-    return m_gameTime >= 450.0f; // Last 7.5 minutes (450-900 seconds) is night
+    float cycleTime = fmod(m_gameTime, 900.0f); // Get position within 15-minute cycle
+    return cycleTime >= 450.0f; // Last 7.5 minutes (450-900 seconds) is night
 }
 
 void Server::HandleChunkRequest(socket_t clientSocket, int32_t chunkX, int32_t chunkZ) {
@@ -908,14 +910,15 @@ void Server::UpdateGameTime() {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_gameStartTime);
         float totalElapsed = elapsed.count() / 1000.0f; // Convert to seconds
         
-        // Update game time (cycles every 15 minutes)
-        m_gameTime = fmod(totalElapsed, DAY_CYCLE_SECONDS);
+        // Update game time (continuous, no cycling - let shader handle day/night phases)
+        m_gameTime = totalElapsed;
         
         // Debug output every 60 seconds for production
         auto timeSinceDebug = std::chrono::duration_cast<std::chrono::seconds>(now - lastDebugTime);
         if (timeSinceDebug.count() >= 60) {
-            std::cout << "[SERVER] Game time: " << m_gameTime << " seconds (elapsed: " << totalElapsed 
-                      << "s, " << (IsDay() ? "DAY" : "NIGHT") << ")" << std::endl;
+            float cycleTime = fmod(m_gameTime, DAY_CYCLE_SECONDS);
+            std::cout << "[SERVER] Game time: " << m_gameTime << " seconds (cycle: " << cycleTime 
+                      << "/900s, " << (IsDay() ? "DAY" : "NIGHT") << ")" << std::endl;
             lastDebugTime = now;
         }
         
