@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "Debug.h"
+#include "Block.h"
 #include <iostream>
 #include <ctime>
 #include <cstring>
@@ -1284,6 +1285,29 @@ void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int m
                 int blockX = (int)raycast.blockPos.x;
                 int blockY = (int)raycast.blockPos.y;
                 int blockZ = (int)raycast.blockPos.z;
+                
+                // Get the block type before breaking it
+                Block targetBlock = s_instance->m_world->GetBlock(blockX, blockY, blockZ);
+                BlockType blockType = targetBlock.GetType();
+                
+                // DEBUG: Log what block type we're breaking
+                std::cout << "Breaking block type: " << static_cast<int>(blockType) << std::endl;
+                
+                // Don't collect AIR blocks
+                if (blockType != BlockType::AIR) {
+                    // Get the corresponding item for this block
+                    Item* blockItem = s_instance->m_itemManager->getItemForBlock(blockType);
+                    if (blockItem) {
+                        // Add the item to player's inventory
+                        if (s_instance->m_player->GetInventory().addItem(blockItem, 1)) {
+                            std::cout << "Added " << blockItem->itemName << " to inventory (block type " << static_cast<int>(blockType) << ")" << std::endl;
+                        } else {
+                            std::cout << "Inventory full! Could not add " << blockItem->itemName << std::endl;
+                        }
+                    } else {
+                        std::cout << "No item found for block type " << static_cast<int>(blockType) << std::endl;
+                    }
+                }
                 
                 std::cout << "Breaking block at (" << blockX << ", " << blockY << ", " << blockZ << ")" << std::endl;
                 

@@ -191,9 +191,9 @@ void PlayerModel::RenderFirstPersonArm(const Player& player) {
     // X: positive = right side of screen
     // Y: negative = bottom of screen  
     // Z: negative = closer to camera
-    float armX = 0.0f;      // CENTER of screen for debugging
-    float armY = 0.0f;      // CENTER of screen for debugging  
-    float armZ = -0.5f;     // Very close to camera
+    float armX = 0.6f;      // Moved farther to the right
+    float armY = -0.2f;      // CENTER of screen for debugging  
+    float armZ = -1.5f;     // Moved further from camera to make it appear smaller
     
     // Apply punch animation if active
     if (m_isPunching) {
@@ -216,13 +216,9 @@ void PlayerModel::RenderFirstPersonArm(const Player& player) {
         }
     }
     
-    // Create scale matrix to make the arm bigger and more visible
-    float scale = 2.0f;     // Made VERY large for debugging visibility
-    Mat4 scaleMatrix;
-    scaleMatrix.m[0] = scale; scaleMatrix.m[4] = 0.0f;  scaleMatrix.m[8] = 0.0f;   scaleMatrix.m[12] = 0.0f;
-    scaleMatrix.m[1] = 0.0f;  scaleMatrix.m[5] = scale; scaleMatrix.m[9] = 0.0f;   scaleMatrix.m[13] = 0.0f;
-    scaleMatrix.m[2] = 0.0f;  scaleMatrix.m[6] = 0.0f;  scaleMatrix.m[10] = scale; scaleMatrix.m[14] = 0.0f;
-    scaleMatrix.m[3] = 0.0f;  scaleMatrix.m[7] = 0.0f;  scaleMatrix.m[11] = 0.0f;  scaleMatrix.m[15] = 1.0f;
+    // Create scale matrix to make the arm a bit smaller
+    float scale = 1.2f;     // Reduced from 2.0f to make it smaller
+    Mat4 scaleMatrix = CreateScaleMatrix(scale, scale, scale);
     
     // Create translation matrix in view space
     Mat4 translationMatrix;
@@ -231,19 +227,39 @@ void PlayerModel::RenderFirstPersonArm(const Player& player) {
     translationMatrix.m[2] = 0.0f; translationMatrix.m[6] = 0.0f; translationMatrix.m[10] = 1.0f; translationMatrix.m[14] = armZ;
     translationMatrix.m[3] = 0.0f; translationMatrix.m[7] = 0.0f; translationMatrix.m[11] = 0.0f; translationMatrix.m[15] = 1.0f;
     
-    // Apply minimal rotation for now to debug positioning
-    // Just a slight angle inward so it looks natural
-    float rotationY = -0.2f;  // Slight angle inward toward center
+    // Apply rotations to make the arm look natural
+    float rotationX = -0.3f;  // Pitch (up/down) - negative tilts down
+    float rotationY = -0.2f;  // Yaw (left/right) + 180 degrees to flip the arm
+    float rotationZ = 0.1f;   // Roll (twist) - positive rotates clockwise
     
-    // Y rotation matrix (turn left/right)
+    // Create rotation matrices
+    // X rotation matrix (pitch - up/down)
+    Mat4 rotationXMatrix;
+    rotationXMatrix.m[0] = 1.0f; rotationXMatrix.m[4] = 0.0f;            rotationXMatrix.m[8] = 0.0f;             rotationXMatrix.m[12] = 0.0f;
+    rotationXMatrix.m[1] = 0.0f; rotationXMatrix.m[5] = cos(rotationX);  rotationXMatrix.m[9] = -sin(rotationX);  rotationXMatrix.m[13] = 0.0f;
+    rotationXMatrix.m[2] = 0.0f; rotationXMatrix.m[6] = sin(rotationX);  rotationXMatrix.m[10] = cos(rotationX);  rotationXMatrix.m[14] = 0.0f;
+    rotationXMatrix.m[3] = 0.0f; rotationXMatrix.m[7] = 0.0f;            rotationXMatrix.m[11] = 0.0f;            rotationXMatrix.m[15] = 1.0f;
+    
+    // Y rotation matrix (yaw - left/right)
     Mat4 rotationYMatrix;
     rotationYMatrix.m[0] = cos(rotationY);  rotationYMatrix.m[4] = 0.0f; rotationYMatrix.m[8] = sin(rotationY);   rotationYMatrix.m[12] = 0.0f;
     rotationYMatrix.m[1] = 0.0f;            rotationYMatrix.m[5] = 1.0f; rotationYMatrix.m[9] = 0.0f;             rotationYMatrix.m[13] = 0.0f;
     rotationYMatrix.m[2] = -sin(rotationY); rotationYMatrix.m[6] = 0.0f; rotationYMatrix.m[10] = cos(rotationY);  rotationYMatrix.m[14] = 0.0f;
     rotationYMatrix.m[3] = 0.0f;            rotationYMatrix.m[7] = 0.0f; rotationYMatrix.m[11] = 0.0f;            rotationYMatrix.m[15] = 1.0f;
     
+    // Z rotation matrix (roll - twist)
+    Mat4 rotationZMatrix;
+    rotationZMatrix.m[0] = cos(rotationZ);  rotationZMatrix.m[4] = -sin(rotationZ); rotationZMatrix.m[8] = 0.0f;  rotationZMatrix.m[12] = 0.0f;
+    rotationZMatrix.m[1] = sin(rotationZ);  rotationZMatrix.m[5] = cos(rotationZ);  rotationZMatrix.m[9] = 0.0f;  rotationZMatrix.m[13] = 0.0f;
+    rotationZMatrix.m[2] = 0.0f;            rotationZMatrix.m[6] = 0.0f;            rotationZMatrix.m[10] = 1.0f; rotationZMatrix.m[14] = 0.0f;
+    rotationZMatrix.m[3] = 0.0f;            rotationZMatrix.m[7] = 0.0f;            rotationZMatrix.m[11] = 0.0f; rotationZMatrix.m[15] = 1.0f;
+    
+    // Combine all rotations: Z * Y * X (order matters!)
+    Mat4 tempRotation = MultiplyMatrices(rotationYMatrix, rotationXMatrix);
+    Mat4 combinedRotation = MultiplyMatrices(rotationZMatrix, tempRotation);
+    
     // Combine transformations: Translation * Rotation * Scale
-    Mat4 tempMatrix = MultiplyMatrices(rotationYMatrix, scaleMatrix);
+    Mat4 tempMatrix = MultiplyMatrices(combinedRotation, scaleMatrix);
     Mat4 finalMatrix = MultiplyMatrices(translationMatrix, tempMatrix);
     
     // Set the model matrix and render the right arm

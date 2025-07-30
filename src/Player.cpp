@@ -707,10 +707,7 @@ void Player::UpdateVectors() {
 }
 
 void Player::InitializeTestInventory(ItemManager* itemManager) {
-    if (itemManager) {
-        m_inventory.populateTestHotbar(itemManager);
-        DEBUG_INVENTORY("Player inventory initialized with test items");
-    } else {
-        DEBUG_WARNING("ItemManager is null, could not initialize test inventory");
-    }
+    // Clear inventory to start empty
+    m_inventory.clear();
+    DEBUG_INVENTORY("Player inventory initialized as empty");
 } 

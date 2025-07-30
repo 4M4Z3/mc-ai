@@ -1138,10 +1138,7 @@ unsigned int Renderer::LoadTexture(const std::string& filepath) {
     if (data) {
         GLenum format = GL_RGB;
         if (nrChannels == 1) {
-            // For grayscale images, force load as RGB to replicate grayscale value across R, G, B channels
-            stbi_image_free(data); // Free the original single-channel data
-            data = stbi_load(filepath.c_str(), &width, &height, &nrChannels, 3); // Force RGB
-            format = GL_RGB;
+            format = GL_RED;
         } else if (nrChannels == 2) {
             format = GL_RG;
         } else if (nrChannels == 4) {

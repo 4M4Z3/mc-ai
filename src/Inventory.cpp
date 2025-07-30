@@ -17,8 +17,8 @@ bool Inventory::addItem(Item* item, int quantity) {
     
     int remainingQuantity = quantity;
     
-    // First try to stack with existing items
-    for (int i = 0; i < TOTAL_SIZE - 1; ++i) { // -1 to skip cursor slot
+    // Phase 1: Try to stack with existing items in hotbar first (slots 27-35)
+    for (int i = HOTBAR_START; i <= HOTBAR_END; ++i) {
         if (slots[i].canStack(item)) {
             remainingQuantity = slots[i].addItems(item, remainingQuantity);
             if (remainingQuantity <= 0) {
@@ -27,8 +27,28 @@ bool Inventory::addItem(Item* item, int quantity) {
         }
     }
     
-    // Then try to fill empty slots
-    for (int i = 0; i < TOTAL_SIZE - 1; ++i) { // -1 to skip cursor slot
+    // Phase 2: Try to stack with existing items in main inventory (slots 0-26)
+    for (int i = MAIN_INVENTORY_START; i <= MAIN_INVENTORY_END; ++i) {
+        if (slots[i].canStack(item)) {
+            remainingQuantity = slots[i].addItems(item, remainingQuantity);
+            if (remainingQuantity <= 0) {
+                return true; // All items added successfully
+            }
+        }
+    }
+    
+    // Phase 3: Try to fill empty slots in hotbar first (slots 27-35)
+    for (int i = HOTBAR_START; i <= HOTBAR_END; ++i) {
+        if (slots[i].isEmpty()) {
+            remainingQuantity = slots[i].addItems(item, remainingQuantity);
+            if (remainingQuantity <= 0) {
+                return true; // All items added successfully
+            }
+        }
+    }
+    
+    // Phase 4: Try to fill empty slots in main inventory (slots 0-26)
+    for (int i = MAIN_INVENTORY_START; i <= MAIN_INVENTORY_END; ++i) {
         if (slots[i].isEmpty()) {
             remainingQuantity = slots[i].addItems(item, remainingQuantity);
             if (remainingQuantity <= 0) {
@@ -42,11 +62,20 @@ bool Inventory::addItem(Item* item, int quantity) {
 }
 
 int Inventory::findEmptySlot() const {
-    for (int i = 0; i < TOTAL_SIZE - 1; ++i) { // -1 to skip cursor slot
+    // First check hotbar slots (27-35)
+    for (int i = HOTBAR_START; i <= HOTBAR_END; ++i) {
         if (slots[i].isEmpty()) {
             return i;
         }
     }
+    
+    // Then check main inventory slots (0-26)
+    for (int i = MAIN_INVENTORY_START; i <= MAIN_INVENTORY_END; ++i) {
+        if (slots[i].isEmpty()) {
+            return i;
+        }
+    }
+    
     return -1; // No empty slot found
 }
 

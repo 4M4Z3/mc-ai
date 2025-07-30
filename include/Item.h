@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include "BlockTypes.h"
 
 // Forward declaration for nlohmann::json
 namespace nlohmann {
@@ -81,6 +82,7 @@ public:
     bool loadFromConfig(const std::string& configPath);
     Item* getItem(const std::string& key) const;
     Item* getItemById(int id) const;
+    Item* getItemForBlock(BlockType blockType) const;  // New method
     
     const std::unordered_map<std::string, std::unique_ptr<Item>>& getAllItems() const { return items; }
     
