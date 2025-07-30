@@ -1,5 +1,6 @@
 #include "Chunk.h"
 #include "World.h"
+#include "BiomeSystem.h"
 #include <cmath>
 #include <iostream>
 #include <unordered_map>
@@ -92,6 +93,21 @@ void Chunk::ClearMesh() {
     }
     m_grassFaceMeshes.clear();
     
+    // Clear log face meshes too
+    for (auto& pair : m_logFaceMeshes) {
+        BlockMesh& mesh = pair.second;
+        if (mesh.VAO) {
+            glDeleteVertexArrays(1, &mesh.VAO);
+            mesh.VAO = 0;
+        }
+        if (mesh.VBO) {
+            glDeleteBuffers(1, &mesh.VBO);
+            mesh.VBO = 0;
+        }
+        mesh.vertexCount = 0;
+    }
+    m_logFaceMeshes.clear();
+    
     m_meshGenerated = false;
 }
 
@@ -104,6 +120,9 @@ void Chunk::GenerateMesh(const World* world, const BlockManager* blockManager) {
     
     // Separate vertex groups for grass faces
     std::unordered_map<GrassFaceType, std::vector<float>> grassFaceVertices;
+    
+    // Separate vertex groups for log faces (similar to grass)
+    std::unordered_map<GrassFaceType, std::vector<float>> logFaceVertices;
     
     // Generate mesh data for all non-air blocks, grouped by type
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
@@ -129,6 +148,15 @@ void Chunk::GenerateMesh(const World* world, const BlockManager* blockManager) {
                                 } else {
                                     // Side faces (FRONT, BACK, LEFT, RIGHT) - flip texture vertically  
                                     AddFaceToMesh(grassFaceVertices[GRASS_SIDE], x, y, z, face, world, true);
+                                }
+                            } else if (blockType == BlockType::OAK_LOG || blockType == BlockType::BIRCH_LOG || blockType == BlockType::DARK_OAK_LOG) {
+                                // Handle log blocks - top/bottom use different texture than sides
+                                if (face == FACE_TOP || face == FACE_BOTTOM) {
+                                    // Top and bottom faces use log_top texture
+                                    AddFaceToMesh(logFaceVertices[GRASS_TOP], x, y, z, face, world);
+                                } else {
+                                    // Side faces (FRONT, BACK, LEFT, RIGHT) use log side texture
+                                    AddFaceToMesh(logFaceVertices[GRASS_SIDE], x, y, z, face, world);
                                 }
                             } else {
                                 // Add face vertices to the appropriate block type group
@@ -189,6 +217,43 @@ void Chunk::GenerateMesh(const World* world, const BlockManager* blockManager) {
         }
         
         BlockMesh& mesh = m_grassFaceMeshes[faceType];
+        
+        // Create OpenGL mesh
+        glGenVertexArrays(1, &mesh.VAO);
+        glBindVertexArray(mesh.VAO);
+        
+        glGenBuffers(1, &mesh.VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, mesh.VBO);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+        
+        // Position attribute (x, y, z) - location 0
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        
+        // Ambient occlusion attribute (ao) - location 1
+        glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+        glEnableVertexAttribArray(1);
+        
+        // Texture coordinate attribute (u, v) - location 2
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(4 * sizeof(float)));
+        glEnableVertexAttribArray(2);
+        
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        
+        mesh.vertexCount = vertices.size() / 6; // 6 floats per vertex
+    }
+    
+    // Create OpenGL meshes for log faces that have vertices
+    for (auto& pair : logFaceVertices) {
+        GrassFaceType faceType = pair.first;
+        std::vector<float>& vertices = pair.second;
+        
+        if (vertices.empty()) {
+            continue;
+        }
+        
+        BlockMesh& mesh = m_logFaceMeshes[faceType];
         
         // Create OpenGL mesh
         glGenVertexArrays(1, &mesh.VAO);
@@ -289,6 +354,18 @@ void Chunk::RenderMeshForBlockType(BlockType blockType) const {
 void Chunk::RenderGrassMesh(GrassFaceType faceType) const {
     auto it = m_grassFaceMeshes.find(faceType);
     if (it != m_grassFaceMeshes.end()) {
+        const BlockMesh& mesh = it->second;
+        if (mesh.VAO != 0 && mesh.vertexCount > 0) {
+            glBindVertexArray(mesh.VAO);
+            glDrawArrays(GL_TRIANGLES, 0, mesh.vertexCount);
+            glBindVertexArray(0);
+        }
+    }
+}
+
+void Chunk::RenderLogMesh(GrassFaceType faceType) const {
+    auto it = m_logFaceMeshes.find(faceType);
+    if (it != m_logFaceMeshes.end()) {
         const BlockMesh& mesh = it->second;
         if (mesh.VAO != 0 && mesh.vertexCount > 0) {
             glBindVertexArray(mesh.VAO);
@@ -619,64 +696,28 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
             // Clamp height to valid range
             terrainHeight = std::max(0, std::min(terrainHeight, CHUNK_HEIGHT - 1));
             
-            // Create biome-based generation using a different noise for variety
-            double biomeNoise = Perlin(worldX * 0.01, worldZ * 0.01, seed + 1000);
-            int biomeType = static_cast<int>((biomeNoise + 1.0) * 0.5 * 4); // 4 biome types
+            // Get biome for this position using the BiomeSystem
+            BiomeType biomeType = BiomeSystem::GetBiomeType(worldX, worldZ, seed);
             
             // Fill blocks from bottom up to terrain height
             for (int y = 0; y <= terrainHeight; ++y) {
                 if (y == terrainHeight) {
-                    // Top layer: random colorful blocks based on biome
+                    // Top layer: biome-specific surface blocks
                     BlockType surfaceBlock;
                     
-                    if (biomeType == 0) {
-                        // "Forest" biome - prefer natural blocks
-                        std::vector<BlockType> forestBlocks;
-                        for (BlockType block : surfaceBlocks) {
-                            if (block == BlockType::GRASS || 
-                                (blockManager && blockManager->GetBlockNameByType(block).find("Leaves") != std::string::npos) ||
-                                (blockManager && blockManager->GetBlockNameByType(block).find("Planks") != std::string::npos) ||
-                                (blockManager && blockManager->GetBlockNameByType(block).find("Sapling") != std::string::npos)) {
-                                forestBlocks.push_back(block);
-                            }
-                        }
-                        if (!forestBlocks.empty()) {
-                            surfaceBlock = forestBlocks[rng() % forestBlocks.size()];
-                        } else {
-                            surfaceBlock = surfaceBlocks[rng() % surfaceBlocks.size()];
-                        }
-                    } else if (biomeType == 1) {
-                        // "Colorful" biome - prefer wool and colorful blocks
-                        std::vector<BlockType> colorfulBlocks;
-                        for (BlockType block : surfaceBlocks) {
-                            if (blockManager && (blockManager->GetBlockNameByType(block).find("Wool") != std::string::npos ||
-                                                blockManager->GetBlockNameByType(block).find("Terracotta") != std::string::npos ||
-                                                blockManager->GetBlockNameByType(block).find("Concrete") != std::string::npos)) {
-                                colorfulBlocks.push_back(block);
-                            }
-                        }
-                        if (!colorfulBlocks.empty()) {
-                            surfaceBlock = colorfulBlocks[rng() % colorfulBlocks.size()];
-                        } else {
-                            surfaceBlock = surfaceBlocks[rng() % surfaceBlocks.size()];
-                        }
-                    } else if (biomeType == 2) {
-                        // "Mineral" biome - prefer ores and blocks
-                        std::vector<BlockType> mineralBlocks;
-                        for (BlockType block : surfaceBlocks) {
-                            if (blockManager && (blockManager->GetBlockNameByType(block).find("Block") != std::string::npos ||
-                                                blockManager->GetBlockNameByType(block).find("Ore") != std::string::npos)) {
-                                mineralBlocks.push_back(block);
-                            }
-                        }
-                        if (!mineralBlocks.empty()) {
-                            surfaceBlock = mineralBlocks[rng() % mineralBlocks.size()];
-                        } else {
-                            surfaceBlock = surfaceBlocks[rng() % surfaceBlocks.size()];
-                        }
-                    } else {
-                        // "Random" biome - completely random
-                        surfaceBlock = surfaceBlocks[rng() % surfaceBlocks.size()];
+                    switch (biomeType) {
+                        case BiomeType::DESERT:
+                        case BiomeType::SAVANNA:
+                            surfaceBlock = BlockType::SAND;
+                            break;
+                        case BiomeType::SNOWY:
+                            // Use snow block if available, otherwise grass
+                            surfaceBlock = BlockType::SNOW;
+                            break;
+                        default:
+                            // Most biomes use grass surface
+                            surfaceBlock = BlockType::GRASS;
+                            break;
                     }
                     
                     m_blocks[x][y][z].SetType(surfaceBlock);
@@ -686,6 +727,27 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
                 } else {
                     // Stone layer below
                     m_blocks[x][y][z].SetType(BlockType::STONE);
+                }
+            }
+        }
+    }
+    
+    // Generate trees in forest biomes
+    for (int x = 2; x < CHUNK_WIDTH - 2; x += 3) {  // Space trees apart
+        for (int z = 2; z < CHUNK_DEPTH - 2; z += 3) {
+            // Convert local chunk coordinates to world coordinates
+            int worldX = m_chunkX * CHUNK_WIDTH + x;
+            int worldZ = m_chunkZ * CHUNK_DEPTH + z;
+            
+            // Get biome for this position
+            BiomeType biomeType = BiomeSystem::GetBiomeType(worldX, worldZ, seed);
+            
+            // Generate trees in forest, taiga, and jungle biomes
+            if (biomeType == BiomeType::FOREST || biomeType == BiomeType::TAIGA || biomeType == BiomeType::JUNGLE) {
+                // Random chance for tree generation (about 70% chance)
+                std::mt19937 treeRng(seed + worldX * 1000 + worldZ);
+                if (treeRng() % 10 < 7) {
+                    GenerateTree(x, z, treeRng, blockManager);
                 }
             }
         }
@@ -991,4 +1053,201 @@ float Chunk::CalculateVertexAO(int x, int y, int z, int faceDirection, int verte
     }
     
     return baseAO * faceMultiplier;
-} 
+}
+
+void Chunk::GenerateTree(int x, int z, std::mt19937& rng, const BlockManager* blockManager) {
+    // Find the surface height at this position
+    int surfaceY = -1;
+    for (int y = CHUNK_HEIGHT - 1; y >= 0; y--) {
+        if (IsValidPosition(x, y, z) && m_blocks[x][y][z].GetType() == BlockType::GRASS) {
+            surfaceY = y;
+            break;
+        }
+    }
+    
+    if (surfaceY == -1) return;  // No grass surface found
+    
+    // Choose tree type (50% oak, 50% birch)
+    bool isOak = (rng() % 2 == 0);
+    
+    if (isOak) {
+        GenerateOakTree(x, z, surfaceY, rng, blockManager);
+    } else {
+        GenerateBirchTree(x, z, surfaceY, rng, blockManager);
+    }
+}
+
+void Chunk::GenerateOakTree(int x, int z, int surfaceY, std::mt19937& rng, const BlockManager* blockManager) {
+    // Oak tree: 4-6 blocks tall trunk with dense, rounded canopy
+    int trunkHeight = 4 + (rng() % 3);  // 4-6 blocks tall
+    
+    // Generate trunk
+    for (int y = 1; y <= trunkHeight; y++) {
+        int trunkY = surfaceY + y;
+        if (trunkY < CHUNK_HEIGHT && IsValidPosition(x, trunkY, z)) {
+            BlockType oakLogType = blockManager ? blockManager->GetBlockTypeByKey("oak_log") : BlockType::AIR;
+            m_blocks[x][trunkY][z].SetType(oakLogType);
+        }
+    }
+    
+    // Generate oak leaves (dense, rounded canopy)
+    int leafStart = surfaceY + trunkHeight - 1;  // Start leaves 1 block below top of trunk
+    
+    // Layer 1: Bottom layer of leaves (3x3)
+    for (int dx = -2; dx <= 2; dx++) {
+        for (int dz = -2; dz <= 2; dz++) {
+            int leafX = x + dx;
+            int leafY = leafStart;
+            int leafZ = z + dz;
+            
+            if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
+                // Skip corners for more natural look
+                if (abs(dx) == 2 && abs(dz) == 2) {
+                    if (rng() % 3 == 0) continue;  // 66% chance to skip corners
+                }
+                
+                if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                    BlockType oakLeavesType = blockManager ? blockManager->GetBlockTypeByKey("oak_leaves") : BlockType::AIR;
+                    m_blocks[leafX][leafY][leafZ].SetType(oakLeavesType);
+                }
+            }
+        }
+    }
+    
+    // Layer 2: Middle layer (3x3, denser)
+    for (int dx = -2; dx <= 2; dx++) {
+        for (int dz = -2; dz <= 2; dz++) {
+            int leafX = x + dx;
+            int leafY = leafStart + 1;
+            int leafZ = z + dz;
+            
+            if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
+                // More selective on edges
+                if (abs(dx) == 2 || abs(dz) == 2) {
+                    if (rng() % 2 == 0) continue;  // 50% chance for edges
+                }
+                
+                if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                    BlockType oakLeavesType = blockManager ? blockManager->GetBlockTypeByKey("oak_leaves") : BlockType::AIR;
+                    m_blocks[leafX][leafY][leafZ].SetType(oakLeavesType);
+                }
+            }
+        }
+    }
+    
+    // Layer 3: Top layer (smaller, 1x1 plus some neighbors)
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+            int leafX = x + dx;
+            int leafY = leafStart + 2;
+            int leafZ = z + dz;
+            
+            if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
+                // Center and adjacent blocks
+                if (dx == 0 && dz == 0) {
+                    // Always place center
+                                    if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                    BlockType oakLeavesType = blockManager ? blockManager->GetBlockTypeByKey("oak_leaves") : BlockType::AIR;
+                    m_blocks[leafX][leafY][leafZ].SetType(oakLeavesType);
+                }
+                } else if (abs(dx) + abs(dz) == 1) {
+                    // 75% chance for adjacent blocks
+                                    if (rng() % 4 != 0 && m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                    BlockType oakLeavesType = blockManager ? blockManager->GetBlockTypeByKey("oak_leaves") : BlockType::AIR;
+                    m_blocks[leafX][leafY][leafZ].SetType(oakLeavesType);
+                }
+                }
+            }
+        }
+    }
+}
+
+void Chunk::GenerateBirchTree(int x, int z, int surfaceY, std::mt19937& rng, const BlockManager* blockManager) {
+    // Birch tree: taller (5-7 blocks), thinner canopy
+    int trunkHeight = 5 + (rng() % 3);  // 5-7 blocks tall
+    
+    // Generate trunk
+    for (int y = 1; y <= trunkHeight; y++) {
+        int trunkY = surfaceY + y;
+        if (trunkY < CHUNK_HEIGHT && IsValidPosition(x, trunkY, z)) {
+            BlockType birchLogType = blockManager ? blockManager->GetBlockTypeByKey("birch_log") : BlockType::AIR;
+            m_blocks[x][trunkY][z].SetType(birchLogType);
+        }
+    }
+    
+    // Generate birch leaves (more sparse, taller canopy)
+    int leafStart = surfaceY + trunkHeight - 2;  // Start leaves 2 blocks below top
+    
+    // Layer 1: Bottom layer (small, 1x1 plus cross)
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+            int leafX = x + dx;
+            int leafY = leafStart;
+            int leafZ = z + dz;
+            
+            if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
+                // Only center and cross pattern
+                if ((dx == 0 && dz == 0) || (abs(dx) + abs(dz) == 1)) {
+                    if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                        BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
+                        m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Layer 2: Middle layer (2x2 around center)
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+            int leafX = x + dx;
+            int leafY = leafStart + 1;
+            int leafZ = z + dz;
+            
+            if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
+                // Skip corners sometimes for natural look
+                if (abs(dx) == 1 && abs(dz) == 1) {
+                    if (rng() % 3 == 0) continue;
+                }
+                
+                if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                    BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
+                    m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
+                }
+            }
+        }
+    }
+    
+    // Layer 3: Top layer (cross pattern)
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+            int leafX = x + dx;
+            int leafY = leafStart + 2;
+            int leafZ = z + dz;
+            
+            if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
+                // Center and cross only
+                if ((dx == 0 && dz == 0) || (abs(dx) + abs(dz) == 1)) {
+                    if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                        BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
+                        m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Layer 4: Very top (just center, sometimes)
+    int leafX = x;
+    int leafY = leafStart + 3;
+    int leafZ = z;
+    
+    if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
+        if (rng() % 2 == 0) {  // 50% chance for top leaf
+            if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
+                m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
+            }
+        }
+    }
+}  

@@ -611,7 +611,12 @@ void Game::RenderGame() {
         
         // Render other players with interpolated positions
         if (m_networkClient && m_networkClient->IsConnected()) {
-            auto interpolatedPositions = GetInterpolatedPlayerPositions();
+            auto interpolatedPositionsMap = GetInterpolatedPlayerPositions();
+            // Convert map to vector for renderer
+            std::vector<PlayerPosition> interpolatedPositions;
+            for (const auto& pair : interpolatedPositionsMap) {
+                interpolatedPositions.push_back(pair.second);
+            }
             static bool debugOnce = false;
             if (!interpolatedPositions.empty() && !debugOnce) {
                 std::cout << "[RENDER] Starting to render " << interpolatedPositions.size() << " other players (my ID: " << m_myPlayerId << ")" << std::endl;
@@ -694,6 +699,9 @@ void Game::RenderGame() {
         }
     }
     ImGui::End();
+    
+    // Render hotbar at bottom center of screen
+    RenderHotbar();
 }
 
 void Game::RenderPauseMenu() {
@@ -1334,4 +1342,47 @@ float Game::GetTimeOfDay() const {
     // Convert game time (0-900 seconds) to 0.0-1.0 
     // where 0.0 = sunrise, 0.5 = sunset, 1.0 = sunrise again
     return m_gameTime / 900.0f;
+} 
+
+void Game::RenderHotbar() {
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Hotbar dimensions - based on typical Minecraft hotbar size
+    const float hotbarWidth = 182.0f * 2.0f;  // Scale up for visibility
+    const float hotbarHeight = 22.0f * 2.0f;
+    const float margin = 20.0f; // Distance from bottom of screen
+    
+    // Position hotbar at bottom center of screen
+    ImVec2 windowPos = ImVec2(
+        (io.DisplaySize.x - hotbarWidth) * 0.5f,  // Center horizontally
+        io.DisplaySize.y - hotbarHeight - margin  // Bottom with margin
+    );
+    
+    // Create invisible window for hotbar rendering
+    ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(hotbarWidth, hotbarHeight), ImGuiCond_Always);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f)); // Transparent background
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f)); // No padding
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f); // No border
+    
+    if (ImGui::Begin("Hotbar", nullptr, 
+                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | 
+                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
+                     ImGuiWindowFlags_NoBackground)) {
+        
+        // Get hotbar texture from renderer
+        unsigned int hotbarTexture = m_renderer.GetHotbarTexture();
+        if (hotbarTexture != 0) {
+            // Render hotbar background
+            ImGui::Image(reinterpret_cast<void*>(static_cast<uintptr_t>(hotbarTexture)), 
+                        ImVec2(hotbarWidth, hotbarHeight));
+            
+            // TODO: Add inventory item rendering and selection indicator
+        }
+    }
+    ImGui::End();
+    
+    ImGui::PopStyleVar(2); // Remove padding and border styles
+    ImGui::PopStyleColor(); // Remove background color
 } 

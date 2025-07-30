@@ -61,7 +61,7 @@ public:
     void RenderWorld(const World& world);
     void RenderChunks(const World& world);  // New chunk-based rendering
     void RenderCube(float x, float y, float z);  // Legacy individual cube rendering
-    void RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosition>& otherPlayers);
+    void RenderOtherPlayers(const std::vector<PlayerPosition>& playerPositions);
     void RenderSky(float gameTime); // Render sky with sun/moon based on time
     void EndFrame();
     
@@ -80,6 +80,13 @@ public:
     // Starting with culling disabled until we verify it works correctly with 70° FOV
     bool m_enableFrustumCulling = false;
 
+    // Texture access for UI rendering
+    unsigned int GetHotbarTexture() const { return m_hotbarTexture; }
+    unsigned int GetHotbarSelectionTexture() const { return m_hotbarSelectionTexture; }
+
+    // Block management (public for world generation access)
+    BlockManager m_blockManager;
+    
 private:
     // Cube rendering data (legacy)
     unsigned int m_cubeVAO;
@@ -101,12 +108,6 @@ private:
     unsigned int m_playerShaderProgram;
     int m_playerModelLoc, m_playerViewLoc, m_playerProjLoc;
     
-public:
-    // Block management (public for world generation access)
-    BlockManager m_blockManager;
-    
-private:
-    
     // Texture management
     std::unordered_map<BlockType, unsigned int> m_blockTextures;
     
@@ -116,14 +117,27 @@ private:
     unsigned int m_grassSideOverlayTexture;
     unsigned int m_grassBottomTexture;
     
+    // Log block textures (different per face, no overlay)
+    unsigned int m_oakLogTopTexture;
+    unsigned int m_oakLogSideTexture;
+    unsigned int m_birchLogTopTexture;
+    unsigned int m_birchLogSideTexture;
+    unsigned int m_darkOakLogTopTexture;
+    unsigned int m_darkOakLogSideTexture;
+    
     // Sky textures
     unsigned int m_sunTexture;
     unsigned int m_moonTexture;
+    
+    // UI textures
+    unsigned int m_hotbarTexture;
+    unsigned int m_hotbarSelectionTexture;
     
     unsigned int LoadTexture(const std::string& filepath);
     unsigned int LoadTextureWithAlpha(const std::string& filepath);
     bool LoadBlockTextures();
     bool LoadSkyTextures();
+    bool LoadHotbarTextures();
     
     // Projection matrix
     Mat4 m_projectionMatrix;
@@ -145,6 +159,11 @@ private:
     unsigned int CompileShader(unsigned int type, const char* source);
     bool CheckShaderCompilation(unsigned int shader, const char* type);
     bool CheckProgramLinking(unsigned int program);
+    
+    // Biome-based tinting helpers
+    bool NeedsBiomeTinting(BlockType blockType) const;
+    bool IsLeafBlock(BlockType blockType) const;
+    void ApplyBiomeTinting(BlockType blockType, int chunkX, int chunkZ, int worldSeed);
     
     // Matrix operations
     Mat4 CreateProjectionMatrix(float fov, float aspect, float near, float far);

@@ -98,6 +98,7 @@ set(SOURCES
     src/Renderer.cpp
     src/Block.cpp
     src/BlockManager.cpp
+    src/BiomeSystem.cpp
     src/Chunk.cpp
     src/World.cpp
     src/Player.cpp
@@ -112,6 +113,7 @@ set(HEADERS
     include/Game.h
     include/Renderer.h
     include/Block.h
+    include/BiomeSystem.h
     include/Chunk.h
     include/World.h
     include/Player.h
