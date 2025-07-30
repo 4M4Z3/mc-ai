@@ -452,6 +452,35 @@ void Game::UpdateGame() {
         }
     }
     
+    // Process pending block updates from network
+    {
+        std::lock_guard<std::mutex> lock(m_pendingBlockUpdatesMutex);
+        while (!m_pendingBlockUpdates.empty()) {
+            const PendingBlockUpdate& update = m_pendingBlockUpdates.front();
+            
+            std::cout << "[CLIENT] Processing queued block update from player " << update.playerId 
+                      << " at (" << update.x << ", " << update.y << ", " << update.z 
+                      << ") to type " << (int)update.blockType << std::endl;
+            
+            // Apply block update to client world (safe to call OpenGL from main thread)
+            if (m_world) {
+                try {
+                    // Use efficient mesh update method
+                    m_world->SetBlockWithMeshUpdate(update.x, update.y, update.z, static_cast<BlockType>(update.blockType));
+                    std::cout << "[CLIENT] Applied block update at (" << update.x << ", " << update.y << ", " << update.z 
+                              << ") to type " << (int)update.blockType << " with incremental mesh update" << std::endl;
+                } catch (const std::exception& e) {
+                    std::cerr << "[CLIENT] Error processing block update: " << e.what() << std::endl;
+                }
+            } else {
+                std::cout << "[CLIENT] Warning: No world available for block update at (" 
+                          << update.x << ", " << update.y << ", " << update.z << ")" << std::endl;
+            }
+            
+            m_pendingBlockUpdates.pop();
+        }
+    }
+    
     // Process pending chunk data from network
     {
         std::lock_guard<std::mutex> lock(m_pendingChunkDataMutex);
@@ -1298,18 +1327,19 @@ void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t
 void Game::OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType) {
     std::cout << "[CLIENT] *** RECEIVED BLOCK UPDATE *** from player " << playerId << " at (" << x << ", " << y << ", " << z << ") to type " << (int)blockType << std::endl;
     
-    // Apply block update to client world (this is from another player or server confirmation)
-    if (m_world) {
-        try {
-            // Use efficient mesh update method
-            m_world->SetBlockWithMeshUpdate(x, y, z, static_cast<BlockType>(blockType));
-            std::cout << "[CLIENT] Applied block update at (" << x << ", " << y << ", " << z << ") to type " << (int)blockType << " with incremental mesh update" << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "[CLIENT] Error processing block update: " << e.what() << std::endl;
-        }
-    } else {
-        std::cout << "[CLIENT] Warning: No world available for block update at (" << x << ", " << y << ", " << z << ")" << std::endl;
+    // Queue the block update for processing on the main thread (to avoid OpenGL calls from network thread)
+    {
+        std::lock_guard<std::mutex> lock(m_pendingBlockUpdatesMutex);
+        PendingBlockUpdate update;
+        update.playerId = playerId;
+        update.x = x;
+        update.y = y;
+        update.z = z;
+        update.blockType = blockType;
+        m_pendingBlockUpdates.push(update);
     }
+    
+    std::cout << "[CLIENT] Queued block update for main thread processing" << std::endl;
 }
 
 void Game::OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {

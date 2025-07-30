@@ -114,6 +114,15 @@ private:
     std::queue<PendingBlockBreak> m_pendingBlockBreaks;
     std::mutex m_pendingBlockBreaksMutex;
     
+    // Thread-safe queue for block updates received from network
+    struct PendingBlockUpdate {
+        uint32_t playerId;
+        int32_t x, y, z;
+        uint8_t blockType;
+    };
+    std::queue<PendingBlockUpdate> m_pendingBlockUpdates;
+    std::mutex m_pendingBlockUpdatesMutex;
+    
     // Thread-safe queue for chunk data received from network
     struct PendingChunkData {
         int32_t chunkX, chunkZ;
