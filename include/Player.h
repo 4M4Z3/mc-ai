@@ -12,6 +12,7 @@
 
 // Forward declarations
 class World;
+class BlockManager;
 
 // Simple 3D vector and matrix structures
 struct Vec3 {
@@ -102,13 +103,13 @@ public:
     
     // Physics for survival mode
     void ApplyGravity(float deltaTime);
-    void Update(float deltaTime, class World* world);
+    void Update(float deltaTime, class World* world, const BlockManager* blockManager = nullptr);
     
     // Collision detection
-    bool CheckCollision(const Vec3& newPosition, class World* world) const;
-    bool CheckGroundCollision(const Vec3& position, class World* world) const;
-    Vec3 HandleCollision(const Vec3& newPosition, class World* world);
-    float FindGroundLevel(const Vec3& position, class World* world) const;
+    bool CheckCollision(const Vec3& newPosition, class World* world, const BlockManager* blockManager = nullptr) const;
+    bool CheckGroundCollision(const Vec3& position, class World* world, const BlockManager* blockManager = nullptr) const;
+    Vec3 HandleCollision(const Vec3& newPosition, class World* world, const BlockManager* blockManager = nullptr);
+    float FindGroundLevel(const Vec3& position, class World* world, const BlockManager* blockManager = nullptr) const;
     
     // Player dimensions
     float GetPlayerHeight() const { return 2.0f; }  // 2 blocks tall
@@ -118,7 +119,7 @@ public:
     void ProcessMouseMovement(float xOffset, float yOffset, float sensitivity = 0.1f);
     
     // Input processing
-    void ProcessInput(GLFWwindow* window, float deltaTime, class World* world);
+    void ProcessInput(GLFWwindow* window, float deltaTime, class World* world, const BlockManager* blockManager = nullptr);
     
     // Camera matrices
     Mat4 GetViewMatrix() const;
@@ -127,7 +128,7 @@ public:
     Vec3 GetUpVector() const;
     
     // Ground collision
-    bool IsOnGround(class World* world) const;
+    bool IsOnGround(class World* world, const BlockManager* blockManager = nullptr) const;
     
     // Jumping
     void Jump();

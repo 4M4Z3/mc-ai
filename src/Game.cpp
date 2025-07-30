@@ -254,7 +254,7 @@ void Game::ProcessInput() {
     
     // Player movement (only in game state and not paused)
     if (m_currentState == GameState::GAME && m_player && !m_showPauseMenu) {
-        m_player->ProcessInput(m_window, m_deltaTime, m_world.get());
+        m_player->ProcessInput(m_window, m_deltaTime, m_world.get(), &(m_renderer.m_blockManager));
     }
 }
 
@@ -370,7 +370,7 @@ void Game::UpdateMainMenu() {
 void Game::UpdateGame() {
     // Update player physics (gravity, etc.)
     if (m_player && m_world) {
-        m_player->Update(m_deltaTime, m_world.get());
+        m_player->Update(m_deltaTime, m_world.get(), &(m_renderer.m_blockManager));
     }
     
     // Update target block for wireframe rendering

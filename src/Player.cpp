@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "World.h"
+#include "BlockManager.h"
 #include <cmath>
 #include <algorithm>
 #include <iostream> // Added for std::cout
@@ -202,7 +203,7 @@ void Player::ApplyGravity(float deltaTime) {
     }
 }
 
-void Player::Update(float deltaTime, World* world) {
+void Player::Update(float deltaTime, World* world, const BlockManager* blockManager) {
     if (!m_isSurvivalMode || !world) return;
     
     ApplyGravity(deltaTime);
@@ -212,7 +213,7 @@ void Player::Update(float deltaTime, World* world) {
         Vec3 gravityPosition = Vec3(m_position.x, m_position.y + m_verticalVelocity * deltaTime, m_position.z);
         
         // Handle gravity collision
-        Vec3 result = HandleCollision(gravityPosition, world);
+        Vec3 result = HandleCollision(gravityPosition, world, blockManager);
         
         // If we hit the ground while falling, stop gravity
         if (m_verticalVelocity < 0 && result.y >= m_position.y) {
@@ -226,11 +227,11 @@ void Player::Update(float deltaTime, World* world) {
         m_position.y = result.y;
     } else {
         // Check if we're still on ground even without vertical velocity
-        m_isOnGround = IsOnGround(world);
+        m_isOnGround = IsOnGround(world, blockManager);
     }
 }
 
-bool Player::CheckCollision(const Vec3& newPosition, World* world) const {
+bool Player::CheckCollision(const Vec3& newPosition, World* world, const BlockManager* blockManager) const {
     if (!world) return false;
     
     float playerWidth = GetPlayerWidth();
@@ -274,6 +275,10 @@ bool Player::CheckCollision(const Vec3& newPosition, World* world) const {
                 
                 Block block = world->GetBlock(blockX, blockY, blockZ);
                 if (block.IsSolid()) {
+                    // Skip collision if this is a ground block and we have BlockManager
+                    if (blockManager && blockManager->IsGround(block.GetType())) {
+                        continue; // Don't collide with ground blocks
+                    }
                     return true; // Collision detected
                 }
             }
@@ -283,7 +288,7 @@ bool Player::CheckCollision(const Vec3& newPosition, World* world) const {
     return false; // No collision
 }
 
-bool Player::CheckGroundCollision(const Vec3& position, World* world) const {
+bool Player::CheckGroundCollision(const Vec3& position, World* world, const BlockManager* blockManager) const {
     if (!world) return false;
     
     float playerWidth = GetPlayerWidth();
@@ -314,6 +319,9 @@ bool Player::CheckGroundCollision(const Vec3& position, World* world) const {
             
             Block block = world->GetBlock(blockX, blockY, blockZ);
             if (block.IsSolid()) {
+                // Note: We don't skip ground blocks here because CheckGroundCollision
+                // is used for physics (gravity, jumping) and we want ground blocks 
+                // to still act as ground for standing on, just not block movement
                 return true; // Ground collision detected
             }
         }
@@ -322,7 +330,7 @@ bool Player::CheckGroundCollision(const Vec3& position, World* world) const {
     return false;
 }
 
-Vec3 Player::HandleCollision(const Vec3& newPosition, World* world) {
+Vec3 Player::HandleCollision(const Vec3& newPosition, World* world, const BlockManager* blockManager) {
     if (!world) return newPosition;
     
     Vec3 result = m_position; // Start with current position
@@ -330,24 +338,24 @@ Vec3 Player::HandleCollision(const Vec3& newPosition, World* world) {
     // Handle horizontal movement (X and Z axes) - test each axis independently
     // Test X movement
     Vec3 testX = Vec3(newPosition.x, m_position.y, m_position.z);
-    if (!CheckCollision(testX, world)) {
+    if (!CheckCollision(testX, world, blockManager)) {
         result.x = newPosition.x; // X movement is safe
     }
     
     // Test Z movement
     Vec3 testZ = Vec3(result.x, m_position.y, newPosition.z);
-    if (!CheckCollision(testZ, world)) {
+    if (!CheckCollision(testZ, world, blockManager)) {
         result.z = newPosition.z; // Z movement is safe
     }
     
     // Handle vertical movement (Y axis) - this is for gravity/jumping
     Vec3 testY = Vec3(result.x, newPosition.y, result.z);
-    if (!CheckCollision(testY, world)) {
+    if (!CheckCollision(testY, world, blockManager)) {
         result.y = newPosition.y; // Y movement is safe
     } else if (newPosition.y < m_position.y) {
         // We're falling and hit the ground
         // Find the exact ground level and place player on top
-        float groundLevel = FindGroundLevel(Vec3(result.x, newPosition.y, result.z), world);
+        float groundLevel = FindGroundLevel(Vec3(result.x, newPosition.y, result.z), world, blockManager);
         result.y = groundLevel;
     }
     // If moving up and hit ceiling, just keep current Y position (result.y = m_position.y)
@@ -355,7 +363,7 @@ Vec3 Player::HandleCollision(const Vec3& newPosition, World* world) {
     return result;
 }
 
-float Player::FindGroundLevel(const Vec3& position, World* world) const {
+float Player::FindGroundLevel(const Vec3& position, World* world, const BlockManager* blockManager) const {
     if (!world) return position.y;
     
     // Start from current falling position and work upward to find the ground surface
@@ -364,7 +372,7 @@ float Player::FindGroundLevel(const Vec3& position, World* world) const {
     // Look for the highest solid block below the player
     for (int y = startY; y >= 0; y--) {
         Vec3 testPos = Vec3(position.x, static_cast<float>(y), position.z);
-        if (CheckGroundCollision(testPos, world)) {
+        if (CheckGroundCollision(testPos, world, blockManager)) {
             // Found solid ground, player should stand on top of this block
             return static_cast<float>(y + 1);
         }
@@ -374,12 +382,12 @@ float Player::FindGroundLevel(const Vec3& position, World* world) const {
     return position.y;
 }
 
-bool Player::IsOnGround(World* world) const {
+bool Player::IsOnGround(World* world, const BlockManager* blockManager) const {
     if (!world) return false;
     
     // Check slightly below the player's feet (bottom block only)
     Vec3 testPos = Vec3(m_position.x, m_position.y - 0.01f, m_position.z);
-    return CheckGroundCollision(testPos, world);
+    return CheckGroundCollision(testPos, world, blockManager);
 }
 
 void Player::Jump() {
@@ -404,7 +412,7 @@ void Player::ProcessMouseMovement(float xOffset, float yOffset, float sensitivit
     UpdateVectors();
 }
 
-void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world) {
+void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world, const BlockManager* blockManager) {
     float velocity = m_movementSpeed * deltaTime;
     Vec3 intendedPosition = m_position;
     
@@ -461,14 +469,14 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world) {
     if (m_isSurvivalMode && world) {
         // For survival mode, apply gravity in Update() method
         // Here we only handle player input movement with collision
-        Vec3 movementResult = HandleCollision(intendedPosition, world);
+        Vec3 movementResult = HandleCollision(intendedPosition, world, blockManager);
         
         // Only update horizontal position from input, gravity handles vertical
         m_position.x = movementResult.x;
         m_position.z = movementResult.z;
         
         // Update ground state
-        m_isOnGround = IsOnGround(world);
+        m_isOnGround = IsOnGround(world, blockManager);
         
         // If we just landed on ground, stop falling
         if (m_isOnGround && m_verticalVelocity < 0) {
