@@ -5,7 +5,10 @@
       "blockName": "Acacia Leaves",
       "type": "transparent",
       "textures": {
-        "all": "acacia_leaves.png"
+        "all": "acacia_leaves.png",
+        "tintR": 1.0,
+        "tintG": 1.0,
+        "tintB": 1.0
       }
     },
     "acacia_planks": {
@@ -61,7 +64,10 @@
       "blockName": "Azalea Leaves",
       "type": "transparent",
       "textures": {
-        "all": "azalea_leaves.png"
+        "all": "azalea_leaves.png",
+        "tintR": 1.0,
+        "tintG": 1.0,
+        "tintB": 1.0
       }
     },
     "azalea_plant": {
@@ -100,7 +106,10 @@
       "blockName": "Birch Leaves",
       "type": "transparent",
       "textures": {
-        "all": "birch_leaves.png"
+        "all": "birch_leaves.png",
+        "tintR": 1.0,
+        "tintG": 1.0,
+        "tintB": 1.0
       }
     },
     "birch_planks": {
@@ -236,7 +245,10 @@
       "blockName": "Cherry Leaves",
       "type": "transparent",
       "textures": {
-        "all": "cherry_leaves.png"
+        "all": "cherry_leaves.png",
+        "tintR": 1.0,
+        "tintG": 1.0,
+        "tintB": 1.0
       }
     },
     "cherry_planks": {
@@ -731,7 +743,10 @@
       "blockName": "Jungle Leaves",
       "type": "transparent",
       "textures": {
-        "all": "jungle_leaves.png"
+        "all": "jungle_leaves.png",
+        "tintR": 1.0,
+        "tintG": 1.0,
+        "tintB": 1.0
       }
     },
     "jungle_planks": {
@@ -880,7 +895,10 @@
       "blockName": "Mangrove Leaves",
       "type": "transparent",
       "textures": {
-        "all": "mangrove_leaves.png"
+        "all": "mangrove_leaves.png",
+        "tintR": 1.0,
+        "tintG": 1.0,
+        "tintB": 1.0
       }
     },
     "moss_block": {
@@ -1346,7 +1364,10 @@
       "blockName": "Spruce Leaves",
       "type": "transparent",
       "textures": {
-        "all": "spruce_leaves.png"
+        "all": "spruce_leaves.png",
+        "tintR": 1.0,
+        "tintG": 1.0,
+        "tintB": 1.0
       }
     },
     "spruce_planks": {
@@ -1587,16 +1608,7 @@
     "_examples_complex_textures": {
       "_comment": "Examples of different texture patterns",
       
-      "grass_block": {
-        "blockType": 221,
-        "blockName": "Grass Block", 
-        "type": "solid",
-        "textures": {
-          "top": "grass_block_top.png",
-          "bottom": "dirt.png",
-          "side": "grass_block_side.png"
-        }
-      },
+
       
       "oak_log": {
         "blockType": 222,
@@ -1640,11 +1652,94 @@
           "all": "dandelion.png"
         }
       }
+    },
+    "oak_log": {
+      "blockType": 226,
+      "blockName": "Oak Log", 
+      "type": "solid",
+      "textures": {
+        "all": "oak_log.png"
+      }
+    },
+    "birch_log": {
+      "blockType": 227,
+      "blockName": "Birch Log",
+      "type": "solid", 
+      "textures": {
+        "all": "birch_log.png"
+      }
+    },
+    "spruce_log": {
+      "blockType": 228,
+      "blockName": "Spruce Log",
+      "type": "solid",
+      "textures": {
+        "all": "spruce_log.png"
+      }
+    },
+    "jungle_log": {
+      "blockType": 229,
+      "blockName": "Jungle Log",
+      "type": "solid",
+      "textures": {
+        "all": "jungle_log.png"
+      }
+    },
+    "acacia_log": {
+      "blockType": 230,
+      "blockName": "Acacia Log",
+      "type": "solid",
+      "textures": {
+        "all": "acacia_log.png"
+      }
+    },
+    "dark_oak_log": {
+      "blockType": 231,
+      "blockName": "Dark Oak Log",
+      "type": "solid",
+      "textures": {
+        "all": "dark_oak_log.png"
+      }
+    },
+    "cherry_log": {
+      "blockType": 232,
+      "blockName": "Cherry Log",
+      "type": "solid",
+      "textures": {
+        "all": "cherry_log.png"
+      }
+    },
+    "mangrove_log": {
+      "blockType": 233,
+      "blockName": "Mangrove Log",
+      "type": "solid",
+      "textures": {
+        "all": "mangrove_log.png"
+      }
+    },
+    "pale_oak_log": {
+      "blockType": 234,
+      "blockName": "Pale Oak Log",
+      "type": "solid",
+      "textures": {
+        "all": "pale_oak_log.png"
+      }
+    },
+    "oak_leaves": {
+      "blockType": 235,
+      "blockName": "Oak Leaves",
+      "type": "transparent",
+      "textures": {
+        "all": "oak_leaves.png",
+        "tintR": 1.0,
+        "tintG": 1.0,
+        "tintB": 1.0
+      }
     }
   },
   "metadata": {
-    "total_blocks": 225,
-    "id_range": "4-225", 
+    "total_blocks": 235,
+    "id_range": "4-235", 
     "description": "Blocks with hierarchical texture system and type categories",
     "block_types": {
       "solid": "Regular opaque blocks (stone, wood, etc)",

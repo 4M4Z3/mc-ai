@@ -226,4 +226,9 @@ enum class BlockType : uint16_t {
     YELLOW_STAINED_GLASS = 218,
     YELLOW_TERRACOTTA = 219,
     YELLOW_WOOL = 220,
+    
+    // Log blocks for trees
+    OAK_LOG = 221,
+    BIRCH_LOG = 222,
+    DARK_OAK_LOG = 223,
 };

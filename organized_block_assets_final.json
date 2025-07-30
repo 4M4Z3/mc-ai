@@ -1336,7 +1336,8 @@
     "block_name": "Dark Oak Log",
     "textures": {
       "sides": "dark_oak_log.png",
-      "top": "dark_oak_log_top.png"
+      "top": "dark_oak_log_top.png",
+      "bottom": "dark_oak_log_bottom.png"
     }
   },
   "dark_oak_planks": {
@@ -2950,7 +2951,8 @@
     "block_name": "Oak Log",
     "textures": {
       "sides": "oak_log.png",
-      "top": "oak_log_top.png"
+      "top": "oak_log_top.png",
+      "bottom": "oak_log_top.png"
     }
   },
   "oak_planks": {

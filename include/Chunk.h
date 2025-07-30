@@ -60,13 +60,14 @@ public:
     void RenderMesh() const;
     void RenderMeshForBlockType(BlockType blockType) const;
     void RenderGrassMesh(GrassFaceType faceType) const;
+    void RenderLogMesh(GrassFaceType faceType) const;
     
     // Apply chunk data received from server
     void ApplyServerData(const uint16_t* blockData);
     
     // World generation
     std::vector<BlockType> GetBlockTypesInChunk() const;
-    bool HasMesh() const { return !m_blockMeshes.empty() || !m_grassFaceMeshes.empty(); }
+    bool HasMesh() const { return !m_blockMeshes.empty() || !m_grassFaceMeshes.empty() || !m_logFaceMeshes.empty(); }
     void ClearMesh();
 
 private:
@@ -86,6 +87,7 @@ private:
     
     // Special mesh data for grass faces (different textures per face)
     std::unordered_map<GrassFaceType, BlockMesh> m_grassFaceMeshes;
+    std::unordered_map<GrassFaceType, BlockMesh> m_logFaceMeshes;
     
     bool m_meshGenerated;
     
@@ -123,6 +125,11 @@ private:
     double Fade(double t) const;
     double Lerp(double t, double a, double b) const;
     double Grad(int hash, double x, double z) const;
+    
+    // Tree generation
+    void GenerateTree(int x, int z, std::mt19937& rng, const BlockManager* blockManager);
+    void GenerateOakTree(int x, int z, int surfaceY, std::mt19937& rng, const BlockManager* blockManager);
+    void GenerateBirchTree(int x, int z, int surfaceY, std::mt19937& rng, const BlockManager* blockManager);
     
     // Terrain generation constants
     static constexpr double NOISE_SCALE = 0.03;         // Scale for Perlin noise sampling

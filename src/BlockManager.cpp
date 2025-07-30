@@ -50,12 +50,46 @@ void BlockManager::InitializeDefaultBlocks() {
     grassBlock.textures.bottom = "dirt.png";
     grassBlock.textures.overlay = "grass_block_side_overlay.png";
     grassBlock.textures.hasOverlay = true;
-    grassBlock.textures.tintR = 0.3f;
-    grassBlock.textures.tintG = 0.7f;
-    grassBlock.textures.tintB = 0.4f;
+    // Tinting will be applied dynamically based on biome
+    grassBlock.textures.tintR = 1.0f;
+    grassBlock.textures.tintG = 1.0f;
+    grassBlock.textures.tintB = 1.0f;
     m_blocksByType[BlockType::GRASS] = grassBlock;
     m_blocksByKey["grass"] = BlockType::GRASS;
     
+    // OAK_LOG block (special case with multiple textures)
+    BlockDefinition oakLogBlock;
+    oakLogBlock.blockKey = "oak_log";
+    oakLogBlock.blockName = "Oak Log";
+    oakLogBlock.blockType = BlockType::OAK_LOG;
+    oakLogBlock.textures.top = "oak_log_top.png";
+    oakLogBlock.textures.sides = "oak_log.png";
+    oakLogBlock.textures.bottom = "oak_log_top.png";  // Same as top
+    m_blocksByType[BlockType::OAK_LOG] = oakLogBlock;
+    m_blocksByKey["oak_log"] = BlockType::OAK_LOG;
+    
+    // BIRCH_LOG block (special case with multiple textures)
+    BlockDefinition birchLogBlock;
+    birchLogBlock.blockKey = "birch_log";
+    birchLogBlock.blockName = "Birch Log";
+    birchLogBlock.blockType = BlockType::BIRCH_LOG;
+    birchLogBlock.textures.top = "birch_log_top.png";
+    birchLogBlock.textures.sides = "birch_log.png";
+    birchLogBlock.textures.bottom = "birch_log_top.png";  // Same as top
+    m_blocksByType[BlockType::BIRCH_LOG] = birchLogBlock;
+    m_blocksByKey["birch_log"] = BlockType::BIRCH_LOG;
+    
+    // DARK_OAK_LOG block (special case with multiple textures)
+    BlockDefinition darkOakLogBlock;
+    darkOakLogBlock.blockKey = "dark_oak_log";
+    darkOakLogBlock.blockName = "Dark Oak Log";
+    darkOakLogBlock.blockType = BlockType::DARK_OAK_LOG;
+    darkOakLogBlock.textures.top = "dark_oak_log_top.png";
+    darkOakLogBlock.textures.sides = "dark_oak_log.png";
+    darkOakLogBlock.textures.bottom = "dark_oak_log_top.png";  // Same as top
+    m_blocksByType[BlockType::DARK_OAK_LOG] = darkOakLogBlock;
+    m_blocksByKey["dark_oak_log"] = BlockType::DARK_OAK_LOG;
+
     // Set default block (fallback)
     m_defaultBlock = airBlock;
 }
@@ -213,6 +247,51 @@ bool BlockManager::ParseBlocksSection(const std::string& blocksContent) {
                 }
             }
         }
+        else if (inTextures && line.find("\"top\":") != std::string::npos) {
+            size_t colonPos = line.find(":");
+            if (colonPos != std::string::npos) {
+                std::string value = line.substr(colonPos + 1);
+                size_t firstQuote = value.find("\"");
+                size_t lastQuote = value.find_last_of("\"");
+                if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote != lastQuote) {
+                    currentBlock.textures.top = value.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+                }
+            }
+        }
+        else if (inTextures && line.find("\"bottom\":") != std::string::npos) {
+            size_t colonPos = line.find(":");
+            if (colonPos != std::string::npos) {
+                std::string value = line.substr(colonPos + 1);
+                size_t firstQuote = value.find("\"");
+                size_t lastQuote = value.find_last_of("\"");
+                if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote != lastQuote) {
+                    currentBlock.textures.bottom = value.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+                }
+            }
+        }
+        else if (inTextures && (line.find("\"sides\":") != std::string::npos || line.find("\"side\":") != std::string::npos)) {
+            size_t colonPos = line.find(":");
+            if (colonPos != std::string::npos) {
+                std::string value = line.substr(colonPos + 1);
+                size_t firstQuote = value.find("\"");
+                size_t lastQuote = value.find_last_of("\"");
+                if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote != lastQuote) {
+                    currentBlock.textures.sides = value.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+                }
+            }
+        }
+        else if (inTextures && line.find("\"overlay\":") != std::string::npos) {
+            size_t colonPos = line.find(":");
+            if (colonPos != std::string::npos) {
+                std::string value = line.substr(colonPos + 1);
+                size_t firstQuote = value.find("\"");
+                size_t lastQuote = value.find_last_of("\"");
+                if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote != lastQuote) {
+                    currentBlock.textures.overlay = value.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+                    currentBlock.textures.hasOverlay = true;
+                }
+            }
+        }
         // End of textures section
         else if (inTextures && line.find("}") != std::string::npos) {
             inTextures = false;
@@ -236,8 +315,6 @@ bool BlockManager::ParseBlocksSection(const std::string& blocksContent) {
 void BlockManager::AddBlock(const std::string& blockKey, const BlockDefinition& blockDef) {
     m_blocksByType[blockDef.blockType] = blockDef;
     m_blocksByKey[blockKey] = blockDef.blockType;
-    // std::cout << "[JSON DEBUG] Added block " << blockKey << " (ID: " << static_cast<int>(blockDef.blockType) 
-    //           << ") with texture: " << blockDef.textures.all << std::endl;
 }
 
 const BlockDefinition* BlockManager::GetBlockDefinition(BlockType blockType) const {

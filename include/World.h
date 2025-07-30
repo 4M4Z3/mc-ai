@@ -7,8 +7,8 @@
 #include <memory>
 #include <random>
 
-// World dimensions (6x6 chunks centered around origin)
-constexpr int WORLD_SIZE = 6;
+// World dimensions (8x8 chunks centered around origin)
+constexpr int WORLD_SIZE = 8;
 
 class World {
 public:

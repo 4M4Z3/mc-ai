@@ -2,6 +2,7 @@
 #include "World.h"
 #include "Chunk.h"
 #include "PlayerModel.h"
+#include "BiomeSystem.h"
 #include <iostream>
 #include <string>
 #include <cmath>
@@ -109,6 +110,12 @@ bool Renderer::Initialize() {
     // Load sky textures
     if (!LoadSkyTextures()) {
         std::cerr << "Failed to load sky textures" << std::endl;
+        return false;
+    }
+    
+    // Load hotbar textures
+    if (!LoadHotbarTextures()) {
+        std::cerr << "Failed to load hotbar textures" << std::endl;
         return false;
     }
     
@@ -363,8 +370,7 @@ void Renderer::RenderChunks(const World& world) {
         
         // Handle grass blocks specially (different textures per face)
         if (blockType == BlockType::GRASS) {
-            // Render grass top faces with purple tint
-            glUniform3f(m_colorTintLoc, 0.3f, 0.7f, 0.4f); // green
+            // Render grass top faces with biome-based tint
             glBindTexture(GL_TEXTURE_2D, m_grassTopTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -372,6 +378,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                        ApplyBiomeTinting(blockType, chunkX, chunkZ, world.GetSeed());
                         chunk->RenderGrassMesh(Chunk::GRASS_TOP);
                     }
                 }
@@ -394,7 +401,6 @@ void Renderer::RenderChunks(const World& world) {
             // Render grass side overlay on top using polygon offset to avoid z-fighting
             glEnable(GL_POLYGON_OFFSET_FILL);
             glPolygonOffset(-1.0f, -1.0f); // Pull overlay slightly toward camera
-            glUniform3f(m_colorTintLoc, 0.3f, 0.7f, 0.4f); // grass mult
             glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
@@ -402,6 +408,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                        ApplyBiomeTinting(blockType, chunkX, chunkZ, world.GetSeed());
                         chunk->RenderGrassMesh(Chunk::GRASS_SIDE);
                     }
                 }
@@ -421,24 +428,130 @@ void Renderer::RenderChunks(const World& world) {
                     }
                 }
             }
+        }
+        // Handle oak log blocks (different textures for top vs sides)
+        else if (blockType == BlockType::OAK_LOG) {
+            // Render oak log top/bottom faces
+            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // No tint
+            glBindTexture(GL_TEXTURE_2D, m_oakLogTopTexture);
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    int chunkX = x - 4;
+                    int chunkZ = z - 4;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                        chunk->RenderLogMesh(Chunk::GRASS_TOP);  // Render log top faces
+                    }
+                }
+            }
+            
+            // Render oak log side faces
+            glBindTexture(GL_TEXTURE_2D, m_oakLogSideTexture);
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    int chunkX = x - 4;
+                    int chunkZ = z - 4;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                        chunk->RenderLogMesh(Chunk::GRASS_SIDE);  // Render log side faces
+                    }
+                }
+            }
+        }
+        // Handle birch log blocks (different textures for top vs sides)
+        else if (blockType == BlockType::BIRCH_LOG) {
+            // Render birch log top/bottom faces
+            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // No tint
+            glBindTexture(GL_TEXTURE_2D, m_birchLogTopTexture);
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    int chunkX = x - 4;
+                    int chunkZ = z - 4;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                        chunk->RenderLogMesh(Chunk::GRASS_TOP);  // Render log top faces
+                    }
+                }
+            }
+            
+            // Render birch log side faces
+            glBindTexture(GL_TEXTURE_2D, m_birchLogSideTexture);
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    int chunkX = x - 4;
+                    int chunkZ = z - 4;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                        chunk->RenderLogMesh(Chunk::GRASS_SIDE);  // Render log side faces
+                    }
+                }
+            }
+        }
+        // Handle dark oak log blocks (different textures for top vs sides)
+        else if (blockType == BlockType::DARK_OAK_LOG) {
+            // Render dark oak log top/bottom faces
+            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // No tint
+            glBindTexture(GL_TEXTURE_2D, m_darkOakLogTopTexture);
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    int chunkX = x - 4;
+                    int chunkZ = z - 4;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                        chunk->RenderLogMesh(Chunk::GRASS_TOP);  // Render log top faces
+                    }
+                }
+            }
+            
+            // Render dark oak log side faces
+            glBindTexture(GL_TEXTURE_2D, m_darkOakLogSideTexture);
+            for (int x = 0; x < WORLD_SIZE; ++x) {
+                for (int z = 0; z < WORLD_SIZE; ++z) {
+                    int chunkX = x - 4;
+                    int chunkZ = z - 4;
+                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                        chunk->RenderLogMesh(Chunk::GRASS_SIDE);  // Render log side faces
+                    }
+                }
+            }
         } else {
-            // Bind the appropriate texture for this block type (no tint)
-            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
+            // Get texture info for this block type
+            const BlockTextureInfo& textureInfo = m_blockManager.GetTextureInfo(blockType);
             
             auto textureIt = m_blockTextures.find(blockType);
             if (textureIt != m_blockTextures.end() && textureIt->second != 0) {
                 glBindTexture(GL_TEXTURE_2D, textureIt->second);
                 
-                // Render all chunks for this block type
-                for (int x = 0; x < WORLD_SIZE; ++x) {
-                    for (int z = 0; z < WORLD_SIZE; ++z) {
-                        // Convert array indices to chunk coordinates
-                        // Array indices 0-5 map to chunk coordinates -3 to +2
-                        int chunkX = x - 3;
-                        int chunkZ = z - 3;
-                        const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                        if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
-                            chunk->RenderMeshForBlockType(blockType);
+                // Check if this block type needs biome-based tinting (leaf blocks)
+                if (NeedsBiomeTinting(blockType)) {
+                    // Render chunks with biome-based tinting per chunk
+                    for (int x = 0; x < WORLD_SIZE; ++x) {
+                        for (int z = 0; z < WORLD_SIZE; ++z) {
+                            int chunkX = x - 3;
+                            int chunkZ = z - 3;
+                            const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                            if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                                ApplyBiomeTinting(blockType, chunkX, chunkZ, world.GetSeed());
+                                chunk->RenderMeshForBlockType(blockType);
+                            }
+                        }
+                    }
+                } else {
+                    // Use the actual tint values from the block definition (for non-biome blocks)
+                    glUniform3f(m_colorTintLoc, textureInfo.tintR, textureInfo.tintG, textureInfo.tintB);
+                    
+                    // Render all chunks for this block type with the same tint
+                    for (int x = 0; x < WORLD_SIZE; ++x) {
+                        for (int z = 0; z < WORLD_SIZE; ++z) {
+                            // Convert array indices to chunk coordinates
+                            // Array indices 0-5 map to chunk coordinates -3 to +2
+                            int chunkX = x - 3;
+                            int chunkZ = z - 3;
+                            const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                            if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                                chunk->RenderMeshForBlockType(blockType);
+                            }
                         }
                     }
                 }
@@ -861,8 +974,8 @@ Mat4 Renderer::CreateTranslationMatrix(float x, float y, float z) {
     return trans;
 }
 
-void Renderer::RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosition>& otherPlayers) {
-    if (otherPlayers.empty()) {
+void Renderer::RenderOtherPlayers(const std::vector<PlayerPosition>& playerPositions) {
+    if (playerPositions.empty()) {
         return; // No other players to render
     }
     
@@ -874,8 +987,7 @@ void Renderer::RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosit
     glUniformMatrix4fv(m_playerProjLoc, 1, GL_FALSE, m_projectionMatrix.m);
     
     // Render each other player with the Minecraft-like player model
-    for (const auto& pair : otherPlayers) {
-        const PlayerPosition& playerPos = pair.second;
+    for (const PlayerPosition& playerPos : playerPositions) {
         
 
         
@@ -987,6 +1099,22 @@ bool Renderer::LoadBlockTextures() {
             m_grassBottomTexture = LoadTexture("assets/block/" + textureInfo.bottom);
             m_blockTextures[blockType] = m_grassSideTexture;
         }
+        // Handle log blocks (different textures for top/bottom vs sides)
+        else if (blockType == BlockType::OAK_LOG) {
+            m_oakLogTopTexture = LoadTexture("assets/block/" + textureInfo.top);
+            m_oakLogSideTexture = LoadTexture("assets/block/" + textureInfo.sides);
+            m_blockTextures[blockType] = m_oakLogSideTexture;
+        }
+        else if (blockType == BlockType::BIRCH_LOG) {
+            m_birchLogTopTexture = LoadTexture("assets/block/" + textureInfo.top);
+            m_birchLogSideTexture = LoadTexture("assets/block/" + textureInfo.sides);
+            m_blockTextures[blockType] = m_birchLogSideTexture;
+        }
+        else if (blockType == BlockType::DARK_OAK_LOG) {
+            m_darkOakLogTopTexture = LoadTexture("assets/block/" + textureInfo.top);
+            m_darkOakLogSideTexture = LoadTexture("assets/block/" + textureInfo.sides);
+            m_blockTextures[blockType] = m_darkOakLogSideTexture;
+        }
         // Handle blocks with a single texture for all faces
         else if (!textureInfo.all.empty()) {
             unsigned int textureID = LoadTexture("assets/block/" + textureInfo.all);
@@ -1031,6 +1159,25 @@ bool Renderer::LoadSkyTextures() {
     }
     
     std::cout << "Sky textures loaded successfully!" << std::endl;
+    return true;
+}
+
+bool Renderer::LoadHotbarTextures() {
+    // Load hotbar texture with alpha support
+    m_hotbarTexture = LoadTextureWithAlpha("assets/gui/sprites/hud/hotbar.png");
+    if (m_hotbarTexture == 0) {
+        std::cerr << "Failed to load hotbar texture" << std::endl;
+        return false;
+    }
+    
+    // Load hotbar selection texture
+    m_hotbarSelectionTexture = LoadTextureWithAlpha("assets/gui/sprites/hud/hotbar_selection.png");
+    if (m_hotbarSelectionTexture == 0) {
+        std::cerr << "Failed to load hotbar selection texture" << std::endl;
+        return false;  
+    }
+    
+    std::cout << "Hotbar textures loaded successfully!" << std::endl;
     return true;
 }
 
@@ -1220,4 +1367,44 @@ bool Renderer::IsAABBInFrustum(const AABB& aabb) const {
     }
     
     return true; // AABB is inside or intersecting the frustum
+}
+
+bool Renderer::NeedsBiomeTinting(BlockType blockType) const {
+    return blockType == BlockType::GRASS || IsLeafBlock(blockType);
+}
+
+bool Renderer::IsLeafBlock(BlockType blockType) const {
+    return blockType == BlockType::ACACIA_LEAVES ||
+           blockType == BlockType::AZALEA_LEAVES ||
+           blockType == BlockType::BIRCH_LEAVES ||
+           blockType == BlockType::CHERRY_LEAVES ||
+           blockType == BlockType::JUNGLE_LEAVES ||
+           blockType == BlockType::MANGROVE_LEAVES ||
+           blockType == BlockType::SPRUCE_LEAVES ||
+           blockType == static_cast<BlockType>(235); // OAK_LEAVES
+}
+
+void Renderer::ApplyBiomeTinting(BlockType blockType, int chunkX, int chunkZ, int worldSeed) {
+    // Get center position of chunk for biome calculation
+    int worldX = chunkX * 16 + 8; // CHUNK_WIDTH is 16
+    int worldZ = chunkZ * 16 + 8; // CHUNK_DEPTH is 16
+    
+    // Get biome for this chunk
+    BiomeType biome = BiomeSystem::GetBiomeType(worldX, worldZ, worldSeed);
+    
+    float r, g, b;
+    
+    if (blockType == BlockType::GRASS) {
+        // Apply grass color for this biome
+        BiomeSystem::GetGrassColor(biome, r, g, b);
+    } else if (IsLeafBlock(blockType)) {
+        // Apply foliage color for this biome
+        BiomeSystem::GetFoliageColor(biome, r, g, b);
+    } else {
+        // Fallback to no tint
+        r = g = b = 1.0f;
+    }
+    
+    // Apply the tint to the shader
+    glUniform3f(m_colorTintLoc, r, g, b);
 } 

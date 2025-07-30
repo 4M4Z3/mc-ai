@@ -177,6 +177,7 @@ private:
     void RenderMainMenu();
     void RenderGame();
     void RenderPauseMenu();
+    void RenderHotbar();
     
     // Helper method to get current interpolated positions for rendering
     std::unordered_map<uint32_t, PlayerPosition> GetInterpolatedPlayerPositions() const;
