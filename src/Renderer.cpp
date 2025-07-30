@@ -95,11 +95,18 @@ bool Renderer::Initialize() {
         std::cerr << "Failed to create sky geometry" << std::endl;
         return false;
     }
+    
+    // Create water shaders
+    if (!CreateWaterShaders()) {
+        std::cerr << "Failed to create water shaders" << std::endl;
+        return false;
+    }
 
     // Get uniform locations for block shaders
     m_modelLoc = glGetUniformLocation(m_shaderProgram, "model");
     m_viewLoc = glGetUniformLocation(m_shaderProgram, "view");
     m_projLoc = glGetUniformLocation(m_shaderProgram, "projection");
+    m_cameraYLoc = glGetUniformLocation(m_shaderProgram, "cameraY");
     
     // Get uniform locations for player shaders
     m_playerModelLoc = glGetUniformLocation(m_playerShaderProgram, "model");
@@ -116,6 +123,15 @@ bool Renderer::Initialize() {
     m_skyProjLoc = glGetUniformLocation(m_skyShaderProgram, "projection");
     m_skyGameTimeLoc = glGetUniformLocation(m_skyShaderProgram, "gameTime");
     m_skySunDirLoc = glGetUniformLocation(m_skyShaderProgram, "sunDirection");
+    
+    // Get uniform locations for water shaders
+    m_waterModelLoc = glGetUniformLocation(m_waterShaderProgram, "model");
+    m_waterViewLoc = glGetUniformLocation(m_waterShaderProgram, "view");
+    m_waterProjLoc = glGetUniformLocation(m_waterShaderProgram, "projection");
+    m_waterTimeLoc = glGetUniformLocation(m_waterShaderProgram, "time");
+    m_waterGameTimeLoc = glGetUniformLocation(m_waterShaderProgram, "gameTime");
+    m_waterCameraPosLoc = glGetUniformLocation(m_waterShaderProgram, "cameraPos");
+    m_waterSunDirLoc = glGetUniformLocation(m_waterShaderProgram, "sunDirection");
 
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
@@ -385,16 +401,22 @@ void Renderer::BeginFrame(const Player& player) {
     // Set projection matrix
     glUniformMatrix4fv(m_projLoc, 1, GL_FALSE, m_projectionMatrix.m);
     
+    // Store camera Y position for underwater effect and full position for water reflections
+    Vec3 playerPos = player.GetPosition();
+    m_cameraY = playerPos.y;
+    m_cameraPos = playerPos;
+    glUniform1f(m_cameraYLoc, m_cameraY);
+    
     // Extract frustum planes for culling
     ExtractFrustum(m_viewMatrix, m_projectionMatrix);
 }
 
-void Renderer::RenderWorld(const World& world) {
+void Renderer::RenderWorld(const World& world, float gameTime) {
     // Use optimized chunk-based rendering instead of individual cubes
-    RenderChunks(world);
+    RenderChunks(world, gameTime);
 }
 
-void Renderer::RenderChunks(const World& world) {
+void Renderer::RenderChunks(const World& world, float gameTime) {
     // Set identity model matrix since chunks handle their own world positioning
     Mat4 modelMatrix;  // Identity matrix
     glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
@@ -408,8 +430,10 @@ void Renderer::RenderChunks(const World& world) {
     
     // Render each block type separately with its texture
     for (BlockType blockType : blockTypesToRender) {
-        // Skip AIR blocks
-        if (blockType == BlockType::AIR) {
+        // Skip AIR blocks and water blocks (water has its own shader)
+        if (blockType == BlockType::AIR || 
+            blockType == BlockType::WATER_STILL || 
+            blockType == BlockType::WATER_FLOW) {
             continue;
         }
         
@@ -603,6 +627,69 @@ void Renderer::RenderChunks(const World& world) {
             }
         }
     }
+    
+    // Render water blocks with water shader (after opaque blocks for proper transparency)
+    glUseProgram(m_waterShaderProgram);
+    
+    // Enable blending for transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // Disable depth writing for water (but keep depth testing enabled)
+    // This allows us to see blocks behind/underneath the water
+    glDepthMask(GL_FALSE);
+    
+    // Set matrices for water shader
+    glUniformMatrix4fv(m_waterViewLoc, 1, GL_FALSE, m_viewMatrix.m);
+    glUniformMatrix4fv(m_waterProjLoc, 1, GL_FALSE, m_projectionMatrix.m);
+    
+    // Set time uniform for water animation
+    static float waterTime = 0.0f;
+    waterTime += 0.016f; // ~60 FPS increment
+    glUniform1f(m_waterTimeLoc, waterTime);
+    
+    // Set game time for sky color synchronization
+    glUniform1f(m_waterGameTimeLoc, gameTime);
+    
+    // Set camera position for reflection calculations
+    glUniform3f(m_waterCameraPosLoc, m_cameraPos.x, m_cameraPos.y, m_cameraPos.z);
+    
+    // Calculate sun direction based on game time (same as sky shader)
+    float cycleTime = fmod(gameTime, 900.0f); // Get position within 15-minute cycle
+    float timeAngle = (cycleTime / 900.0f) * 2.0f * M_PI; // Full circle over day cycle
+    Vec3 sunDirection(
+        sin(timeAngle),
+        cos(timeAngle),
+        0.0f
+    );
+    glUniform3f(m_waterSunDirLoc, sunDirection.x, sunDirection.y, sunDirection.z);
+    
+    // Set identity model matrix for water
+    Mat4 waterModelMatrix;  // Identity matrix
+    glUniformMatrix4fv(m_waterModelLoc, 1, GL_FALSE, waterModelMatrix.m);
+    
+    // Don't bind any texture for water - we want pure color
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    // Render water blocks
+    std::vector<BlockType> waterBlocks = {BlockType::WATER_STILL, BlockType::WATER_FLOW};
+    for (BlockType waterType : waterBlocks) {
+        for (int x = 0; x < WORLD_SIZE; ++x) {
+            for (int z = 0; z < WORLD_SIZE; ++z) {
+                int chunkX = x - 5;
+                int chunkZ = z - 5;
+                const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+                if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
+                    chunk->RenderMeshForBlockType(waterType);
+                }
+            }
+        }
+    }
+    
+    // Re-enable depth writing and disable blending, switch back to regular shader
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+    glUseProgram(m_shaderProgram);
     
     // Unbind texture
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -889,6 +976,54 @@ bool Renderer::CreateSkyShaders() {
     glDeleteShader(fragmentShader);
 
     DEBUG_SHADER("Sky shaders loaded and compiled successfully!");
+    return true;
+}
+
+bool Renderer::CreateWaterShaders() {
+    // Load water vertex shader source from file
+    std::string vertexShaderSource = LoadShaderSource("shaders/water_vertex.glsl");
+    if (vertexShaderSource.empty()) {
+        std::cerr << "Failed to load water vertex shader" << std::endl;
+        return false;
+    }
+
+    // Load water fragment shader source from file  
+    std::string fragmentShaderSource = LoadShaderSource("shaders/water_fragment.glsl");
+    if (fragmentShaderSource.empty()) {
+        std::cerr << "Failed to load water fragment shader" << std::endl;
+        return false;
+    }
+
+    // Compile water shaders
+    unsigned int vertexShader = CompileShader(GL_VERTEX_SHADER, vertexShaderSource.c_str());
+    if (vertexShader == 0) return false;
+
+    unsigned int fragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource.c_str());
+    if (fragmentShader == 0) {
+        glDeleteShader(vertexShader);
+        return false;
+    }
+
+    // Create water shader program
+    m_waterShaderProgram = glCreateProgram();
+    glAttachShader(m_waterShaderProgram, vertexShader);
+    glAttachShader(m_waterShaderProgram, fragmentShader);
+    glLinkProgram(m_waterShaderProgram);
+
+    // Check for linking errors
+    if (!CheckProgramLinking(m_waterShaderProgram)) {
+        glDeleteShader(vertexShader);
+        glDeleteShader(fragmentShader);
+        glDeleteProgram(m_waterShaderProgram);
+        m_waterShaderProgram = 0;
+        return false;
+    }
+
+    // Clean up shaders
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    DEBUG_SHADER("Water shaders loaded and compiled successfully!");
     return true;
 }
 

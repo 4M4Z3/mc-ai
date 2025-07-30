@@ -131,8 +131,11 @@ private:
     void GenerateOakTree(int x, int z, int surfaceY, std::mt19937& rng, const BlockManager* blockManager);
     void GenerateBirchTree(int x, int z, int surfaceY, std::mt19937& rng, const BlockManager* blockManager);
     
-    // Terrain generation constants
+    // Terrain generation constants  
     static constexpr double NOISE_SCALE = 0.03;         // Scale for Perlin noise sampling
-    static constexpr int BASE_HEIGHT = 24;              // Base terrain height (lowered from 64)
-    static constexpr int MAX_HEIGHT_VARIATION = 12;     // Maximum hill height above base (lowered from 16)
+    static constexpr double NOISE_SCALE_FINE = 0.08;    // Fine detail noise scale
+    static constexpr double NOISE_SCALE_COARSE = 0.01;  // Large terrain features scale
+    static constexpr int BASE_HEIGHT = 65;              // Base terrain height (above sea level)
+    static constexpr int MAX_HEIGHT_VARIATION = 50;     // Maximum hill height above base
+    static constexpr int SEA_LEVEL = 60;                // Sea level constant
 }; 

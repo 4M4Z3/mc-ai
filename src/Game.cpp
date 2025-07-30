@@ -617,7 +617,7 @@ void Game::RenderGame() {
             }
         }
         
-        m_renderer.RenderWorld(*m_world);
+        m_renderer.RenderWorld(*m_world, m_gameTime);
         
         // Render wireframe around target block
         if (m_targetBlock.hit) {

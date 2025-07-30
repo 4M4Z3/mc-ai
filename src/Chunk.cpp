@@ -387,15 +387,29 @@ std::vector<BlockType> Chunk::GetBlockTypesInChunk() const {
 
 bool Chunk::ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world, const BlockManager* blockManager) const {
     Block neighbor = GetNeighborBlock(x, y, z, faceDirection, world);
+    BlockType currentBlockType = m_blocks[x][y][z].GetType();
     
     // Always show faces adjacent to air
     if (neighbor.IsAir()) {
         return true;
     }
     
+    // Special handling for water blocks
+    if (currentBlockType == BlockType::WATER_STILL || currentBlockType == BlockType::WATER_FLOW) {
+        BlockType neighborType = neighbor.GetType();
+        // For water: only render faces that are NOT adjacent to other water blocks
+        return neighborType != BlockType::WATER_STILL && neighborType != BlockType::WATER_FLOW;
+    }
+    
     // If we have a BlockManager, also show faces adjacent to transparent or ground blocks
     if (blockManager) {
         BlockType neighborType = neighbor.GetType();
+        
+        // Special case: always render faces adjacent to water blocks (regardless of transparency detection)
+        if (neighborType == BlockType::WATER_STILL || neighborType == BlockType::WATER_FLOW) {
+            return true;
+        }
+        
         return blockManager->IsTransparent(neighborType) || blockManager->IsGround(neighborType);
     }
     
@@ -437,6 +451,7 @@ Block Chunk::GetNeighborBlock(int x, int y, int z, int faceDirection, const Worl
 }
 
 void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world, bool flipTextureV) const {
+    BlockType currentBlockType = m_blocks[x][y][z].GetType();
     // Convert local chunk coordinates to world position for rendering
     float worldX = static_cast<float>(m_chunkX * CHUNK_WIDTH + x);
     float worldY = static_cast<float>(y);
@@ -544,13 +559,19 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             float ao2 = CalculateVertexAO(x, y, z, FACE_TOP, 2, world);
             float ao3 = CalculateVertexAO(x, y, z, FACE_TOP, 3, world);
             
+            // Water blocks have lowered surface at 15/16 height (0.9375)
+            float topY = worldY + 0.5f;
+            if (currentBlockType == BlockType::WATER_STILL || currentBlockType == BlockType::WATER_FLOW) {
+                topY = worldY - 0.5f + 0.9375f; // 15/16 height from block bottom
+            }
+            
             float topVertices[] = {
-                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f,
-                worldX - 0.5f, worldY + 0.5f, worldZ + 0.5f, ao3, 1.0f, 0.0f,
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
-                worldX + 0.5f, worldY + 0.5f, worldZ + 0.5f, ao2, 1.0f, 1.0f,
-                worldX + 0.5f, worldY + 0.5f, worldZ - 0.5f, ao1, 0.0f, 1.0f,
-                worldX - 0.5f, worldY + 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f
+                worldX - 0.5f, topY, worldZ - 0.5f, ao0, 0.0f, 0.0f,
+                worldX - 0.5f, topY, worldZ + 0.5f, ao3, 1.0f, 0.0f,
+                worldX + 0.5f, topY, worldZ + 0.5f, ao2, 1.0f, 1.0f,
+                worldX + 0.5f, topY, worldZ + 0.5f, ao2, 1.0f, 1.0f,
+                worldX + 0.5f, topY, worldZ - 0.5f, ao1, 0.0f, 1.0f,
+                worldX - 0.5f, topY, worldZ - 0.5f, ao0, 0.0f, 0.0f
             };
             vertices.insert(vertices.end(), topVertices, topVertices + 36);
             break;
@@ -679,25 +700,39 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
         surfaceBlocks = {BlockType::GRASS, BlockType::STONE, BlockType::DIRT};
     }
     
-    // Generate terrain using Perlin noise
+    // Generate terrain using multiple octaves of noise for varied geography
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int z = 0; z < CHUNK_DEPTH; ++z) {
             // Convert local chunk coordinates to world coordinates
             int worldX = m_chunkX * CHUNK_WIDTH + x;
             int worldZ = m_chunkZ * CHUNK_DEPTH + z;
             
-            // Get height from Perlin noise
-            double noise = Perlin(worldX * NOISE_SCALE, worldZ * NOISE_SCALE, seed);
+            // Get biome for this position using the new BiomeSystem
+            BiomeType biomeType = BiomeSystem::GetBiomeType(worldX, worldZ, seed);
+            
+            // Generate height using multiple noise octaves for varied terrain
+            double coarseNoise = Perlin(worldX * NOISE_SCALE_COARSE, worldZ * NOISE_SCALE_COARSE, seed);
+            double mediumNoise = Perlin(worldX * NOISE_SCALE, worldZ * NOISE_SCALE, seed + 1000);
+            double fineNoise = Perlin(worldX * NOISE_SCALE_FINE, worldZ * NOISE_SCALE_FINE, seed + 2000);
+            
+            // Combine noise octaves with different weights for varied terrain
+            double combinedNoise = coarseNoise * 0.6 + mediumNoise * 0.3 + fineNoise * 0.1;
             
             // Map noise from [-1, 1] to [0, 1] and scale to height variation
-            double normalizedNoise = (noise + 1.0) * 0.5;
+            double normalizedNoise = (combinedNoise + 1.0) * 0.5;
             int terrainHeight = BASE_HEIGHT + static_cast<int>(normalizedNoise * MAX_HEIGHT_VARIATION);
+            
+            // Ensure terrain doesn't generate underwater - enforce minimum height above sea level
+            terrainHeight = std::max(SEA_LEVEL + 1, terrainHeight);
             
             // Clamp height to valid range
             terrainHeight = std::max(0, std::min(terrainHeight, CHUNK_HEIGHT - 1));
             
-            // Get biome for this position using the BiomeSystem
-            BiomeType biomeType = BiomeSystem::GetBiomeType(worldX, worldZ, seed);
+            // Handle rivers - lower the terrain and add water
+            if (biomeType == BiomeType::RIVER) {
+                // Rivers are carved below sea level
+                terrainHeight = std::max(SEA_LEVEL - 3, std::min(terrainHeight - 8, SEA_LEVEL - 1));
+            }
             
             // Fill blocks from bottom up to terrain height
             for (int y = 0; y <= terrainHeight; ++y) {
@@ -710,9 +745,15 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
                         case BiomeType::SAVANNA:
                             surfaceBlock = BlockType::SAND;
                             break;
-                        case BiomeType::SNOWY:
-                            // Use snow block if available, otherwise grass
+                        case BiomeType::SNOWY_TUNDRA:
+                        case BiomeType::SNOWY_TAIGA:
                             surfaceBlock = BlockType::SNOW;
+                            break;
+                        case BiomeType::RIVER:
+                            surfaceBlock = BlockType::SAND; // River bed
+                            break;
+                        case BiomeType::SWAMP:
+                            surfaceBlock = BlockType::DIRT; // Muddy swamp surface
                             break;
                         default:
                             // Most biomes use grass surface
@@ -732,6 +773,18 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
         }
     }
     
+    // Generate water bodies (fill areas below sea level with water)
+    for (int x = 0; x < CHUNK_WIDTH; ++x) {
+        for (int z = 0; z < CHUNK_DEPTH; ++z) {
+            for (int y = 0; y < SEA_LEVEL; ++y) {
+                // If there's air below sea level, fill with water
+                if (m_blocks[x][y][z].GetType() == BlockType::AIR) {
+                    m_blocks[x][y][z].SetType(BlockType::WATER_STILL);
+                }
+            }
+        }
+    }
+    
     // Generate trees in forest biomes
     for (int x = 2; x < CHUNK_WIDTH - 2; x += 3) {  // Space trees apart
         for (int z = 2; z < CHUNK_DEPTH - 2; z += 3) {
@@ -742,11 +795,37 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
             // Get biome for this position
             BiomeType biomeType = BiomeSystem::GetBiomeType(worldX, worldZ, seed);
             
-            // Generate trees in forest, taiga, and jungle biomes
-            if (biomeType == BiomeType::FOREST || biomeType == BiomeType::TAIGA || biomeType == BiomeType::JUNGLE) {
-                // Random chance for tree generation (about 70% chance)
+            // Generate trees in forest, taiga, jungle, and swamp biomes
+            bool shouldGenerateTree = false;
+            int treeChance = 7; // 70% chance by default
+            
+            switch (biomeType) {
+                case BiomeType::FOREST:
+                    shouldGenerateTree = true;
+                    treeChance = 8;  // 80% chance in forests
+                    break;
+                case BiomeType::TAIGA:
+                case BiomeType::SNOWY_TAIGA:
+                    shouldGenerateTree = true;
+                    treeChance = 6;  // 60% chance in taiga
+                    break;
+                case BiomeType::JUNGLE:
+                    shouldGenerateTree = true;
+                    treeChance = 9;  // 90% chance in jungle
+                    break;
+                case BiomeType::SWAMP:
+                    shouldGenerateTree = true;
+                    treeChance = 4;  // 40% chance in swamp
+                    break;
+                default:
+                    shouldGenerateTree = false;
+                    break;
+            }
+            
+            if (shouldGenerateTree) {
+                // Random chance for tree generation
                 std::mt19937 treeRng(seed + worldX * 1000 + worldZ);
-                if (treeRng() % 10 < 7) {
+                if (static_cast<int>(treeRng() % 10) < treeChance) {
                     GenerateTree(x, z, treeRng, blockManager);
                 }
             }

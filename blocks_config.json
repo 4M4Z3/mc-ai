@@ -1486,6 +1486,7 @@
     "water_flow": {
       "blockType": 204,
       "blockName": "Water Flow",
+      "category": "transparent",
       "textures": {
         "all": "water_flow.png"
       }
@@ -1493,6 +1494,7 @@
     "water_still": {
       "blockType": 205,
       "blockName": "Water Still",
+      "category": "transparent",
       "textures": {
         "all": "water_still.png"
       }

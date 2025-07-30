@@ -58,8 +58,8 @@ public:
     
     // 3D rendering
     void BeginFrame(const Player& player);
-    void RenderWorld(const World& world);
-    void RenderChunks(const World& world);  // New chunk-based rendering
+    void RenderWorld(const World& world, float gameTime);
+    void RenderChunks(const World& world, float gameTime);  // New chunk-based rendering
     void RenderCube(float x, float y, float z);  // Legacy individual cube rendering
     void RenderOtherPlayers(const std::vector<PlayerPosition>& playerPositions);
     void RenderSky(float gameTime); // Render sky with sun/moon based on time
@@ -119,6 +119,11 @@ private:
     unsigned int m_skyShaderProgram;
     int m_skyViewLoc, m_skyProjLoc, m_skyGameTimeLoc, m_skySunDirLoc;
     
+    // Water rendering
+    unsigned int m_waterShaderProgram;
+    int m_waterModelLoc, m_waterViewLoc, m_waterProjLoc, m_waterTimeLoc;
+    int m_waterGameTimeLoc, m_waterCameraPosLoc, m_waterSunDirLoc;
+    
     // Texture management
     std::unordered_map<BlockType, unsigned int> m_blockTextures;
     
@@ -159,17 +164,21 @@ private:
     Mat4 m_projectionMatrix;
     Mat4 m_viewMatrix;  // Store view matrix for player rendering
     int m_viewportWidth, m_viewportHeight;
+    float m_cameraY;  // Store camera Y position for underwater effect
+    Vec3 m_cameraPos;  // Store camera position for water reflections
     
     // Shader uniforms
     int m_modelLoc, m_viewLoc, m_projLoc;
     int m_textureLoc;
     int m_colorTintLoc;
+    int m_cameraYLoc;
 
     // Shader management
     bool CreateShaders();
     bool CreatePlayerShaders();
     bool CreateWireframeShaders();
     bool CreateSkyShaders();
+    bool CreateWaterShaders();
     bool CreateCubeGeometry();
     bool CreateWireframeGeometry();
     bool CreateSkyGeometry();
