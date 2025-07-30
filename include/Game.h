@@ -189,6 +189,9 @@ private:
     bool m_showCraftingTable;
     bool m_showFurnace;
     
+    // UI visibility toggle
+    bool m_showUI;
+    
     // Hotbar selection
     int m_selectedHotbarSlot;
     

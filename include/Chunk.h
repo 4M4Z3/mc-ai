@@ -122,6 +122,7 @@ private:
     
     // Perlin noise utilities for world generation
     double Perlin(double x, double z, int seed) const;
+    double Perlin3D(double x, double y, double z, int seed) const;
     double Fade(double t) const;
     double Lerp(double t, double a, double b) const;
     double Grad(int hash, double x, double z) const;
@@ -142,4 +143,11 @@ private:
     static constexpr int BASE_HEIGHT = 65;              // Base terrain height (above sea level)
     static constexpr int MAX_HEIGHT_VARIATION = 50;     // Maximum hill height above base
     static constexpr int SEA_LEVEL = 60;                // Sea level constant
+    
+    // Cave generation constants
+    static constexpr double CAVE_NOISE_SCALE = 0.08;    // Scale for cave noise sampling (increased for smaller caves)
+    static constexpr double CAVE_THRESHOLD = 0.3;       // Threshold for cave generation (lowered for more caves)
+    static constexpr int CAVE_MIN_HEIGHT = 5;           // Minimum height for caves (above bedrock)
+    static constexpr int CAVE_MAX_HEIGHT = 80;          // Maximum height for caves
+    static constexpr int CAVE_SURFACE_BUFFER = 2;       // Minimum blocks between cave and surface (reduced)
 }; 

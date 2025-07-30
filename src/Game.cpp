@@ -56,11 +56,16 @@ Game::Game() :
     m_fontTitle(nullptr),
     m_showPauseMenu(false),
     m_showInventory(false),
+<<<<<<< Updated upstream
     m_showCraftingTable(false),
     m_showFurnace(false),
     m_selectedHotbarSlot(0),
     m_placementPreviewPosition(0, 0, 0),
     m_showPlacementPreview(false)
+=======
+    m_showUI(true),
+    m_selectedHotbarSlot(0)
+>>>>>>> Stashed changes
 {
     s_instance = this;
 }
@@ -790,7 +795,9 @@ void Game::RenderGame() {
         }
         
         // Render first-person arm (like in Minecraft)
-        m_renderer.RenderFirstPersonArm(*m_player);
+        if (m_showUI) {
+            m_renderer.RenderFirstPersonArm(*m_player);
+        }
         
         m_renderer.EndFrame();
     }
@@ -820,10 +827,11 @@ void Game::RenderGame() {
     }
     
     // Show game UI
-    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(400, 250), ImGuiCond_Always);
-    
-    if (ImGui::Begin("Minecraft Clone", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
+    if (m_showUI) {
+        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(400, 250), ImGuiCond_Always);
+        
+        if (ImGui::Begin("Minecraft Clone", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
         // Use large font for the header
         if (m_fontLarge) {
             ImGui::PushFont(m_fontLarge);
@@ -891,11 +899,14 @@ void Game::RenderGame() {
         } else {
             ImGui::Text("Single Player Mode");
         }
+        }
+        ImGui::End();
     }
-    ImGui::End();
     
     // Render hotbar at bottom center of screen
-    RenderHotbar();
+    if (m_showUI) {
+        RenderHotbar();
+    }
 }
 
 void Game::RenderPauseMenu() {
@@ -1517,6 +1528,14 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
             if (s_instance->m_currentState == GameState::GAME) {
                 s_instance->m_renderer.m_enableFrustumCulling = !s_instance->m_renderer.m_enableFrustumCulling;
                 std::cout << "Frustum culling: " << (s_instance->m_renderer.m_enableFrustumCulling ? "ON" : "OFF") << std::endl;
+            }
+        }
+        
+        // Toggle UI visibility with ] key
+        if (key == GLFW_KEY_RIGHT_BRACKET && action == GLFW_PRESS) {
+            if (s_instance->m_currentState == GameState::GAME) {
+                s_instance->m_showUI = !s_instance->m_showUI;
+                std::cout << "UI visibility: " << (s_instance->m_showUI ? "ON" : "OFF") << std::endl;
             }
         }
         

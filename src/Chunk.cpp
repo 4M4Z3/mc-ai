@@ -769,6 +769,113 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
         }
     }
     
+    // Generate cave tunnels using "cave worms" that create long stringy passages
+    int caveBlocksCarved = 0;
+    std::mt19937 caveRng(seed + m_chunkX * 7841 + m_chunkZ * 9973);
+    
+    // Generate multiple cave worms per chunk
+    int numWorms = 2 + (caveRng() % 4); // 2-5 worms per chunk
+    
+    for (int worm = 0; worm < numWorms; worm++) {
+        // Start position for this worm (can be anywhere in chunk)
+        float startX = static_cast<float>(caveRng() % CHUNK_WIDTH);
+        float startZ = static_cast<float>(caveRng() % CHUNK_DEPTH);
+        
+        // Find surface height at start position
+        int surfaceY = 0;
+        for (int y = CHUNK_HEIGHT - 1; y >= 0; y--) {
+            if (m_blocks[static_cast<int>(startX)][y][static_cast<int>(startZ)].GetType() != BlockType::AIR) {
+                surfaceY = y;
+                break;
+            }
+        }
+        
+        // Start from surface and burrow down
+        float currentX = startX;
+        float currentY = static_cast<float>(surfaceY);
+        float currentZ = startZ;
+        
+        // Random direction for this worm
+        float dirX = (static_cast<float>(caveRng()) / RAND_MAX - 0.5f) * 0.8f;
+        float dirY = -0.3f - (static_cast<float>(caveRng()) / RAND_MAX) * 0.4f; // Generally downward
+        float dirZ = (static_cast<float>(caveRng()) / RAND_MAX - 0.5f) * 0.8f;
+        
+        // Worm length
+        int wormLength = 40 + (caveRng() % 80); // 40-120 blocks long
+        float radius = 1.2f + (static_cast<float>(caveRng()) / RAND_MAX) * 1.0f; // Variable radius
+        
+        for (int step = 0; step < wormLength; step++) {
+            // Carve out blocks in a sphere around current position
+            int minX = std::max(0, static_cast<int>(currentX - radius));
+            int maxX = std::min(CHUNK_WIDTH - 1, static_cast<int>(currentX + radius));
+            int minY = std::max(CAVE_MIN_HEIGHT, static_cast<int>(currentY - radius));
+            int maxY = std::min(CAVE_MAX_HEIGHT, static_cast<int>(currentY + radius));
+            int minZ = std::max(0, static_cast<int>(currentZ - radius));
+            int maxZ = std::min(CHUNK_DEPTH - 1, static_cast<int>(currentZ + radius));
+            
+            for (int x = minX; x <= maxX; x++) {
+                for (int y = minY; y <= maxY; y++) {
+                    for (int z = minZ; z <= maxZ; z++) {
+                        // Check if this block is within the worm's radius
+                        float dx = x - currentX;
+                        float dy = y - currentY;
+                        float dz = z - currentZ;
+                        float distanceSquared = dx*dx + dy*dy + dz*dz;
+                        
+                        if (distanceSquared <= radius * radius) {
+                            BlockType currentType = m_blocks[x][y][z].GetType();
+                            if (currentType == BlockType::STONE || currentType == BlockType::DIRT || currentType == BlockType::GRASS) {
+                                m_blocks[x][y][z].SetType(BlockType::AIR);
+                                caveBlocksCarved++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Update worm position
+            currentX += dirX;
+            currentY += dirY;
+            currentZ += dirZ;
+            
+            // Add some randomness to direction (winding tunnels)
+            dirX += (static_cast<float>(caveRng()) / RAND_MAX - 0.5f) * 0.2f;
+            dirY += (static_cast<float>(caveRng()) / RAND_MAX - 0.5f) * 0.1f;
+            dirZ += (static_cast<float>(caveRng()) / RAND_MAX - 0.5f) * 0.2f;
+            
+            // Normalize direction to prevent it from getting too extreme
+            float dirLength = std::sqrt(dirX*dirX + dirY*dirY + dirZ*dirZ);
+            if (dirLength > 1.0f) {
+                dirX /= dirLength;
+                dirY /= dirLength;
+                dirZ /= dirLength;
+            }
+            
+            // Occasionally change direction more dramatically (branching)
+            if (caveRng() % 15 == 0) {
+                dirX += (static_cast<float>(caveRng()) / RAND_MAX - 0.5f) * 1.0f;
+                dirZ += (static_cast<float>(caveRng()) / RAND_MAX - 0.5f) * 1.0f;
+            }
+            
+            // Stop if worm goes out of chunk bounds or too deep
+            if (currentX < -radius || currentX >= CHUNK_WIDTH + radius ||
+                currentZ < -radius || currentZ >= CHUNK_DEPTH + radius ||
+                currentY < CAVE_MIN_HEIGHT || currentY > CAVE_MAX_HEIGHT) {
+                break;
+            }
+            
+            // Vary radius slightly as we go
+            radius += (static_cast<float>(caveRng()) / RAND_MAX - 0.5f) * 0.1f;
+            radius = std::max(0.8f, std::min(2.5f, radius));
+        }
+    }
+    
+    // Debug output to verify caves are being generated
+    if (caveBlocksCarved > 0) {
+        std::cout << "Chunk (" << m_chunkX << "," << m_chunkZ << ") carved " << 
+                     caveBlocksCarved << " cave blocks with " << numWorms << " worms" << std::endl;
+    }
+    
     // Generate water bodies (fill areas below sea level with water)
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
         for (int z = 0; z < CHUNK_DEPTH; ++z) {
@@ -957,6 +1064,53 @@ double Chunk::Grad(int hash, double x, double z) const {
     double u = h < 2 ? x : z;
     double v = h < 2 ? z : x;
     return ((h & 1) ? -u : u) + ((h & 2) ? -2.0 * v : 2.0 * v);
+}
+
+// 3D Perlin noise implementation for cave generation
+double Chunk::Perlin3D(double x, double y, double z, int seed) const {
+    std::hash<int> hasher;
+    
+    // Get integer and fractional parts
+    int xi = static_cast<int>(std::floor(x)) & 255;
+    int yi = static_cast<int>(std::floor(y)) & 255;
+    int zi = static_cast<int>(std::floor(z)) & 255;
+    double xf = x - std::floor(x);
+    double yf = y - std::floor(y);
+    double zf = z - std::floor(z);
+    
+    // Fade curves
+    double u = Fade(xf);
+    double v = Fade(yf);
+    double w = Fade(zf);
+    
+    // Hash coordinates with seed
+    int aaa = hasher(xi + hasher(yi + hasher(zi + seed)));
+    int aba = hasher(xi + hasher(yi + 1 + hasher(zi + seed)));
+    int aab = hasher(xi + hasher(yi + hasher(zi + 1 + seed)));
+    int abb = hasher(xi + hasher(yi + 1 + hasher(zi + 1 + seed)));
+    int baa = hasher(xi + 1 + hasher(yi + hasher(zi + seed)));
+    int bba = hasher(xi + 1 + hasher(yi + 1 + hasher(zi + seed)));
+    int bab = hasher(xi + 1 + hasher(yi + hasher(zi + 1 + seed)));
+    int bbb = hasher(xi + 1 + hasher(yi + 1 + hasher(zi + 1 + seed)));
+    
+    // 3D gradient function
+    auto grad3d = [](int hash, double x, double y, double z) -> double {
+        int h = hash & 15;
+        double u = h < 8 ? x : y;
+        double v = h < 4 ? y : (h == 12 || h == 14 ? x : z);
+        return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+    };
+    
+    // Interpolate
+    double x1 = Lerp(u, grad3d(aaa, xf, yf, zf), grad3d(baa, xf - 1, yf, zf));
+    double x2 = Lerp(u, grad3d(aba, xf, yf - 1, zf), grad3d(bba, xf - 1, yf - 1, zf));
+    double y1 = Lerp(v, x1, x2);
+    
+    x1 = Lerp(u, grad3d(aab, xf, yf, zf - 1), grad3d(bab, xf - 1, yf, zf - 1));
+    x2 = Lerp(u, grad3d(abb, xf, yf - 1, zf - 1), grad3d(bbb, xf - 1, yf - 1, zf - 1));
+    double y2 = Lerp(v, x1, x2);
+    
+    return Lerp(w, y1, y2);
 } 
 
 // Helper method to get a block at an arbitrary offset from the current position
