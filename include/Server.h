@@ -29,7 +29,8 @@ struct PlayerPosition {
     uint32_t playerId;
 };
 
-struct NetworkMessage {
+// Base message header
+struct NetworkMessageHeader {
     enum Type {
         PLAYER_JOIN = 1,
         PLAYER_LEAVE = 2,
@@ -40,32 +41,38 @@ struct NetworkMessage {
         BLOCK_BREAK = 7,
         CHUNK_REQUEST = 8,
         CHUNK_DATA = 9,
-        MY_PLAYER_ID = 10, // New message type for client's own player ID
-        BLOCK_UPDATE = 11  // Individual block update for streaming
+        MY_PLAYER_ID = 10,
+        BLOCK_UPDATE = 11
     };
     
     uint8_t type;
     uint32_t playerId;
+};
+
+// Small message for most communications
+struct NetworkMessage {
+    NetworkMessageHeader header;
     PlayerPosition position;
-    int32_t worldSeed; // Added for seed synchronization
-    float gameTime; // Game time in seconds (0-900 for 15 minute cycle)
+    int32_t worldSeed;
+    float gameTime;
     
-    // Block breaking data
+    // Block data
     struct {
         int32_t x, y, z;
-    } blockPos;
+        uint8_t blockType; // For block updates, 0 for breaks
+    } blockData;
     
-    // Block update data
-    struct {
-        int32_t x, y, z;
-        uint8_t blockType; // New block type to set
-    } blockUpdate;
-    
-    // Chunk data
+    // Chunk request data
     struct {
         int32_t chunkX, chunkZ;
-        uint8_t blocks[16 * 256 * 16]; // 16x256x16 chunk, 1 byte per block type
-    } chunkData;
+    } chunkRequest;
+};
+
+// Large message for chunk data only
+struct ChunkDataMessage {
+    NetworkMessageHeader header;
+    int32_t chunkX, chunkZ;
+    uint8_t blocks[16 * 256 * 16];
 };
 
 // Server announcement for UDP broadcast discovery

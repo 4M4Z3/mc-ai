@@ -135,8 +135,8 @@ void NetworkClient::SendPlayerPosition(const PlayerPosition& position) {
     }
     
     NetworkMessage message = {}; // Initialize to zero
-    message.type = NetworkMessage::PLAYER_POSITION;
-    message.playerId = 0; // Server will assign the correct player ID
+    message.header.type = NetworkMessageHeader::PLAYER_POSITION;
+    message.header.playerId = 0; // Server will assign the correct player ID
     message.position = position;
     
     QueueMessage(message);
@@ -148,13 +148,14 @@ void NetworkClient::SendBlockBreak(int32_t x, int32_t y, int32_t z) {
     }
     
     NetworkMessage message = {}; // Initialize to zero
-    message.type = NetworkMessage::BLOCK_BREAK;
-    message.playerId = 0; // Server will assign the correct player ID
-    message.blockPos.x = x;
-    message.blockPos.y = y;
-    message.blockPos.z = z;
+    message.header.type = NetworkMessageHeader::BLOCK_BREAK;
+    message.header.playerId = 0; // Server will assign the correct player ID
+    message.blockData.x = x;
+    message.blockData.y = y;
+    message.blockData.z = z;
+    message.blockData.blockType = 0; // AIR for breaks
     
-    std::cout << "[CLIENT] Creating block break message - type: " << (int)message.type 
+    std::cout << "[CLIENT] Creating block break message - type: " << (int)message.header.type 
               << ", coords: (" << x << ", " << y << ", " << z << ")" << std::endl;
     
     QueueMessage(message);
@@ -166,14 +167,14 @@ void NetworkClient::SendBlockUpdate(int32_t x, int32_t y, int32_t z, uint8_t blo
     }
     
     NetworkMessage message = {}; // Initialize to zero
-    message.type = NetworkMessage::BLOCK_UPDATE;
-    message.playerId = 0; // Server will assign the correct player ID
-    message.blockUpdate.x = x;
-    message.blockUpdate.y = y;
-    message.blockUpdate.z = z;
-    message.blockUpdate.blockType = blockType;
+    message.header.type = NetworkMessageHeader::BLOCK_UPDATE;
+    message.header.playerId = 0; // Server will assign the correct player ID
+    message.blockData.x = x;
+    message.blockData.y = y;
+    message.blockData.z = z;
+    message.blockData.blockType = blockType;
     
-    std::cout << "[CLIENT] Creating block update message - type: " << (int)message.type 
+    std::cout << "[CLIENT] Creating block update message - type: " << (int)message.header.type 
               << ", coords: (" << x << ", " << y << ", " << z << "), blockType: " << (int)blockType << std::endl;
     
     QueueMessage(message);
@@ -186,10 +187,10 @@ void NetworkClient::RequestChunk(int32_t chunkX, int32_t chunkZ)
     }
     
     NetworkMessage message = {}; // Initialize to zero
-    message.type = NetworkMessage::CHUNK_REQUEST;
-    message.playerId = 0; // Server will assign the correct player ID
-    message.chunkData.chunkX = chunkX;
-    message.chunkData.chunkZ = chunkZ;
+    message.header.type = NetworkMessageHeader::CHUNK_REQUEST;
+    message.header.playerId = 0; // Server will assign the correct player ID
+    message.chunkRequest.chunkX = chunkX;
+    message.chunkRequest.chunkZ = chunkZ;
     
     int bytesSent = send(m_socket, (const char*)&message, sizeof(NetworkMessage), 0);
     if (bytesSent == SOCKET_ERROR) {
@@ -216,13 +217,13 @@ void NetworkClient::SendMessagesThread() {
         
         if (hasMessage) {
             // Validate message before sending
-            if (message.type == 0 || message.type > NetworkMessage::BLOCK_UPDATE) {
-                std::cerr << "[CLIENT] ERROR: Invalid message type " << (int)message.type 
+            if (message.header.type == 0 || message.header.type > NetworkMessageHeader::BLOCK_UPDATE) {
+                std::cerr << "[CLIENT] ERROR: Invalid message type " << (int)message.header.type 
                           << " detected in send queue, skipping!" << std::endl;
                 continue; // Skip this corrupted message
             }
             
-            std::cout << "[CLIENT] Sending message type " << (int)message.type << std::endl;
+            std::cout << "[CLIENT] Sending message type " << (int)message.header.type << std::endl;
             
             // Send the message
             size_t messageSize = sizeof(NetworkMessage);
@@ -236,7 +237,7 @@ void NetworkClient::SendMessagesThread() {
                                    0);
                 
                 if (bytesSent == SOCKET_ERROR) {
-                    std::cerr << "[CLIENT] Failed to send message type " << (int)message.type << std::endl;
+                    std::cerr << "[CLIENT] Failed to send message type " << (int)message.header.type << std::endl;
                     break;
                 }
                 
@@ -254,11 +255,11 @@ void NetworkClient::QueueMessage(const NetworkMessage& message) {
         return;
     }
     
-    std::cout << "[CLIENT] Queuing message type " << (int)message.type;
-    if (message.type == NetworkMessage::BLOCK_BREAK) {
-        std::cout << " - block break at (" << message.blockPos.x << ", " << message.blockPos.y << ", " << message.blockPos.z << ")";
-    } else if (message.type == NetworkMessage::BLOCK_UPDATE) {
-        std::cout << " - block update at (" << message.blockUpdate.x << ", " << message.blockUpdate.y << ", " << message.blockUpdate.z << ") to type " << (int)message.blockUpdate.blockType;
+    std::cout << "[CLIENT] Queuing message type " << (int)message.header.type;
+    if (message.header.type == NetworkMessageHeader::BLOCK_BREAK) {
+        std::cout << " - block break at (" << message.blockData.x << ", " << message.blockData.y << ", " << message.blockData.z << ")";
+    } else if (message.header.type == NetworkMessageHeader::BLOCK_UPDATE) {
+        std::cout << " - block update at (" << message.blockData.x << ", " << message.blockData.y << ", " << message.blockData.z << ") to type " << (int)message.blockData.blockType;
     }
     std::cout << std::endl;
     
@@ -332,26 +333,26 @@ void NetworkClient::ReceiveMessages() {
 }
 
 void NetworkClient::ProcessMessage(const NetworkMessage& message) {
-    switch (message.type) {
-        case NetworkMessage::PLAYER_JOIN:
+    switch (message.header.type) {
+        case NetworkMessageHeader::PLAYER_JOIN:
         {
             {
                 std::lock_guard<std::mutex> lock(m_otherPlayersMutex);
-                m_otherPlayers[message.playerId] = message.position;
+                m_otherPlayers[message.header.playerId] = message.position;
             }
             
             if (m_onPlayerJoin) {
-                m_onPlayerJoin(message.playerId, message.position);
+                m_onPlayerJoin(message.header.playerId, message.position);
             }
             
-            std::cout << "Player " << message.playerId << " joined the game" << std::endl;
+            std::cout << "Player " << message.header.playerId << " joined the game" << std::endl;
             break;
         }
         
-        case NetworkMessage::PLAYER_LEAVE:
+        case NetworkMessageHeader::PLAYER_LEAVE:
         {
             // Check for server shutdown (special case: playerId = 0)
-            if (message.playerId == 0) {
+            if (message.header.playerId == 0) {
                 std::cout << "Server is shutting down!" << std::endl;
                 m_connected = false;
                 return;
@@ -359,43 +360,43 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
             
             {
                 std::lock_guard<std::mutex> lock(m_otherPlayersMutex);
-                m_otherPlayers.erase(message.playerId);
+                m_otherPlayers.erase(message.header.playerId);
             }
             
             if (m_onPlayerLeave) {
-                m_onPlayerLeave(message.playerId);
+                m_onPlayerLeave(message.header.playerId);
             }
             
-            std::cout << "Player " << message.playerId << " left the game" << std::endl;
+            std::cout << "Player " << message.header.playerId << " left the game" << std::endl;
             break;
         }
         
-        case NetworkMessage::PLAYER_POSITION:
+        case NetworkMessageHeader::PLAYER_POSITION:
         {
             {
                 std::lock_guard<std::mutex> lock(m_otherPlayersMutex);
-                m_otherPlayers[message.playerId] = message.position;
+                m_otherPlayers[message.header.playerId] = message.position;
             }
             
             if (m_onPlayerPosition) {
-                m_onPlayerPosition(message.playerId, message.position);
+                m_onPlayerPosition(message.header.playerId, message.position);
             }
             break;
         }
         
-        case NetworkMessage::PLAYER_LIST:
+        case NetworkMessageHeader::PLAYER_LIST:
         {
             {
                 std::lock_guard<std::mutex> lock(m_otherPlayersMutex);
-                m_otherPlayers[message.playerId] = message.position;
+                m_otherPlayers[message.header.playerId] = message.position;
             }
             
             // This is an existing player from when we joined
-            std::cout << "Existing player " << message.playerId << " in game" << std::endl;
+            std::cout << "Existing player " << message.header.playerId << " in game" << std::endl;
             break;
         }
         
-        case NetworkMessage::WORLD_SEED:
+        case NetworkMessageHeader::WORLD_SEED:
         {
             std::cout << "Received world seed: " << message.worldSeed << std::endl;
             
@@ -405,7 +406,7 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
             break;
         }
         
-        case NetworkMessage::TIME_SYNC:
+        case NetworkMessageHeader::TIME_SYNC:
         {
             std::cout << "Received game time sync: " << message.gameTime << std::endl;
             
@@ -415,46 +416,42 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
             break;
         }
         
-        case NetworkMessage::BLOCK_BREAK:
+        case NetworkMessageHeader::BLOCK_BREAK:
         {
-            std::cout << "Player " << message.playerId << " broke block at (" 
-                      << message.blockPos.x << ", " << message.blockPos.y << ", " << message.blockPos.z << ")" << std::endl;
+            std::cout << "Player " << message.header.playerId << " broke block at (" 
+                      << message.blockData.x << ", " << message.blockData.y << ", " << message.blockData.z << ")" << std::endl;
             
             if (m_onBlockBreak) {
-                m_onBlockBreak(message.playerId, message.blockPos.x, message.blockPos.y, message.blockPos.z);
+                m_onBlockBreak(message.header.playerId, message.blockData.x, message.blockData.y, message.blockData.z);
             }
             break;
         }
         
-        case NetworkMessage::BLOCK_UPDATE:
+        case NetworkMessageHeader::BLOCK_UPDATE:
         {
-            std::cout << "[CLIENT] *** PROCESSING BLOCK UPDATE MESSAGE *** Player " << message.playerId << " updated block at (" 
-                      << message.blockUpdate.x << ", " << message.blockUpdate.y << ", " << message.blockUpdate.z 
-                      << ") to type " << (int)message.blockUpdate.blockType << std::endl;
+            std::cout << "[CLIENT] *** PROCESSING BLOCK UPDATE MESSAGE *** Player " << message.header.playerId << " updated block at (" 
+                      << message.blockData.x << ", " << message.blockData.y << ", " << message.blockData.z 
+                      << ") to type " << (int)message.blockData.blockType << std::endl;
             
             if (m_onBlockUpdate) {
-                m_onBlockUpdate(message.playerId, message.blockUpdate.x, message.blockUpdate.y, message.blockUpdate.z, message.blockUpdate.blockType);
+                m_onBlockUpdate(message.header.playerId, message.blockData.x, message.blockData.y, message.blockData.z, message.blockData.blockType);
             }
             break;
         }
         
-        case NetworkMessage::CHUNK_DATA:
+        case NetworkMessageHeader::CHUNK_DATA:
         {
-            std::cout << "[CLIENT] Received chunk data (" 
-                      << message.chunkData.chunkX << ", " << message.chunkData.chunkZ << ")" << std::endl;
-            
-            if (m_onChunkData) {
-                m_onChunkData(message.chunkData.chunkX, message.chunkData.chunkZ, message.chunkData.blocks);
-            }
+            // TODO: Handle chunk data with separate ChunkDataMessage
+            std::cout << "[CLIENT] CHUNK_DATA case - needs separate handler for ChunkDataMessage" << std::endl;
             break;
         }
         
-        case NetworkMessage::MY_PLAYER_ID:
+        case NetworkMessageHeader::MY_PLAYER_ID:
         {
-            std::cout << "[CLIENT] Received my player ID: " << message.playerId << std::endl;
+            std::cout << "[CLIENT] Received my player ID: " << message.header.playerId << std::endl;
             
             if (m_onMyPlayerId) {
-                m_onMyPlayerId(message.playerId);
+                m_onMyPlayerId(message.header.playerId);
             }
             break;
         }
