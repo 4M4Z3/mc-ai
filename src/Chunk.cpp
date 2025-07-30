@@ -142,25 +142,25 @@ void Chunk::GenerateMesh(const World* world, const BlockManager* blockManager) {
                             if (blockType == BlockType::GRASS) {
                                 // Group grass faces by face type for different textures
                                 if (face == FACE_TOP) {
-                                    AddFaceToMesh(grassFaceVertices[GRASS_TOP], x, y, z, face, world);
+                                    AddFaceToMesh(grassFaceVertices[GRASS_TOP], x, y, z, face, world, blockManager);
                                 } else if (face == FACE_BOTTOM) {
-                                    AddFaceToMesh(grassFaceVertices[GRASS_BOTTOM], x, y, z, face, world);
+                                    AddFaceToMesh(grassFaceVertices[GRASS_BOTTOM], x, y, z, face, world, blockManager);
                                 } else {
                                     // Side faces (FRONT, BACK, LEFT, RIGHT) - flip texture vertically  
-                                    AddFaceToMesh(grassFaceVertices[GRASS_SIDE], x, y, z, face, world, true);
+                                    AddFaceToMesh(grassFaceVertices[GRASS_SIDE], x, y, z, face, world, blockManager, true);
                                 }
                             } else if (blockType == BlockType::OAK_LOG || blockType == BlockType::BIRCH_LOG || blockType == BlockType::DARK_OAK_LOG) {
                                 // Handle log blocks - top/bottom use different texture than sides
                                 if (face == FACE_TOP || face == FACE_BOTTOM) {
                                     // Top and bottom faces use log_top texture
-                                    AddFaceToMesh(logFaceVertices[GRASS_TOP], x, y, z, face, world);
+                                    AddFaceToMesh(logFaceVertices[GRASS_TOP], x, y, z, face, world, blockManager);
                                 } else {
                                     // Side faces (FRONT, BACK, LEFT, RIGHT) use log side texture
-                                    AddFaceToMesh(logFaceVertices[GRASS_SIDE], x, y, z, face, world);
+                                    AddFaceToMesh(logFaceVertices[GRASS_SIDE], x, y, z, face, world, blockManager);
                                 }
                             } else {
                                 // Add face vertices to the appropriate block type group
-                                AddFaceToMesh(blockVertices[blockType], x, y, z, face, world);
+                                AddFaceToMesh(blockVertices[blockType], x, y, z, face, world, blockManager);
                             }
                         }
                     }
@@ -450,7 +450,7 @@ Block Chunk::GetNeighborBlock(int x, int y, int z, int faceDirection, const Worl
     return Block(BlockType::AIR);
 }
 
-void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world, bool flipTextureV) const {
+void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world, const BlockManager* blockManager, bool flipTextureV) const {
     BlockType currentBlockType = m_blocks[x][y][z].GetType();
     // Convert local chunk coordinates to world position for rendering
     float worldX = static_cast<float>(m_chunkX * CHUNK_WIDTH + x);
@@ -467,10 +467,10 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
     switch (faceDirection) {
         case FACE_FRONT: { // +Z face
             // Calculate AO for each vertex of the front face
-            float ao0 = CalculateVertexAO(x, y, z, FACE_FRONT, 0, world); // Bottom-left
-            float ao1 = CalculateVertexAO(x, y, z, FACE_FRONT, 1, world); // Bottom-right  
-            float ao2 = CalculateVertexAO(x, y, z, FACE_FRONT, 2, world); // Top-right
-            float ao3 = CalculateVertexAO(x, y, z, FACE_FRONT, 3, world); // Top-left
+            float ao0 = CalculateVertexAO(x, y, z, FACE_FRONT, 0, world, blockManager); // Bottom-left
+            float ao1 = CalculateVertexAO(x, y, z, FACE_FRONT, 1, world, blockManager); // Bottom-right  
+            float ao2 = CalculateVertexAO(x, y, z, FACE_FRONT, 2, world, blockManager); // Top-right
+            float ao3 = CalculateVertexAO(x, y, z, FACE_FRONT, 3, world, blockManager); // Top-left
             
             float frontVertices[] = {
                 // Triangle 1: x, y, z, ao, u, v
@@ -486,10 +486,10 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             break;
         }
         case FACE_BACK: { // -Z face
-            float ao0 = CalculateVertexAO(x, y, z, FACE_BACK, 0, world);
-            float ao1 = CalculateVertexAO(x, y, z, FACE_BACK, 1, world);
-            float ao2 = CalculateVertexAO(x, y, z, FACE_BACK, 2, world);
-            float ao3 = CalculateVertexAO(x, y, z, FACE_BACK, 3, world);
+            float ao0 = CalculateVertexAO(x, y, z, FACE_BACK, 0, world, blockManager);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_BACK, 1, world, blockManager);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_BACK, 2, world, blockManager);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_BACK, 3, world, blockManager);
             
             float backVertices[] = {
                 worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, vBottom,
@@ -503,10 +503,10 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             break;
         }
         case FACE_LEFT: { // -X face
-            float ao0 = CalculateVertexAO(x, y, z, FACE_LEFT, 0, world);
-            float ao1 = CalculateVertexAO(x, y, z, FACE_LEFT, 1, world);
-            float ao2 = CalculateVertexAO(x, y, z, FACE_LEFT, 2, world);
-            float ao3 = CalculateVertexAO(x, y, z, FACE_LEFT, 3, world);
+            float ao0 = CalculateVertexAO(x, y, z, FACE_LEFT, 0, world, blockManager);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_LEFT, 1, world, blockManager);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_LEFT, 2, world, blockManager);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_LEFT, 3, world, blockManager);
             
             float leftVertices[] = {
                 worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, vBottom,
@@ -520,10 +520,10 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             break;
         }
         case FACE_RIGHT: { // +X face
-            float ao0 = CalculateVertexAO(x, y, z, FACE_RIGHT, 0, world);
-            float ao1 = CalculateVertexAO(x, y, z, FACE_RIGHT, 1, world);
-            float ao2 = CalculateVertexAO(x, y, z, FACE_RIGHT, 2, world);
-            float ao3 = CalculateVertexAO(x, y, z, FACE_RIGHT, 3, world);
+            float ao0 = CalculateVertexAO(x, y, z, FACE_RIGHT, 0, world, blockManager);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_RIGHT, 1, world, blockManager);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_RIGHT, 2, world, blockManager);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_RIGHT, 3, world, blockManager);
             
             float rightVertices[] = {
                 worldX + 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 1.0f, vBottom,
@@ -537,10 +537,10 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             break;
         }
         case FACE_BOTTOM: { // -Y face
-            float ao0 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 0, world);
-            float ao1 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 1, world);
-            float ao2 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 2, world);
-            float ao3 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 3, world);
+            float ao0 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 0, world, blockManager);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 1, world, blockManager);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 2, world, blockManager);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_BOTTOM, 3, world, blockManager);
             
             float bottomVertices[] = {
                 worldX - 0.5f, worldY - 0.5f, worldZ - 0.5f, ao0, 0.0f, 0.0f,
@@ -554,10 +554,10 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
             break;
         }
         case FACE_TOP: { // +Y face
-            float ao0 = CalculateVertexAO(x, y, z, FACE_TOP, 0, world);
-            float ao1 = CalculateVertexAO(x, y, z, FACE_TOP, 1, world);
-            float ao2 = CalculateVertexAO(x, y, z, FACE_TOP, 2, world);
-            float ao3 = CalculateVertexAO(x, y, z, FACE_TOP, 3, world);
+            float ao0 = CalculateVertexAO(x, y, z, FACE_TOP, 0, world, blockManager);
+            float ao1 = CalculateVertexAO(x, y, z, FACE_TOP, 1, world, blockManager);
+            float ao2 = CalculateVertexAO(x, y, z, FACE_TOP, 2, world, blockManager);
+            float ao3 = CalculateVertexAO(x, y, z, FACE_TOP, 3, world, blockManager);
             
             // Water blocks have lowered surface at 15/16 height (0.9375)
             float topY = worldY + 0.5f;
@@ -832,6 +832,64 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
         }
     }
     
+    // Generate tall grass and flowers in forest biomes
+    for (int x = 0; x < CHUNK_WIDTH; x++) {
+        for (int z = 0; z < CHUNK_DEPTH; z++) {
+            // Convert local chunk coordinates to world coordinates
+            int worldX = m_chunkX * CHUNK_WIDTH + x;
+            int worldZ = m_chunkZ * CHUNK_DEPTH + z;
+            
+            // Get biome for this position
+            BiomeType biomeType = BiomeSystem::GetBiomeType(worldX, worldZ, seed);
+            
+            // Only generate vegetation in forest biomes
+            if (biomeType == BiomeType::FOREST) {
+                // Find the surface height at this position
+                int surfaceY = -1;
+                for (int y = CHUNK_HEIGHT - 1; y >= 0; y--) {
+                    if (IsValidPosition(x, y, z) && m_blocks[x][y][z].GetType() == BlockType::GRASS) {
+                        surfaceY = y;
+                        break;
+                    }
+                }
+                
+                if (surfaceY != -1 && surfaceY + 1 < CHUNK_HEIGHT) {
+                    std::mt19937 vegRng(seed + worldX * 7919 + worldZ * 4441); // Different seed offset for vegetation
+                    
+                    // Check if there's air above the grass surface
+                    if (m_blocks[x][surfaceY + 1][z].GetType() == BlockType::AIR) {
+                        int vegChance = vegRng() % 100;
+                        
+                        if (vegChance < 25) { // 25% chance for tall grass
+                            if (blockManager) {
+                                BlockType tallGrassType = blockManager->GetBlockTypeByKey("tall_grass");
+                                if (tallGrassType != BlockType::AIR) {
+                                    m_blocks[x][surfaceY + 1][z].SetType(tallGrassType);
+                                }
+                            }
+                        } else if (vegChance < 30) { // 5% chance for flowers (rare)
+                            if (blockManager) {
+                                // Choose a random flower type
+                                std::vector<std::string> flowerTypes = {
+                                    "dandelion", "poppy", "azure_bluet", "allium", 
+                                    "cornflower", "lily_of_the_valley"
+                                };
+                                
+                                if (!flowerTypes.empty()) {
+                                    std::string chosenFlower = flowerTypes[vegRng() % flowerTypes.size()];
+                                    BlockType flowerType = blockManager->GetBlockTypeByKey(chosenFlower);
+                                    if (flowerType != BlockType::AIR) {
+                                        m_blocks[x][surfaceY + 1][z].SetType(flowerType);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     // Mark mesh as needing regeneration
     m_meshGenerated = false;
 }
@@ -929,7 +987,7 @@ Block Chunk::GetBlockAtOffset(int x, int y, int z, int dx, int dy, int dz, const
 
 // Calculate ambient occlusion for a specific vertex of a face
 // Simplified version - just samples blocks that would block ambient light to this vertex
-float Chunk::CalculateVertexAO(int x, int y, int z, int faceDirection, int vertexIndex, const World* world) const {
+float Chunk::CalculateVertexAO(int x, int y, int z, int faceDirection, int vertexIndex, const World* world, const BlockManager* blockManager) const {
     // Key insight: we need to sample blocks that are adjacent to where the vertex will be positioned
     // For a TOP face, vertices are on the top surface, so we sample blocks ABOVE that position
     // For a FRONT face, vertices are on the front surface, so we sample blocks IN FRONT of that position
@@ -1099,9 +1157,10 @@ float Chunk::CalculateVertexAO(int x, int y, int z, int faceDirection, int verte
     Block corner = GetBlockAtOffset(x, y, z, corner_dx, corner_dy, corner_dz, world);
     
     // Convert to boolean (solid = true, air = false)
-    bool s1 = !side1.IsAir();
-    bool s2 = !side2.IsAir();
-    bool c = !corner.IsAir();
+    // Ground blocks (flowers, saplings, etc.) should not contribute to ambient occlusion
+    bool s1 = !side1.IsAir() && (blockManager ? !blockManager->IsGround(side1.GetType()) : true);
+    bool s2 = !side2.IsAir() && (blockManager ? !blockManager->IsGround(side2.GetType()) : true);
+    bool c = !corner.IsAir() && (blockManager ? !blockManager->IsGround(corner.GetType()) : true);
     
     // Apply Minecraft's ambient occlusion formula
     if (s1 && s2) {
@@ -1242,10 +1301,10 @@ void Chunk::GenerateOakTree(int x, int z, int surfaceY, std::mt19937& rng, const
 }
 
 void Chunk::GenerateBirchTree(int x, int z, int surfaceY, std::mt19937& rng, const BlockManager* blockManager) {
-    // Birch tree: taller (5-7 blocks), thinner canopy
-    int trunkHeight = 5 + (rng() % 3);  // 5-7 blocks tall
+    // Birch tree: now using oak tree structure (dense, rounded canopy)
+    int trunkHeight = 4 + (rng() % 3);  // 4-6 blocks tall (same as oak)
     
-    // Generate trunk
+    // Generate trunk (using birch log but oak structure)
     for (int y = 1; y <= trunkHeight; y++) {
         int trunkY = surfaceY + y;
         if (trunkY < CHUNK_HEIGHT && IsValidPosition(x, trunkY, z)) {
@@ -1254,39 +1313,20 @@ void Chunk::GenerateBirchTree(int x, int z, int surfaceY, std::mt19937& rng, con
         }
     }
     
-    // Generate birch leaves (more sparse, taller canopy)
-    int leafStart = surfaceY + trunkHeight - 2;  // Start leaves 2 blocks below top
+    // Generate oak-style leaves but with birch leaves
+    int leafStart = surfaceY + trunkHeight - 1;  // Start leaves 1 block below top of trunk
     
-    // Layer 1: Bottom layer (small, 1x1 plus cross)
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dz = -1; dz <= 1; dz++) {
+    // Layer 1: Bottom layer of leaves (5x5)
+    for (int dx = -2; dx <= 2; dx++) {
+        for (int dz = -2; dz <= 2; dz++) {
             int leafX = x + dx;
             int leafY = leafStart;
             int leafZ = z + dz;
             
             if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
-                // Only center and cross pattern
-                if ((dx == 0 && dz == 0) || (abs(dx) + abs(dz) == 1)) {
-                    if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
-                        BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
-                        m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
-                    }
-                }
-            }
-        }
-    }
-    
-    // Layer 2: Middle layer (2x2 around center)
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dz = -1; dz <= 1; dz++) {
-            int leafX = x + dx;
-            int leafY = leafStart + 1;
-            int leafZ = z + dz;
-            
-            if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
-                // Skip corners sometimes for natural look
-                if (abs(dx) == 1 && abs(dz) == 1) {
-                    if (rng() % 3 == 0) continue;
+                // Skip corners for more natural look
+                if (abs(dx) == 2 && abs(dz) == 2) {
+                    if (rng() % 3 == 0) continue;  // 66% chance to skip corners
                 }
                 
                 if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
@@ -1297,7 +1337,28 @@ void Chunk::GenerateBirchTree(int x, int z, int surfaceY, std::mt19937& rng, con
         }
     }
     
-    // Layer 3: Top layer (cross pattern)
+    // Layer 2: Middle layer (5x5, denser)
+    for (int dx = -2; dx <= 2; dx++) {
+        for (int dz = -2; dz <= 2; dz++) {
+            int leafX = x + dx;
+            int leafY = leafStart + 1;
+            int leafZ = z + dz;
+            
+            if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
+                // More selective on edges
+                if (abs(dx) == 2 || abs(dz) == 2) {
+                    if (rng() % 2 == 0) continue;  // 50% chance for edges
+                }
+                
+                if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                    BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
+                    m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
+                }
+            }
+        }
+    }
+    
+    // Layer 3: Top layer (smaller, 3x3 plus some neighbors)
     for (int dx = -1; dx <= 1; dx++) {
         for (int dz = -1; dz <= 1; dz++) {
             int leafX = x + dx;
@@ -1305,27 +1366,20 @@ void Chunk::GenerateBirchTree(int x, int z, int surfaceY, std::mt19937& rng, con
             int leafZ = z + dz;
             
             if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
-                // Center and cross only
-                if ((dx == 0 && dz == 0) || (abs(dx) + abs(dz) == 1)) {
+                // Center and adjacent blocks
+                if (dx == 0 && dz == 0) {
+                    // Always place center
                     if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
                         BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
                         m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
                     }
+                } else if (abs(dx) + abs(dz) == 1) {
+                    // 75% chance for adjacent blocks
+                    if (rng() % 4 != 0 && m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
+                        BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
+                        m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
+                    }
                 }
-            }
-        }
-    }
-    
-    // Layer 4: Very top (just center, sometimes)
-    int leafX = x;
-    int leafY = leafStart + 3;
-    int leafZ = z;
-    
-    if (IsValidPosition(leafX, leafY, leafZ) && leafY < CHUNK_HEIGHT) {
-        if (rng() % 2 == 0) {  // 50% chance for top leaf
-            if (m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
-                BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
-                m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
             }
         }
     }
