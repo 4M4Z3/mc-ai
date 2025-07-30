@@ -373,15 +373,10 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                 
                 case NetworkMessageHeader::BLOCK_UPDATE:
                 {
-                    std::cout << "[SERVER] *** RECEIVED BLOCK UPDATE *** from Player " << playerId << " at (" 
-                              << message.blockData.x << ", " << message.blockData.y << ", " << message.blockData.z 
-                              << ") to type " << (int)message.blockData.blockType << std::endl;
-                    
                     // Apply block update to server world
                     if (m_world) {
                         m_world->SetBlock(message.blockData.x, message.blockData.y, message.blockData.z, 
                                         static_cast<BlockType>(message.blockData.blockType));
-                        std::cout << "[SERVER] Applied block update to server world" << std::endl;
                     }
                     
                     // Set the player ID for the message
@@ -389,7 +384,6 @@ void Server::HandleClient(socket_t clientSocket, uint32_t playerId) {
                     
                     // Broadcast to ALL clients (including sender for consistency)
                     BroadcastToAllClients(message);
-                    std::cout << "[SERVER] *** BROADCASTED BLOCK UPDATE *** to all clients" << std::endl;
                     break;
                 }
                 
