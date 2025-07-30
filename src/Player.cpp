@@ -7,14 +7,15 @@
 #include <algorithm>
 #include <iostream> // Added for std::cout
 #include <vector> // Added for std::vector
+#include <chrono> // Added for jump delay timing
 
 Player::Player() : m_position(0.0f, 64.0f, 0.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
-                   m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false) {
+                   m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f) {
     UpdateVectors();
 }
 
 Player::Player(float x, float y, float z) : m_position(x, y, z), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
-                                            m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false) {
+                                            m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f) {
     UpdateVectors();
 }
 
@@ -222,6 +223,10 @@ void Player::Update(float deltaTime, World* world, const BlockManager* blockMana
             // We hit the ground
             m_verticalVelocity = 0.0f;
             m_isOnGround = true;
+        } else if (m_verticalVelocity > 0 && result.y < gravityPosition.y) {
+            // We were moving up but hit a ceiling - stop upward velocity
+            m_verticalVelocity = 0.0f;
+            m_isOnGround = false;
         } else {
             m_isOnGround = false;
         }
@@ -238,13 +243,27 @@ bool Player::CheckCollision(const Vec3& newPosition, World* world, const BlockMa
     
     float playerWidth = GetPlayerWidth();
     float halfWidth = playerWidth / 2.0f;
+    float playerHeight = GetPlayerHeight(); // Use actual player height (1.8 blocks)
     
-    // Check collision for a 2-block tall player
-    // Bottom block (feet/legs): y to y+1
-    // Top block (torso/head): y+1 to y+2
+    // Check collision for the player's actual height
+    // Check at multiple heights within the player's full height range
+    std::vector<float> heightsToCheck;
     
-    for (int blockLevel = 0; blockLevel < 2; ++blockLevel) { // 2 blocks tall
-        float yCheck = newPosition.y + blockLevel; // Check at y+0 and y+1
+    // Always check feet level
+    heightsToCheck.push_back(0.0f);
+    
+    // Check intermediate heights every 0.5 blocks 
+    for (float h = 0.5f; h < playerHeight; h += 0.5f) {
+        heightsToCheck.push_back(h);
+    }
+    
+    // Always check the very top (head level)
+    if (playerHeight > 0.1f) {
+        heightsToCheck.push_back(playerHeight - 0.01f); // Just below the head
+    }
+    
+    for (float heightOffset : heightsToCheck) {
+        float yCheck = newPosition.y + heightOffset;
         
         // Check multiple points around the player's circumference for precise collision
         // Use symmetric sampling around the center point
@@ -361,8 +380,11 @@ Vec3 Player::HandleCollision(const Vec3& newPosition, World* world, const BlockM
         // We're falling and hit a solid (non-ground) block - land on top
         float groundLevel = FindGroundLevel(Vec3(result.x, newPosition.y, result.z), world, blockManager);
         result.y = groundLevel;
+    } else if (newPosition.y > m_position.y) {
+        // Moving up but hit ceiling - allow partial movement up to where we hit
+        float maxUpwardMovement = FindCeilingLevel(Vec3(result.x, m_position.y, result.z), newPosition.y, world, blockManager);
+        result.y = maxUpwardMovement;
     }
-    // If moving up and hit ceiling, just keep current Y position (result.y = m_position.y)
     
     return result;
 }
@@ -386,6 +408,34 @@ float Player::FindGroundLevel(const Vec3& position, World* world, const BlockMan
     return position.y;
 }
 
+float Player::FindCeilingLevel(const Vec3& position, float intendedY, World* world, const BlockManager* blockManager) const {
+    if (!world) return intendedY;
+    
+    float currentY = position.y;
+    float maxY = intendedY;
+    
+    // Use very small increments for extremely precise ceiling detection
+    float testY = currentY;
+    float increment = 0.001f; // Ultra-small steps for maximum precision
+    
+    while (testY < maxY) {
+        float nextTestY = std::min(testY + increment, maxY);
+        Vec3 testPos = Vec3(position.x, nextTestY, position.z);
+        
+        // Check if the player would collide with a block at this height
+        if (CheckCollision(testPos, world, blockManager)) {
+            // Hit a ceiling, return the last safe position
+            float safeY = std::max(currentY, testY - increment);
+            return safeY;
+        }
+        
+        testY = nextTestY;
+    }
+    
+    // No ceiling found within intended range
+    return maxY;
+}
+
 bool Player::IsOnGround(World* world, const BlockManager* blockManager) const {
     if (!world) return false;
     
@@ -394,12 +444,74 @@ bool Player::IsOnGround(World* world, const BlockManager* blockManager) const {
     return CheckGroundCollision(testPos, world, blockManager);
 }
 
-void Player::Jump() {
-    // Only allow jumping if in survival mode and on ground
-    if (m_isSurvivalMode && m_isOnGround) {
-        m_verticalVelocity = JUMP_VELOCITY;
+void Player::Jump(World* world, const BlockManager* blockManager) {
+    // Only allow jumping if in survival mode and on ground and jump delay has passed
+    if (m_isSurvivalMode && m_isOnGround && CanJump()) {
+        // Check if there's a low ceiling above - if so, use reduced jump velocity
+        if (world && HasLowCeiling(world, blockManager)) {
+            m_verticalVelocity = LOW_CEILING_JUMP_VELOCITY; // Lower jump to prevent camera clipping
+        } else {
+            m_verticalVelocity = JUMP_VELOCITY; // Normal jump
+        }
+        
         m_isOnGround = false; // Player is no longer on ground after jumping
+        m_lastJumpTime = GetCurrentTime(); // Update last jump time
     }
+}
+
+bool Player::CanJump() const {
+    float currentTime = GetCurrentTime();
+    return (currentTime - m_lastJumpTime) >= JUMP_DELAY;
+}
+
+float Player::GetCurrentTime() const {
+    static auto startTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - startTime);
+    return duration.count() / 1000000.0f; // Convert to seconds
+}
+
+bool Player::HasLowCeiling(World* world, const BlockManager* blockManager) const {
+    if (!world) return false;
+    
+    float playerHeight = GetPlayerHeight(); // 1.8 blocks
+    
+    // Check for blocks within 1 block above the camera position (to account for looking up)
+    // This prevents camera clipping when jumping and looking up
+    float checkHeight = m_position.y + playerHeight + 1.0f; // Check 1 block above player head
+    
+    // Check in a small area around the player's head
+    float playerWidth = GetPlayerWidth();
+    float halfWidth = playerWidth / 2.0f;
+    
+    std::vector<std::pair<float, float>> testPoints = {
+        {0.0f, 0.0f},              // Center
+        {-halfWidth, 0.0f},        // Left
+        {halfWidth, 0.0f},         // Right  
+        {0.0f, -halfWidth},        // Front
+        {0.0f, halfWidth}          // Back
+    };
+    
+    for (const auto& offset : testPoints) {
+        float testX = m_position.x + offset.first;
+        float testZ = m_position.z + offset.second;
+        
+        // Check the block at head level + 1 block
+        int blockX = static_cast<int>(std::round(testX));
+        int blockY = static_cast<int>(std::floor(checkHeight));
+        int blockZ = static_cast<int>(std::round(testZ));
+        
+        Block block = world->GetBlock(blockX, blockY, blockZ);
+        if (block.IsSolid()) {
+            // Skip if it's a ground block
+            if (blockManager && blockManager->IsGround(block.GetType())) {
+                continue;
+            }
+            return true; // Found a low ceiling
+        }
+    }
+    
+    return false; // No low ceiling detected
 }
 
 void Player::ProcessMouseMovement(float xOffset, float yOffset, float sensitivity) {
@@ -465,7 +577,7 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world, con
     } else {
         // Survival mode - jumping only
         if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-            Jump();
+            Jump(world, blockManager);
         }
     }
     
@@ -550,9 +662,8 @@ Vec3 Player::GetUpVector() const {
 }
 
 Vec3 Player::GetCameraPosition() const {
-    // Camera should be at eye level, which is approximately 1.5 blocks above the feet
-    // Since m_position represents the center bottom of the player (feet level),
-    // we add the eye height offset (1.5f works for proper block indicator alignment)
+    // Camera should be at eye level - using 1.2f for more natural feeling
+    // Since m_position represents the center bottom of the player (feet level)
     return Vec3(m_position.x, m_position.y + 1.2f, m_position.z);
 }
 

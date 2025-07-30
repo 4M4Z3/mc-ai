@@ -112,9 +112,10 @@ public:
     bool CheckGroundCollision(const Vec3& position, class World* world, const BlockManager* blockManager = nullptr) const;
     Vec3 HandleCollision(const Vec3& newPosition, class World* world, const BlockManager* blockManager = nullptr);
     float FindGroundLevel(const Vec3& position, class World* world, const BlockManager* blockManager = nullptr) const;
+    float FindCeilingLevel(const Vec3& position, float intendedY, class World* world, const BlockManager* blockManager = nullptr) const;
     
     // Player dimensions
-    float GetPlayerHeight() const { return 2.0f; }  // 2 blocks tall
+    float GetPlayerHeight() const { return 1.8f; }  // 1.8 blocks tall (standard Minecraft player height)
     float GetPlayerWidth() const { return 0.6f; }   // 0.6 blocks wide
     
     // Mouse look
@@ -133,7 +134,9 @@ public:
     bool IsOnGround(class World* world, const BlockManager* blockManager = nullptr) const;
     
     // Jumping
-    void Jump();
+    void Jump(class World* world = nullptr, const BlockManager* blockManager = nullptr);
+    bool CanJump() const;  // Check if enough time has passed since last jump
+    bool HasLowCeiling(class World* world, const BlockManager* blockManager = nullptr) const;  // Check if there's a low ceiling above
     
     // Inventory access
     Inventory& GetInventory() { return m_inventory; }
@@ -152,21 +155,25 @@ private:
     bool m_isSurvivalMode;
     float m_verticalVelocity;  // For gravity
     bool m_isOnGround;
+    float m_lastJumpTime;      // Time of last jump (for jump delay)
     
     // Physics constants - Minecraft standard values
     static constexpr float GRAVITY = 32.0f;        // blocks per second squared (Minecraft standard)
     static constexpr float TERMINAL_VELOCITY = 78.4f; // Maximum fall speed
     static constexpr float JUMP_VELOCITY = 8.94f;  // Initial upward velocity when jumping (calculated for 1.25 block height)
+    static constexpr float LOW_CEILING_JUMP_VELOCITY = 3.0f;  // Reduced jump velocity when ceiling is low
+    static constexpr float JUMP_DELAY = 0.4f;      // Minimum time between jumps (in seconds)
     
     // Player positioning:
     // - m_position represents the CENTER of the player at GROUND LEVEL (feet)
     // - Camera is at m_position.y + 1.5 (eye level - aligns with head position in model)
-    // - Total player height is 1.8 blocks
+    // - Total player height is 1.8 blocks (standard Minecraft player height)
     // - Collision detection uses m_position as center for entire 1.8 block height
     // - Player spans from m_position.y to m_position.y + 1.8
     
     // Helper functions
     void UpdateVectors();
+    float GetCurrentTime() const;  // Get current time in seconds for jump delay
     Vec3 m_front;
     Vec3 m_right;
     Vec3 m_up;
