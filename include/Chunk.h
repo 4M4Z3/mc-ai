@@ -103,11 +103,11 @@ private:
     // Face culling helpers
     bool ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world, const BlockManager* blockManager = nullptr) const;
     Block GetNeighborBlock(int x, int y, int z, int faceDirection, const World* world) const;
-    void AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world, bool flipTextureV = false) const;
+    void AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world, const BlockManager* blockManager, bool flipTextureV = false) const;
     void AddCrossToMesh(std::vector<float>& vertices, int x, int y, int z, const World* world) const;
     
     // Ambient occlusion calculation
-    float CalculateVertexAO(int x, int y, int z, int faceDirection, int vertexIndex, const World* world) const;
+    float CalculateVertexAO(int x, int y, int z, int faceDirection, int vertexIndex, const World* world, const BlockManager* blockManager) const;
     Block GetBlockAtOffset(int x, int y, int z, int dx, int dy, int dz, const World* world) const;
     
     // Face direction constants
