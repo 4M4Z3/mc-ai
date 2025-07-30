@@ -216,7 +216,7 @@ void NetworkClient::SendMessagesThread() {
         
         if (hasMessage) {
             // Validate message before sending
-            if (message.type == 0 || message.type > NetworkMessage::MY_PLAYER_ID) {
+            if (message.type == 0 || message.type > NetworkMessage::BLOCK_UPDATE) {
                 std::cerr << "[CLIENT] ERROR: Invalid message type " << (int)message.type 
                           << " detected in send queue, skipping!" << std::endl;
                 continue; // Skip this corrupted message
