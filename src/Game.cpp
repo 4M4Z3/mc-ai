@@ -659,7 +659,7 @@ void Game::RenderGame() {
     
     // Show game UI
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(400, 250), ImGuiCond_Always);
     
     if (ImGui::Begin("Minecraft Clone", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse)) {
         // Use large font for the header
@@ -715,10 +715,6 @@ void Game::RenderGame() {
             }
         } else {
             ImGui::Text("Single Player Mode");
-        }
-        
-        if (ImGui::Button("Back to Menu", ImVec2(280, 50))) {
-            SetState(GameState::MAIN_MENU);
         }
     }
     ImGui::End();
