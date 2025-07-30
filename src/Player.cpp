@@ -319,9 +319,10 @@ bool Player::CheckGroundCollision(const Vec3& position, World* world, const Bloc
             
             Block block = world->GetBlock(blockX, blockY, blockZ);
             if (block.IsSolid()) {
-                // Note: We don't skip ground blocks here because CheckGroundCollision
-                // is used for physics (gravity, jumping) and we want ground blocks 
-                // to still act as ground for standing on, just not block movement
+                // Skip collision if this is a ground block and we have BlockManager
+                if (blockManager && blockManager->IsGround(block.GetType())) {
+                    continue; // Don't treat ground blocks as solid ground for landing
+                }
                 return true; // Ground collision detected
             }
         }
@@ -350,11 +351,12 @@ Vec3 Player::HandleCollision(const Vec3& newPosition, World* world, const BlockM
     
     // Handle vertical movement (Y axis) - this is for gravity/jumping
     Vec3 testY = Vec3(result.x, newPosition.y, result.z);
+    
+    // Use the ground-block-skipping collision check - this will ignore ground blocks entirely
     if (!CheckCollision(testY, world, blockManager)) {
-        result.y = newPosition.y; // Y movement is safe
+        result.y = newPosition.y; // Y movement is safe (no collision with solid blocks)
     } else if (newPosition.y < m_position.y) {
-        // We're falling and hit the ground
-        // Find the exact ground level and place player on top
+        // We're falling and hit a solid (non-ground) block - land on top
         float groundLevel = FindGroundLevel(Vec3(result.x, newPosition.y, result.z), world, blockManager);
         result.y = groundLevel;
     }
