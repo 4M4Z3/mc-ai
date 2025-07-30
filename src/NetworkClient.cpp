@@ -174,9 +174,6 @@ void NetworkClient::SendBlockUpdate(int32_t x, int32_t y, int32_t z, uint8_t blo
     message.blockData.z = z;
     message.blockData.blockType = blockType;
     
-    std::cout << "[CLIENT] Creating block update message - type: " << (int)message.header.type 
-              << ", coords: (" << x << ", " << y << ", " << z << "), blockType: " << (int)blockType << std::endl;
-    
     QueueMessage(message);
 }
 
@@ -429,10 +426,6 @@ void NetworkClient::ProcessMessage(const NetworkMessage& message) {
         
         case NetworkMessageHeader::BLOCK_UPDATE:
         {
-            std::cout << "[CLIENT] *** PROCESSING BLOCK UPDATE MESSAGE *** Player " << message.header.playerId << " updated block at (" 
-                      << message.blockData.x << ", " << message.blockData.y << ", " << message.blockData.z 
-                      << ") to type " << (int)message.blockData.blockType << std::endl;
-            
             if (m_onBlockUpdate) {
                 m_onBlockUpdate(message.header.playerId, message.blockData.x, message.blockData.y, message.blockData.z, message.blockData.blockType);
             }

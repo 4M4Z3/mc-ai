@@ -458,23 +458,14 @@ void Game::UpdateGame() {
         while (!m_pendingBlockUpdates.empty()) {
             const PendingBlockUpdate& update = m_pendingBlockUpdates.front();
             
-            std::cout << "[CLIENT] Processing queued block update from player " << update.playerId 
-                      << " at (" << update.x << ", " << update.y << ", " << update.z 
-                      << ") to type " << (int)update.blockType << std::endl;
-            
             // Apply block update to client world (safe to call OpenGL from main thread)
             if (m_world) {
                 try {
                     // Use efficient mesh update method
                     m_world->SetBlockWithMeshUpdate(update.x, update.y, update.z, static_cast<BlockType>(update.blockType));
-                    std::cout << "[CLIENT] Applied block update at (" << update.x << ", " << update.y << ", " << update.z 
-                              << ") to type " << (int)update.blockType << " with incremental mesh update" << std::endl;
                 } catch (const std::exception& e) {
                     std::cerr << "[CLIENT] Error processing block update: " << e.what() << std::endl;
                 }
-            } else {
-                std::cout << "[CLIENT] Warning: No world available for block update at (" 
-                          << update.x << ", " << update.y << ", " << update.z << ")" << std::endl;
             }
             
             m_pendingBlockUpdates.pop();
@@ -865,10 +856,7 @@ void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int m
                 
                 // Send to server for synchronization with other clients using the new streaming system
                 if (s_instance->m_networkClient && s_instance->m_networkClient->IsConnected()) {
-                    std::cout << "[CLIENT] *** SENDING BLOCK UPDATE *** to server at (" << blockX << ", " << blockY << ", " << blockZ << ") to AIR" << std::endl;
                     s_instance->m_networkClient->SendBlockUpdate(blockX, blockY, blockZ, static_cast<uint8_t>(BlockType::AIR));
-                } else {
-                    std::cout << "[CLIENT] *** WARNING *** Network client not connected, cannot send block update" << std::endl;
                 }
             }
         }
@@ -1325,8 +1313,6 @@ void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t
 }
 
 void Game::OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType) {
-    std::cout << "[CLIENT] *** RECEIVED BLOCK UPDATE *** from player " << playerId << " at (" << x << ", " << y << ", " << z << ") to type " << (int)blockType << std::endl;
-    
     // Queue the block update for processing on the main thread (to avoid OpenGL calls from network thread)
     {
         std::lock_guard<std::mutex> lock(m_pendingBlockUpdatesMutex);
@@ -1338,8 +1324,6 @@ void Game::OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_
         update.blockType = blockType;
         m_pendingBlockUpdates.push(update);
     }
-    
-    std::cout << "[CLIENT] Queued block update for main thread processing" << std::endl;
 }
 
 void Game::OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
