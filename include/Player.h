@@ -9,10 +9,12 @@
     #include <epoxy/gl.h>
 #endif
 #include <GLFW/glfw3.h>
+#include "Inventory.h"
 
 // Forward declarations
 class World;
 class BlockManager;
+class ItemManager;
 
 // Simple 3D vector and matrix structures
 struct Vec3 {
@@ -132,6 +134,11 @@ public:
     
     // Jumping
     void Jump();
+    
+    // Inventory access
+    Inventory& GetInventory() { return m_inventory; }
+    const Inventory& GetInventory() const { return m_inventory; }
+    void InitializeTestInventory(ItemManager* itemManager);
 
 private:
     Vec3 m_position;  // Player position at CENTER of feet level (ground level)
@@ -163,4 +170,7 @@ private:
     Vec3 m_front;
     Vec3 m_right;
     Vec3 m_up;
+    
+    // Inventory
+    Inventory m_inventory;
 }; 

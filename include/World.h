@@ -7,8 +7,8 @@
 #include <memory>
 #include <random>
 
-// World dimensions (8x8 chunks centered around origin)
-constexpr int WORLD_SIZE = 8;
+// World dimensions (10x10 chunks centered around origin)
+constexpr int WORLD_SIZE = 10;
 
 class World {
 public:
@@ -53,8 +53,8 @@ public:
     int FindHighestBlock(int worldX, int worldZ) const;
 
 private:
-    // 6x6 grid of chunks: [x][z] where x,z are 0 to 5
-    // Maps to chunk coordinates: (-3,-3) to (2,2)
+    // 10x10 grid of chunks: [x][z] where x,z are 0 to 9
+    // Maps to chunk coordinates: (-5,-5) to (4,4)
     std::array<std::array<std::unique_ptr<Chunk>, WORLD_SIZE>, WORLD_SIZE> m_chunks;
     
     int m_seed;

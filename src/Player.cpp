@@ -1,6 +1,8 @@
 #include "Player.h"
 #include "World.h"
 #include "BlockManager.h"
+#include "Item.h"
+#include "Debug.h"
 #include <cmath>
 #include <algorithm>
 #include <iostream> // Added for std::cout
@@ -551,7 +553,7 @@ Vec3 Player::GetCameraPosition() const {
     // Camera should be at eye level, which is approximately 1.5 blocks above the feet
     // Since m_position represents the center bottom of the player (feet level),
     // we add the eye height offset (1.5f works for proper block indicator alignment)
-    return Vec3(m_position.x, m_position.y + 1.5f, m_position.z);
+    return Vec3(m_position.x, m_position.y + 1.2f, m_position.z);
 }
 
 void Player::UpdateVectors() {
@@ -591,4 +593,13 @@ void Player::UpdateVectors() {
     m_up.x /= length;
     m_up.y /= length;
     m_up.z /= length;
+}
+
+void Player::InitializeTestInventory(ItemManager* itemManager) {
+    if (itemManager) {
+        m_inventory.populateTestHotbar(itemManager);
+        DEBUG_INVENTORY("Player inventory initialized with test items");
+    } else {
+        DEBUG_WARNING("ItemManager is null, could not initialize test inventory");
+    }
 } 

@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "Debug.h"
 #include <iostream>
 #include <ctime>
 #include <cstring>
@@ -51,7 +52,9 @@ Game::Game() :
     m_fontDefault(nullptr),
     m_fontLarge(nullptr),
     m_fontTitle(nullptr),
-    m_showPauseMenu(false)
+    m_showPauseMenu(false),
+    m_showInventory(false),
+    m_selectedHotbarSlot(0)
 {
     s_instance = this;
 }
@@ -115,8 +118,8 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     glfwGetFramebufferSize(m_window, &framebufferWidth, &framebufferHeight);
     m_renderer.SetViewport(framebufferWidth, framebufferHeight);
     
-    std::cout << "Window size: " << windowWidth << "x" << windowHeight << std::endl;
-    std::cout << "Framebuffer size: " << framebufferWidth << "x" << framebufferHeight << std::endl;
+    DEBUG_INFO("Window size: " << windowWidth << "x" << windowHeight);
+    DEBUG_INFO("Framebuffer size: " << framebufferWidth << "x" << framebufferHeight);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -134,7 +137,7 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     if (m_fontDefault == nullptr) {
         std::cerr << "Warning: Failed to load Minecraft font from " << fontPath << ", using default font" << std::endl;
     } else {
-        std::cout << "Successfully loaded Minecraft font in multiple sizes!" << std::endl;
+        DEBUG_INFO("Successfully loaded Minecraft font in multiple sizes!");
         io.FontDefault = m_fontDefault; // Set 16pt as default font
     }
 
@@ -150,8 +153,17 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+    // Initialize item system
+    m_itemManager = std::make_unique<ItemManager>();
+    if (!m_itemManager->loadFromConfig("items_config.json")) {
+        std::cerr << "Warning: Failed to load items config, inventory will be empty" << std::endl;
+    }
+
     // Create player
     m_player = std::make_unique<Player>(0.0f, 5.0f, 3.0f);
+    
+    // Initialize player's inventory with test items
+    m_player->InitializeTestInventory(m_itemManager.get());
 
     // Initialize server discovery
     m_serverDiscovery = std::make_unique<ServerDiscovery>();
@@ -160,7 +172,7 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
         // Don't fail completely, just continue without server discovery
     }
 
-    std::cout << "Game initialized successfully!" << std::endl;
+    DEBUG_INFO("Game initialized successfully!");
     return true;
 }
 
@@ -253,7 +265,7 @@ void Game::ProcessInput() {
     // ESC key handling is done in KeyCallback
     
     // Player movement (only in game state and not paused)
-    if (m_currentState == GameState::GAME && m_player && !m_showPauseMenu) {
+    if (m_currentState == GameState::GAME && m_player && !m_showPauseMenu && !m_showInventory) {
         m_player->ProcessInput(m_window, m_deltaTime, m_world.get(), &(m_renderer.m_blockManager));
     }
 }
@@ -263,8 +275,9 @@ void Game::SetState(GameState newState) {
     m_currentState = newState;
     std::cout << "State changed to: " << (newState == GameState::MAIN_MENU ? "MAIN_MENU" : "GAME") << std::endl;
     
-    // Reset pause menu when changing states
+    // Reset pause menu and inventory when changing states
     m_showPauseMenu = false;
+    m_showInventory = false;
     
     // Handle state transitions
     if (oldState == GameState::GAME && newState == GameState::MAIN_MENU) {
@@ -305,7 +318,7 @@ void Game::SetState(GameState newState) {
 void Game::UpdateMainMenu() {
     // Check if we received a world seed and need to create the world
     if (m_worldSeedReceived && !m_world) {
-        std::cout << "Creating world with seed " << m_worldSeed << " in main thread..." << std::endl;
+        DEBUG_INFO("Creating world with seed " << m_worldSeed << " in main thread...");
         
         try {
             // Create world with server-provided seed and regenerate with colorful blocks
@@ -314,14 +327,18 @@ void Game::UpdateMainMenu() {
             // Regenerate with colorful blocks using renderer's BlockManager
             // Access BlockManager from renderer to generate colorful world
             m_world->RegenerateWithSeed(m_worldSeed, &(m_renderer.m_blockManager));
-            std::cout << "World created with colorful blocks!" << std::endl;
+            DEBUG_INFO("World created with colorful blocks!");
             
             // Create player immediately after world creation
             if (!m_player) {
-                std::cout << "Creating player at spawn position..." << std::endl;
+                DEBUG_INFO("Creating player at spawn position...");
                 float spawnY = static_cast<float>(m_world->FindHighestBlock(0, 0));
                 m_player = std::make_unique<Player>(0.0f, spawnY, 0.0f);
-                std::cout << "Player created at spawn position (0, " << spawnY << ", 0)" << std::endl;
+                
+                // Initialize player's inventory with test items
+                m_player->InitializeTestInventory(m_itemManager.get());
+                
+                DEBUG_INFO("Player created at spawn position (0, " << spawnY << ", 0)");
             }
             
             // Request initial chunks around spawn position from server
@@ -337,9 +354,9 @@ void Game::UpdateMainMenu() {
                 
                 // For now, immediately change to game state
                 // TODO: Wait for chunks to load before changing state
-                std::cout << "Setting state to GAME..." << std::endl;
+                DEBUG_INFO("Setting state to GAME...");
                 SetState(GameState::GAME);
-                std::cout << "World created with server chunks, entering game!" << std::endl;
+                DEBUG_INFO("World created with server chunks, entering game!");
             }
         } catch (const std::exception& e) {
             std::cerr << "ERROR: Failed to create world or player: " << e.what() << std::endl;
@@ -634,6 +651,12 @@ void Game::RenderGame() {
         return; // Don't show game UI when paused
     }
     
+    // Show inventory overlay if active
+    if (m_showInventory) {
+        RenderInventory();
+        return; // Don't show game UI when inventory is open
+    }
+    
     // Show game UI
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_Always);
@@ -763,6 +786,178 @@ void Game::RenderPauseMenu() {
     ImGui::End();
 }
 
+void Game::RenderInventory() {
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Create a semi-transparent background overlay
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(io.DisplaySize);
+    
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.4f));
+    if (ImGui::Begin("InventoryBackground", nullptr, 
+                     ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
+                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | 
+                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
+                     ImGuiWindowFlags_NoInputs)) {
+        // Empty window just for background
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+    
+    // Custom inventory GUI dimensions
+    const float slotSize = 64.0f;
+    const float slotSpacing = 4.0f;
+    const float padding = 20.0f;
+    const float titleHeight = 40.0f;
+    const float sectionSpacing = 30.0f;
+    
+    // Calculate total window dimensions
+    const float inventoryWidth = (9 * slotSize) + (8 * slotSpacing) + (2 * padding);
+    const float inventoryHeight = titleHeight + (3 * slotSize) + (2 * slotSpacing) + sectionSpacing + 
+                                  slotSize + (2 * padding); // 3 rows + spacing + hotbar + padding
+    
+    // Center the inventory window
+    float centerX = (io.DisplaySize.x - inventoryWidth) * 0.5f;
+    float centerY = (io.DisplaySize.y - inventoryHeight) * 0.5f;
+    
+    ImGui::SetNextWindowSize(ImVec2(inventoryWidth, inventoryHeight), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(ImVec2(centerX, centerY), ImGuiCond_Always);
+    
+    // Style the main inventory window
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 2.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.15f, 0.15f, 0.2f, 0.95f)); // Dark blue-gray
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.4f, 0.4f, 0.5f, 0.8f)); // Light gray border
+    ImGui::PushStyleColor(ImGuiCol_TitleBg, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
+    
+    if (ImGui::Begin("Inventory", nullptr, 
+                     ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | 
+                     ImGuiWindowFlags_NoCollapse)) {
+        
+        if (m_player) {
+            const auto& inventory = m_player->GetInventory();
+            
+            // Render title
+            ImGui::PushFont(nullptr); // Use default font but make it prominent
+            ImGui::SetCursorPos(ImVec2(padding, padding));
+            ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "Inventory");
+            ImGui::PopFont();
+            
+            ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f); // Add space after title
+            
+            // Main inventory section (3x9 grid)
+            float startY = ImGui::GetCursorPosY();
+            
+            for (int row = 0; row < 3; ++row) {
+                for (int col = 0; col < 9; ++col) {
+                    int slotIndex = row * 9 + col;
+                    const auto& slot = inventory.getSlot(slotIndex);
+                    
+                    float slotX = padding + (col * (slotSize + slotSpacing));
+                    float slotY = startY + (row * (slotSize + slotSpacing));
+                    
+                    RenderCustomInventorySlot(slot, slotX, slotY, slotSize, slotIndex);
+                }
+            }
+            
+            // Add spacing between main inventory and hotbar
+            float hotbarY = startY + (3 * (slotSize + slotSpacing)) + sectionSpacing;
+            
+            // Hotbar label
+            ImGui::SetCursorPos(ImVec2(padding, hotbarY - 20.0f));
+            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.9f, 1.0f), "Hotbar");
+            
+            // Render hotbar slots (1x9 grid)
+            for (int i = 0; i < 9; ++i) {
+                const auto& slot = inventory.getHotbarSlot(i);
+                
+                float slotX = padding + (i * (slotSize + slotSpacing));
+                
+                RenderCustomInventorySlot(slot, slotX, hotbarY, slotSize, Inventory::HOTBAR_START + i);
+            }
+        }
+    }
+    ImGui::End();
+    ImGui::PopStyleColor(4); // Pop all color styles
+    ImGui::PopStyleVar(3); // Pop all var styles
+}
+
+void Game::RenderCustomInventorySlot(const InventorySlot& slot, float x, float y, float size, int slotIndex) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImVec2 canvas_pos = ImGui::GetWindowPos();
+    
+    // Slot position in screen coordinates
+    ImVec2 slot_min(canvas_pos.x + x, canvas_pos.y + y);
+    ImVec2 slot_max(slot_min.x + size, slot_min.y + size);
+    
+    // Check if mouse is hovering over this slot
+    bool is_hovered = ImGui::IsMouseHoveringRect(slot_min, slot_max);
+    
+    // Slot background color
+    ImU32 slot_bg_color;
+    if (slot.isEmpty()) {
+        slot_bg_color = is_hovered ? IM_COL32(70, 70, 80, 255) : IM_COL32(50, 50, 60, 255);
+    } else {
+        slot_bg_color = is_hovered ? IM_COL32(80, 80, 90, 255) : IM_COL32(60, 60, 70, 255);
+    }
+    
+    // Draw slot background
+    draw_list->AddRectFilled(slot_min, slot_max, slot_bg_color, 4.0f);
+    
+    // Draw slot border
+    ImU32 border_color = is_hovered ? IM_COL32(120, 120, 140, 255) : IM_COL32(80, 80, 100, 255);
+    draw_list->AddRect(slot_min, slot_max, border_color, 4.0f, 0, 2.0f);
+    
+    // Render item if slot is not empty
+    if (!slot.isEmpty() && slot.item) {
+        // Load item texture
+        unsigned int itemTexture = m_renderer.GetItemTexture(slot.item->icon);
+        
+        if (itemTexture != 0) {
+            // Item icon size and positioning (slightly smaller than slot for padding)
+            const float itemPadding = 8.0f;
+            const float itemSize = size - (itemPadding * 2);
+            ImVec2 item_min(slot_min.x + itemPadding, slot_min.y + itemPadding);
+            ImVec2 item_max(item_min.x + itemSize, item_min.y + itemSize);
+            
+            // Render item icon
+            draw_list->AddImage(reinterpret_cast<void*>(static_cast<uintptr_t>(itemTexture)),
+                               item_min, item_max);
+            
+            // Render quantity text if more than 1
+            if (slot.quantity > 1) {
+                char quantityText[16];
+                snprintf(quantityText, sizeof(quantityText), "%d", slot.quantity);
+                
+                // Position text in bottom-right corner of slot
+                ImVec2 text_size = ImGui::CalcTextSize(quantityText);
+                ImVec2 text_pos(slot_max.x - text_size.x - 4.0f, slot_max.y - text_size.y - 4.0f);
+                
+                // Draw text background for better readability
+                ImVec2 text_bg_min(text_pos.x - 2.0f, text_pos.y - 1.0f);
+                ImVec2 text_bg_max(text_pos.x + text_size.x + 2.0f, text_pos.y + text_size.y + 1.0f);
+                draw_list->AddRectFilled(text_bg_min, text_bg_max, IM_COL32(0, 0, 0, 180), 2.0f);
+                
+                // Draw quantity text
+                draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), quantityText);
+            }
+        }
+    }
+    
+    // Add hover tooltip with item information
+    if (is_hovered && !slot.isEmpty() && slot.item) {
+        ImGui::SetTooltip("%s\nQuantity: %d", slot.item->itemName.c_str(), slot.quantity);
+    }
+    
+    // Handle click interactions (basic for now)
+    if (is_hovered && ImGui::IsMouseClicked(0)) {
+        // TODO: Implement slot click handling for item interaction
+        std::cout << "Clicked slot " << slotIndex << std::endl;
+    }
+}
+
 std::unordered_map<uint32_t, PlayerPosition> Game::GetInterpolatedPlayerPositions() const {
     std::unordered_map<uint32_t, PlayerPosition> interpolatedPositions;
     
@@ -805,11 +1000,25 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
                 std::cout << "Frustum culling: " << (s_instance->m_renderer.m_enableFrustumCulling ? "ON" : "OFF") << std::endl;
             }
         }
+        
+        // Toggle inventory with E key
+        if (key == GLFW_KEY_E && action == GLFW_PRESS) {
+            if (s_instance->m_currentState == GameState::GAME && !s_instance->m_showPauseMenu) {
+                s_instance->m_showInventory = !s_instance->m_showInventory;
+                
+                // Update cursor visibility based on inventory state
+                if (s_instance->m_showInventory) {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                } else {
+                    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                }
+            }
+        }
     }
 }
 
 void Game::MouseCallback(GLFWwindow* window, double xpos, double ypos) {
-    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player && !s_instance->m_showPauseMenu) {
+    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player && !s_instance->m_showPauseMenu && !s_instance->m_showInventory) {
         if (s_instance->m_firstMouse) {
             s_instance->m_lastX = xpos;
             s_instance->m_lastY = ypos;
@@ -827,7 +1036,7 @@ void Game::MouseCallback(GLFWwindow* window, double xpos, double ypos) {
 }
 
 void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player && s_instance->m_world && !s_instance->m_showPauseMenu) {
+    if (s_instance && s_instance->m_currentState == GameState::GAME && s_instance->m_player && s_instance->m_world && !s_instance->m_showPauseMenu && !s_instance->m_showInventory) {
         if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
             // Cast ray to find target block
             RaycastResult raycast = s_instance->m_player->CastRay(s_instance->m_world.get(), 5.0f);
@@ -881,7 +1090,7 @@ void Game::StartHost() {
         m_isHost = true;
         
         // Give server time to fully initialize before client connects
-        std::cout << "Server started, waiting for initialization..." << std::endl;
+        DEBUG_INFO("Server started, waiting for initialization...");
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         
         // Also connect as a client to our own server
@@ -1378,7 +1587,58 @@ void Game::RenderHotbar() {
             ImGui::Image(reinterpret_cast<void*>(static_cast<uintptr_t>(hotbarTexture)), 
                         ImVec2(hotbarWidth, hotbarHeight));
             
-            // TODO: Add inventory item rendering and selection indicator
+            // Render items in hotbar slots
+            if (m_player) {
+                const auto& inventory = m_player->GetInventory();
+                
+                // Calculate slot dimensions and positions  
+                // The hotbar image is 364px wide (scaled to hotbarWidth), we want 9 evenly spaced slots
+                const float slotSize = 32.0f; // Size of each slot item (scaled up from 16px)
+                const float slotSpacing = 40.0f; // Space between slot centers 
+                const float firstSlotOffsetX = 8.0f; // Start offset from left edge (scaled)
+                const float slotOffsetY = 6.0f; // Vertical offset from top of hotbar (scaled)
+                
+                for (int i = 0; i < 9; ++i) {  // 9 hotbar slots
+                    const auto& slot = inventory.getHotbarSlot(i);
+                    
+                    if (!slot.isEmpty() && slot.item) {
+                        // Load item texture
+                        unsigned int itemTexture = m_renderer.GetItemTexture(slot.item->icon);
+                        
+                        if (itemTexture != 0) {
+                            // Calculate absolute position for this slot within the window
+                            // Position relative to the top-left of the window (not cursor)
+                            float slotX = firstSlotOffsetX + (i * slotSpacing);
+                            float slotY = slotOffsetY;
+                            
+                            // Set cursor position for this item
+                            ImGui::SetCursorPos(ImVec2(slotX, slotY));
+                            
+                            // Render item icon
+                            ImGui::Image(reinterpret_cast<void*>(static_cast<uintptr_t>(itemTexture)), 
+                                        ImVec2(slotSize, slotSize));
+                            
+                            // Render quantity text if more than 1
+                            if (slot.quantity > 1) {
+                                // Position text in bottom right of slot
+                                ImGui::SetCursorPos(ImVec2(slotX + slotSize - 16, 
+                                                         slotY + slotSize - 16));
+                                
+                                // Use small font for quantity
+                                if (m_fontSmall) {
+                                    ImGui::PushFont(m_fontSmall);
+                                }
+                                
+                                ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%d", slot.quantity);
+                                
+                                if (m_fontSmall) {
+                                    ImGui::PopFont();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     ImGui::End();

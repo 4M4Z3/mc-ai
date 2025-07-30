@@ -1,4 +1,5 @@
 #include "BlockManager.h"
+#include "Debug.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -308,7 +309,7 @@ bool BlockManager::ParseBlocksSection(const std::string& blocksContent) {
         AddBlock(currentBlockKey, currentBlock);
     }
     
-    std::cout << "Loaded " << (m_blocksByType.size() - 4) << " new blocks from JSON" << std::endl;
+    DEBUG_BLOCKS("Loaded " << (m_blocksByType.size() - 4) << " new blocks from JSON");
     return true;
 }
 

@@ -8,6 +8,7 @@
 #include "Server.h"
 #include "NetworkClient.h"
 #include "ServerDiscovery.h"
+#include "Item.h"
 #include <memory>
 #include <unordered_map>
 #include <chrono>
@@ -103,6 +104,9 @@ private:
     std::unique_ptr<World> m_world;
     std::unique_ptr<Player> m_player;
     
+    // Item system
+    std::unique_ptr<ItemManager> m_itemManager;
+    
     // Block targeting
     RaycastResult m_targetBlock;
     
@@ -169,6 +173,12 @@ private:
     
     // Pause menu
     bool m_showPauseMenu;
+    
+    // Inventory menu
+    bool m_showInventory;
+    
+    // Hotbar selection
+    int m_selectedHotbarSlot;
 
     // State management
     void SetState(GameState newState);
@@ -177,6 +187,9 @@ private:
     void RenderMainMenu();
     void RenderGame();
     void RenderPauseMenu();
+    void RenderInventory();
+    void RenderCustomInventorySlot(const InventorySlot& slot, float x, float y, float size, int slotIndex);
+    void RenderCustomHotbarSlot(const InventorySlot& slot, float x, float y, float size, int slotIndex, bool isSelected);
     void RenderHotbar();
     
     // Helper method to get current interpolated positions for rendering

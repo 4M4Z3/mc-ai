@@ -82,6 +82,11 @@ public:
 
     // Texture access for UI rendering
     unsigned int GetHotbarTexture() const { return m_hotbarTexture; }
+    unsigned int GetInventoryTexture() const { return m_inventoryTexture; }
+    
+    // Item texture management
+    unsigned int LoadItemTexture(const std::string& itemIconPath);
+    unsigned int GetItemTexture(const std::string& itemIconPath);
     unsigned int GetHotbarSelectionTexture() const { return m_hotbarSelectionTexture; }
 
     // Block management (public for world generation access)
@@ -132,12 +137,17 @@ private:
     // UI textures
     unsigned int m_hotbarTexture;
     unsigned int m_hotbarSelectionTexture;
+    unsigned int m_inventoryTexture;
+    
+    // Item textures cache
+    std::unordered_map<std::string, unsigned int> m_itemTextures;
     
     unsigned int LoadTexture(const std::string& filepath);
     unsigned int LoadTextureWithAlpha(const std::string& filepath);
     bool LoadBlockTextures();
     bool LoadSkyTextures();
     bool LoadHotbarTextures();
+    bool LoadInventoryTextures();
     
     // Projection matrix
     Mat4 m_projectionMatrix;

@@ -106,6 +106,8 @@ set(SOURCES
     src/Server.cpp
     src/NetworkClient.cpp
     src/ServerDiscovery.cpp
+    src/ItemManager.cpp
+    src/Inventory.cpp
 )
 
 # Header files

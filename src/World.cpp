@@ -23,17 +23,17 @@ World::World(int seed) : m_seed(seed) {
 }
 
 void World::InitializeChunks() {
-    // Initialize 8x8 grid of chunks centered around origin
-    // Array index [0][0] = chunk (-4, -4)
-    // Array index [4][4] = chunk (0, 0)  
-    // Array index [7][7] = chunk (3, 3)
+    // Initialize 10x10 grid of chunks centered around origin
+    // Array index [0][0] = chunk (-5, -5)
+    // Array index [5][5] = chunk (0, 0)  
+    // Array index [9][9] = chunk (4, 4)
     
     for (int x = 0; x < WORLD_SIZE; ++x) {
         for (int z = 0; z < WORLD_SIZE; ++z) {
             // Convert array index to chunk coordinates
-            // Array indices 0-7 map to chunk coordinates -4 to +3
-            int chunkX = x - 4;
-            int chunkZ = z - 4;
+            // Array indices 0-9 map to chunk coordinates -5 to +4
+            int chunkX = x - 5;
+            int chunkZ = z - 5;
             
             m_chunks[x][z] = std::make_unique<Chunk>(chunkX, chunkZ);
         }
@@ -263,12 +263,12 @@ bool World::IsValidWorldPosition(int worldX, int worldY, int worldZ) const {
         return false;
     }
     
-    // Check if position is within our 8x8 chunk world
+    // Check if position is within our 10x10 chunk world
     int chunkX, chunkZ, localX, localZ;
     WorldToChunkCoords(worldX, worldZ, chunkX, chunkZ, localX, localZ);
     
-    // Valid chunk coordinates are -4 to +3 for both X and Z
-    return (chunkX >= -4 && chunkX <= 3) && (chunkZ >= -4 && chunkZ <= 3);
+    // Valid chunk coordinates are -5 to +4 for both X and Z
+    return (chunkX >= -5 && chunkX <= 4) && (chunkZ >= -5 && chunkZ <= 4);
 }
 
 void World::WorldToChunkCoords(int worldX, int worldZ, int& chunkX, int& chunkZ, int& localX, int& localZ) const {
@@ -299,9 +299,9 @@ bool World::IsValidChunkIndex(int x, int z) const {
 
 void World::ChunkCoordsToArrayIndex(int chunkX, int chunkZ, int& arrayX, int& arrayZ) const {
     // Convert chunk coordinates to array indices
-    // Chunk coordinates -4 to +3 map to array indices 0 to 7
-    arrayX = chunkX + 4;
-    arrayZ = chunkZ + 4;
+    // Chunk coordinates -5 to +4 map to array indices 0 to 9
+    arrayX = chunkX + 5;
+    arrayZ = chunkZ + 5;
 } 
 
 int World::FindHighestBlock(int worldX, int worldZ) const {

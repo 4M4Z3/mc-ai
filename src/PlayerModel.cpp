@@ -1,4 +1,5 @@
 #include "PlayerModel.h"
+#include "Debug.h"
 #include <iostream>
 #include <cmath>  // For M_PI and fmod
 #include <filesystem>
@@ -399,7 +400,7 @@ bool PlayerModel::LoadSkins() {
                 if (textureID != 0) {
                     m_availableSkins.push_back(skinName);
                     m_skinTextures.push_back(textureID);
-                    std::cout << "Loaded skin: " << skinName << std::endl;
+                    DEBUG_TEXTURE("Loaded skin: " << skinName);
                 }
             }
         }
@@ -413,7 +414,7 @@ bool PlayerModel::LoadSkins() {
         return false;
     }
     
-    std::cout << "Loaded " << m_availableSkins.size() << " skins" << std::endl;
+    DEBUG_TEXTURE("Loaded " << m_availableSkins.size() << " skins");
     return true;
 }
 
@@ -424,7 +425,7 @@ void PlayerModel::AssignRandomSkin() {
     size_t randomIndex = dist(m_randomGenerator);
     
     m_currentSkinTexture = m_skinTextures[randomIndex];
-    std::cout << "Assigned random skin: " << m_availableSkins[randomIndex] << std::endl;
+    DEBUG_TEXTURE("Assigned random skin: " << m_availableSkins[randomIndex]);
 }
 
 void PlayerModel::SetSkin(const std::string& skinName) {
@@ -461,7 +462,7 @@ unsigned int PlayerModel::LoadSkinTexture(const std::string& skinPath) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         
-        std::cout << "Loaded skin texture: " << skinPath << " (" << width << "x" << height << ")" << std::endl;
+        DEBUG_TEXTURE("Loaded skin texture: " << skinPath << " (" << width << "x" << height << ")");
     } else {
         std::cerr << "Failed to load skin texture: " << skinPath << std::endl;
         std::cerr << "STB Error: " << stbi_failure_reason() << std::endl;

@@ -3,6 +3,7 @@
 #include "Chunk.h"
 #include "PlayerModel.h"
 #include "BiomeSystem.h"
+#include "Debug.h"
 #include <iostream>
 #include <string>
 #include <cmath>
@@ -119,6 +120,11 @@ bool Renderer::Initialize() {
         return false;
     }
     
+    if (!LoadInventoryTextures()) {
+        std::cerr << "Failed to load inventory textures" << std::endl;
+        return false;
+    }
+    
     // Get texture uniform location after loading textures
     m_textureLoc = glGetUniformLocation(m_shaderProgram, "blockTexture");
     m_colorTintLoc = glGetUniformLocation(m_shaderProgram, "colorTint");
@@ -139,7 +145,7 @@ bool Renderer::Initialize() {
     // Set initial viewport and projection
     SetViewport(m_viewportWidth, m_viewportHeight);
 
-    std::cout << "3D Renderer initialized successfully!" << std::endl;
+    DEBUG_INFO("3D Renderer initialized successfully!");
     return true;
 }
 
@@ -314,7 +320,7 @@ void Renderer::Clear() {
 }
 
 void Renderer::SetViewport(int width, int height) {
-    std::cout << "Setting viewport to: " << width << "x" << height << std::endl;
+    DEBUG_INFO("Setting viewport to: " << width << "x" << height);
     
     m_viewportWidth = width;
     m_viewportHeight = height;
@@ -324,7 +330,7 @@ void Renderer::SetViewport(int width, int height) {
     float aspect = (float)width / (float)height;
     m_projectionMatrix = CreateProjectionMatrix(65.0f, aspect, 0.1f, 100.0f);
     
-    std::cout << "Aspect ratio: " << aspect << std::endl;
+    DEBUG_INFO("Aspect ratio: " << aspect);
 }
 
 void Renderer::BeginFrame(const Player& player) {
@@ -374,8 +380,8 @@ void Renderer::RenderChunks(const World& world) {
             glBindTexture(GL_TEXTURE_2D, m_grassTopTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
-                    int chunkX = x - 3;
-                    int chunkZ = z - 3;
+                    int chunkX = x - 5;
+                    int chunkZ = z - 5;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                         ApplyBiomeTinting(blockType, chunkX, chunkZ, world.GetSeed());
@@ -389,8 +395,8 @@ void Renderer::RenderChunks(const World& world) {
             glBindTexture(GL_TEXTURE_2D, m_grassSideTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
-                    int chunkX = x - 3;
-                    int chunkZ = z - 3;
+                    int chunkX = x - 5;
+                    int chunkZ = z - 5;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                         chunk->RenderGrassMesh(Chunk::GRASS_SIDE);
@@ -404,8 +410,8 @@ void Renderer::RenderChunks(const World& world) {
             glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
-                    int chunkX = x - 3;
-                    int chunkZ = z - 3;
+                    int chunkX = x - 5;
+                    int chunkZ = z - 5;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                         ApplyBiomeTinting(blockType, chunkX, chunkZ, world.GetSeed());
@@ -420,8 +426,8 @@ void Renderer::RenderChunks(const World& world) {
             glBindTexture(GL_TEXTURE_2D, m_grassBottomTexture);
             for (int x = 0; x < WORLD_SIZE; ++x) {
                 for (int z = 0; z < WORLD_SIZE; ++z) {
-                    int chunkX = x - 3;
-                    int chunkZ = z - 3;
+                    int chunkX = x - 5;
+                    int chunkZ = z - 5;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                     if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                         chunk->RenderGrassMesh(Chunk::GRASS_BOTTOM);
@@ -528,8 +534,8 @@ void Renderer::RenderChunks(const World& world) {
                     // Render chunks with biome-based tinting per chunk
                     for (int x = 0; x < WORLD_SIZE; ++x) {
                         for (int z = 0; z < WORLD_SIZE; ++z) {
-                            int chunkX = x - 3;
-                            int chunkZ = z - 3;
+                            int chunkX = x - 5;
+                            int chunkZ = z - 5;
                             const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                             if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                                 ApplyBiomeTinting(blockType, chunkX, chunkZ, world.GetSeed());
@@ -545,9 +551,9 @@ void Renderer::RenderChunks(const World& world) {
                     for (int x = 0; x < WORLD_SIZE; ++x) {
                         for (int z = 0; z < WORLD_SIZE; ++z) {
                             // Convert array indices to chunk coordinates
-                            // Array indices 0-5 map to chunk coordinates -3 to +2
-                            int chunkX = x - 3;
-                            int chunkZ = z - 3;
+                            // Array indices 0-9 map to chunk coordinates -5 to +4
+                            int chunkX = x - 5;
+                            int chunkZ = z - 5;
                             const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
                             if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                                 chunk->RenderMeshForBlockType(blockType);
@@ -603,60 +609,14 @@ void Renderer::RenderBlockWireframe(const Vec3& blockPos, const World& world) {
     
     // Set up wireframe rendering
     glDisable(GL_CULL_FACE); // Disable face culling for wireframe
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Render as wireframe
     glLineWidth(2.0f); // Make wireframe lines thicker
     
-    // Render only visible faces by checking neighboring blocks
+    // Render the complete cube outline (12 lines)
     glBindVertexArray(m_wireframeVAO);
-    
-    // Check each face and render only if it's visible (neighboring block is air)
-    int faceOffset = 0;
-    
-    // Front face (+Z)
-    Block frontNeighbor = world.GetBlock((int)blockPos.x, (int)blockPos.y, (int)blockPos.z + 1);
-    if (!frontNeighbor.IsSolid()) {
-        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
-    }
-    faceOffset += 6;
-    
-    // Back face (-Z)
-    Block backNeighbor = world.GetBlock((int)blockPos.x, (int)blockPos.y, (int)blockPos.z - 1);
-    if (!backNeighbor.IsSolid()) {
-        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
-    }
-    faceOffset += 6;
-    
-    // Left face (-X)
-    Block leftNeighbor = world.GetBlock((int)blockPos.x - 1, (int)blockPos.y, (int)blockPos.z);
-    if (!leftNeighbor.IsSolid()) {
-        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
-    }
-    faceOffset += 6;
-    
-    // Right face (+X)
-    Block rightNeighbor = world.GetBlock((int)blockPos.x + 1, (int)blockPos.y, (int)blockPos.z);
-    if (!rightNeighbor.IsSolid()) {
-        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
-    }
-    faceOffset += 6;
-    
-    // Bottom face (-Y)
-    Block bottomNeighbor = world.GetBlock((int)blockPos.x, (int)blockPos.y - 1, (int)blockPos.z);
-    if (!bottomNeighbor.IsSolid()) {
-        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
-    }
-    faceOffset += 6;
-    
-    // Top face (+Y)
-    Block topNeighbor = world.GetBlock((int)blockPos.x, (int)blockPos.y + 1, (int)blockPos.z);
-    if (!topNeighbor.IsSolid()) {
-        glDrawArrays(GL_TRIANGLES, faceOffset, 6);
-    }
-    
+    glDrawArrays(GL_LINES, 0, 24); // 12 lines * 2 vertices per line = 24 vertices
     glBindVertexArray(0);
     
     // Restore rendering state
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Back to filled polygons
     glLineWidth(1.0f); // Reset line width
     glEnable(GL_CULL_FACE); // Re-enable face culling
 }
@@ -697,7 +657,7 @@ std::string Renderer::LoadShaderSource(const std::string& filepath) {
     file.close();
     
     std::string source = buffer.str();
-    std::cout << "Loaded shader from: " << filepath << std::endl;
+    DEBUG_SHADER("Loaded shader from: " << filepath);
     return source;
 }
 
@@ -745,7 +705,7 @@ bool Renderer::CreateShaders() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    std::cout << "Shaders loaded and compiled successfully!" << std::endl;
+    DEBUG_SHADER("Shaders loaded and compiled successfully!");
     return true;
 }
 
@@ -793,7 +753,7 @@ bool Renderer::CreatePlayerShaders() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    std::cout << "Player shaders loaded and compiled successfully!" << std::endl;
+    DEBUG_SHADER("Player shaders loaded and compiled successfully!");
     return true;
 }
 
@@ -841,60 +801,30 @@ bool Renderer::CreateWireframeShaders() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    std::cout << "Wireframe shaders loaded and compiled successfully!" << std::endl;
+    DEBUG_SHADER("Wireframe shaders loaded and compiled successfully!");
     return true;
 }
 
 bool Renderer::CreateWireframeGeometry() {
-    // Wireframe cube vertices (only positions)
+    // Wireframe cube edges (12 lines for cube outline)
     float wireframeVertices[] = {
-        // Front face
-        -0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
-
-        // Back face
-        -0.5f, -0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-
-        // Left face
-        -0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f, -0.5f,
-        -0.5f, -0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f,
-
-        // Right face
-         0.5f,  0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-         0.5f,  0.5f,  0.5f,
-
-        // Bottom face
-        -0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f,  0.5f,
-        -0.5f, -0.5f, -0.5f,
-
-        // Top face
-        -0.5f,  0.5f, -0.5f,
-        -0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-         0.5f,  0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f
+        // Bottom face edges (4 lines)
+        -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, -0.5f, // Bottom front edge
+         0.5f, -0.5f, -0.5f,  0.5f, -0.5f,  0.5f, // Bottom right edge
+         0.5f, -0.5f,  0.5f, -0.5f, -0.5f,  0.5f, // Bottom back edge
+        -0.5f, -0.5f,  0.5f, -0.5f, -0.5f, -0.5f, // Bottom left edge
+        
+        // Top face edges (4 lines)
+        -0.5f,  0.5f, -0.5f,  0.5f,  0.5f, -0.5f, // Top front edge
+         0.5f,  0.5f, -0.5f,  0.5f,  0.5f,  0.5f, // Top right edge
+         0.5f,  0.5f,  0.5f, -0.5f,  0.5f,  0.5f, // Top back edge
+        -0.5f,  0.5f,  0.5f, -0.5f,  0.5f, -0.5f, // Top left edge
+        
+        // Vertical edges (4 lines)
+        -0.5f, -0.5f, -0.5f, -0.5f,  0.5f, -0.5f, // Front left vertical
+         0.5f, -0.5f, -0.5f,  0.5f,  0.5f, -0.5f, // Front right vertical
+         0.5f, -0.5f,  0.5f,  0.5f,  0.5f,  0.5f, // Back right vertical
+        -0.5f, -0.5f,  0.5f, -0.5f,  0.5f,  0.5f  // Back left vertical
     };
 
     glGenVertexArrays(1, &m_wireframeVAO);
@@ -1028,7 +958,7 @@ unsigned int Renderer::LoadTexture(const std::string& filepath) {
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         
-        std::cout << "Loaded texture: " << filepath << " (" << width << "x" << height << ", " << nrChannels << " channels)" << std::endl;
+        DEBUG_TEXTURE("Loaded texture: " << filepath << " (" << width << "x" << height << ", " << nrChannels << " channels)");
     } else {
         std::cerr << "Failed to load texture: " << filepath << std::endl;
         std::cerr << "STB Error: " << stbi_failure_reason() << std::endl;
@@ -1059,7 +989,7 @@ unsigned int Renderer::LoadTextureWithAlpha(const std::string& filepath) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         
-        std::cout << "Loaded texture with alpha: " << filepath << " (" << width << "x" << height << ", forced to 4 channels)" << std::endl;
+        DEBUG_TEXTURE("Loaded texture with alpha: " << filepath << " (" << width << "x" << height << ", forced to 4 channels)");
     } else {
         std::cerr << "Failed to load texture: " << filepath << std::endl;
         std::cerr << "STB Error: " << stbi_failure_reason() << std::endl;
@@ -1139,7 +1069,7 @@ bool Renderer::LoadBlockTextures() {
         }
     }
     
-    std::cout << "Loaded textures for " << m_blockTextures.size() << " block types" << std::endl;
+    DEBUG_TEXTURE("Loaded textures for " << m_blockTextures.size() << " block types");
     return true;
 }
 
@@ -1158,7 +1088,7 @@ bool Renderer::LoadSkyTextures() {
         return false;
     }
     
-    std::cout << "Sky textures loaded successfully!" << std::endl;
+    DEBUG_TEXTURE("Sky textures loaded successfully!");
     return true;
 }
 
@@ -1177,7 +1107,19 @@ bool Renderer::LoadHotbarTextures() {
         return false;  
     }
     
-    std::cout << "Hotbar textures loaded successfully!" << std::endl;
+    DEBUG_TEXTURE("Hotbar textures loaded successfully!");
+    return true;
+}
+
+bool Renderer::LoadInventoryTextures() {
+    // Load inventory texture with alpha support
+    m_inventoryTexture = LoadTextureWithAlpha("assets/gui/container/inventory.png");
+    if (m_inventoryTexture == 0) {
+        std::cerr << "Failed to load inventory texture" << std::endl;
+        return false;
+    }
+    
+    DEBUG_TEXTURE("Inventory textures loaded successfully!");
     return true;
 }
 
@@ -1407,4 +1349,38 @@ void Renderer::ApplyBiomeTinting(BlockType blockType, int chunkX, int chunkZ, in
     
     // Apply the tint to the shader
     glUniform3f(m_colorTintLoc, r, g, b);
+}
+
+// Item texture management methods
+unsigned int Renderer::LoadItemTexture(const std::string& itemIconPath) {
+    // Check if texture is already loaded
+    auto it = m_itemTextures.find(itemIconPath);
+    if (it != m_itemTextures.end()) {
+        return it->second;
+    }
+    
+    // Load the texture
+    std::string fullPath = "assets/" + itemIconPath;
+    unsigned int textureId = LoadTextureWithAlpha(fullPath);
+    
+    // Cache it for future use
+    if (textureId != 0) {
+        m_itemTextures[itemIconPath] = textureId;
+        std::cout << "Loaded item texture: " << fullPath << std::endl;
+    } else {
+        std::cerr << "Failed to load item texture: " << fullPath << std::endl;
+    }
+    
+    return textureId;
+}
+
+unsigned int Renderer::GetItemTexture(const std::string& itemIconPath) {
+    // Check if texture is already loaded
+    auto it = m_itemTextures.find(itemIconPath);
+    if (it != m_itemTextures.end()) {
+        return it->second;
+    }
+    
+    // If not loaded, load it now
+    return LoadItemTexture(itemIconPath);
 } 
