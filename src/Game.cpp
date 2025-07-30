@@ -821,6 +821,14 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
                 std::cout << "Survival mode: " << (s_instance->m_player->IsSurvivalMode() ? "ON" : "OFF") << std::endl;
             }
         }
+        
+        // Toggle frustum culling with F1 key for debugging
+        if (key == GLFW_KEY_F1 && action == GLFW_PRESS) {
+            if (s_instance->m_currentState == GameState::GAME) {
+                s_instance->m_renderer.m_enableFrustumCulling = !s_instance->m_renderer.m_enableFrustumCulling;
+                std::cout << "Frustum culling: " << (s_instance->m_renderer.m_enableFrustumCulling ? "ON" : "OFF") << std::endl;
+            }
+        }
     }
 }
 

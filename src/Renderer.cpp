@@ -329,6 +329,9 @@ void Renderer::BeginFrame(const Player& player) {
     
     // Set projection matrix
     glUniformMatrix4fv(m_projLoc, 1, GL_FALSE, m_projectionMatrix.m);
+    
+    // Extract frustum planes for culling
+    ExtractFrustum(m_viewMatrix, m_projectionMatrix);
 }
 
 void Renderer::RenderWorld(const World& world) {
@@ -365,7 +368,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkX = x - 3;
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                    if (chunk && chunk->HasMesh()) {
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                         chunk->RenderGrassMesh(Chunk::GRASS_TOP);
                     }
                 }
@@ -379,7 +382,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkX = x - 3;
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                    if (chunk && chunk->HasMesh()) {
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                         chunk->RenderGrassMesh(Chunk::GRASS_SIDE);
                     }
                 }
@@ -395,7 +398,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkX = x - 3;
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                    if (chunk && chunk->HasMesh()) {
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                         chunk->RenderGrassMesh(Chunk::GRASS_SIDE);
                     }
                 }
@@ -410,7 +413,7 @@ void Renderer::RenderChunks(const World& world) {
                     int chunkX = x - 3;
                     int chunkZ = z - 3;
                     const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                    if (chunk && chunk->HasMesh()) {
+                    if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                         chunk->RenderGrassMesh(Chunk::GRASS_BOTTOM);
                     }
                 }
@@ -431,7 +434,7 @@ void Renderer::RenderChunks(const World& world) {
                         int chunkX = x - 3;
                         int chunkZ = z - 3;
                         const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                        if (chunk && chunk->HasMesh()) {
+                        if (chunk && chunk->HasMesh() && (!m_enableFrustumCulling || IsChunkInFrustum(chunkX, chunkZ))) {
                             chunk->RenderMeshForBlockType(blockType);
                         }
                     }
@@ -1093,4 +1096,125 @@ void Renderer::RenderSky(float gameTime) {
     // TODO: Add actual sun/moon rendering with textured quads
     // For now, we're just changing the sky color
     // Future implementation will render sun/moon sprites positioned in the sky
+}
+
+// ============== FRUSTUM CULLING IMPLEMENTATION ==============
+
+void Renderer::ExtractFrustum(const Mat4& viewMatrix, const Mat4& projMatrix) {
+    // Multiply view and projection matrices to get view-projection matrix
+    Mat4 viewProj;
+    
+    // Manual matrix multiplication: viewProj = proj * view
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            viewProj.m[i * 4 + j] = 0;
+            for (int k = 0; k < 4; k++) {
+                viewProj.m[i * 4 + j] += projMatrix.m[i * 4 + k] * viewMatrix.m[k * 4 + j];
+            }
+        }
+    }
+    
+    // Extract the six frustum planes from the view-projection matrix
+    // Left plane
+    m_frustum.planes[0] = Plane(
+        Vec3(viewProj.m[3] + viewProj.m[0], viewProj.m[7] + viewProj.m[4], viewProj.m[11] + viewProj.m[8]),
+        viewProj.m[15] + viewProj.m[12]
+    );
+    
+    // Right plane
+    m_frustum.planes[1] = Plane(
+        Vec3(viewProj.m[3] - viewProj.m[0], viewProj.m[7] - viewProj.m[4], viewProj.m[11] - viewProj.m[8]),
+        viewProj.m[15] - viewProj.m[12]
+    );
+    
+    // Bottom plane
+    m_frustum.planes[2] = Plane(
+        Vec3(viewProj.m[3] + viewProj.m[1], viewProj.m[7] + viewProj.m[5], viewProj.m[11] + viewProj.m[9]),
+        viewProj.m[15] + viewProj.m[13]
+    );
+    
+    // Top plane
+    m_frustum.planes[3] = Plane(
+        Vec3(viewProj.m[3] - viewProj.m[1], viewProj.m[7] - viewProj.m[5], viewProj.m[11] - viewProj.m[9]),
+        viewProj.m[15] - viewProj.m[13]
+    );
+    
+    // Near plane
+    m_frustum.planes[4] = Plane(
+        Vec3(viewProj.m[3] + viewProj.m[2], viewProj.m[7] + viewProj.m[6], viewProj.m[11] + viewProj.m[10]),
+        viewProj.m[15] + viewProj.m[14]
+    );
+    
+    // Far plane
+    m_frustum.planes[5] = Plane(
+        Vec3(viewProj.m[3] - viewProj.m[2], viewProj.m[7] - viewProj.m[6], viewProj.m[11] - viewProj.m[10]),
+        viewProj.m[15] - viewProj.m[14]
+    );
+    
+    // Normalize all planes
+    for (int i = 0; i < 6; i++) {
+        float length = m_frustum.planes[i].normal.Length();
+        if (length > 0.0f) {
+            m_frustum.planes[i].normal = m_frustum.planes[i].normal * (1.0f / length);
+            m_frustum.planes[i].distance /= length;
+        }
+    }
+}
+
+bool Renderer::IsChunkInFrustum(int chunkX, int chunkZ) const {
+    // Calculate chunk world bounds
+    // Each chunk is 16x16 blocks in XZ, full height (256) in Y
+    float worldX = chunkX * CHUNK_WIDTH;
+    float worldZ = chunkZ * CHUNK_DEPTH;
+    
+    Vec3 chunkMin(worldX, 0.0f, worldZ);
+    Vec3 chunkMax(worldX + CHUNK_WIDTH, CHUNK_HEIGHT, worldZ + CHUNK_DEPTH); 
+    
+    AABB chunkAABB(chunkMin, chunkMax);
+    
+    // Make culling much more conservative by expanding the AABB significantly
+    // This prevents false positives where chunks at the edge get culled incorrectly
+    // Using a large margin because 75° FOV is quite wide
+    float margin = 16.0f; // 16 block margin - very conservative
+    AABB expandedAABB(Vec3(chunkMin.x - margin, chunkMin.y - margin, chunkMin.z - margin),
+                      Vec3(chunkMax.x + margin, chunkMax.y + margin, chunkMax.z + margin));
+    
+    bool inFrustum = IsAABBInFrustum(expandedAABB);
+    
+    // Debug output for the first few seconds to see culling behavior
+    static float debugStartTime = glfwGetTime();
+    if (glfwGetTime() - debugStartTime < 5.0f) { // Debug for first 5 seconds
+        if (!inFrustum) {
+            static int debugCount = 0;
+            if (debugCount < 10) { // Limit debug spam
+                std::cout << "[FRUSTUM] Culling chunk (" << chunkX << ", " << chunkZ 
+                          << ") at world coords (" << worldX << ", " << worldZ << ")" << std::endl;
+                debugCount++;
+            }
+        }
+    }
+    
+    return inFrustum;
+}
+
+bool Renderer::IsAABBInFrustum(const AABB& aabb) const {
+    // Test the AABB against all 6 frustum planes
+    // If the box is completely behind any plane, it's outside the frustum
+    
+    for (int i = 0; i < 6; i++) {
+        const Plane& plane = m_frustum.planes[i];
+        
+        // Find the positive vertex (furthest point in direction of plane normal)
+        Vec3 positiveVertex;
+        positiveVertex.x = (plane.normal.x >= 0.0f) ? aabb.max.x : aabb.min.x;
+        positiveVertex.y = (plane.normal.y >= 0.0f) ? aabb.max.y : aabb.min.y;
+        positiveVertex.z = (plane.normal.z >= 0.0f) ? aabb.max.z : aabb.min.z;
+        
+        // If positive vertex is behind the plane, the entire AABB is outside
+        if (plane.DistanceToPoint(positiveVertex) < 0.0f) {
+            return false;
+        }
+    }
+    
+    return true; // AABB is inside or intersecting the frustum
 } 

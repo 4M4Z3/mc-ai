@@ -18,6 +18,34 @@
 
 class World;
 
+// Frustum culling structures
+struct Plane {
+    Vec3 normal;
+    float distance;
+    
+    Plane(const Vec3& n, float d) : normal(n), distance(d) {}
+    
+    // Distance from point to plane (positive = in front, negative = behind)
+    float DistanceToPoint(const Vec3& point) const {
+        return normal.x * point.x + normal.y * point.y + normal.z * point.z + distance;
+    }
+};
+
+struct Frustum {
+    Plane planes[6]; // Left, Right, Bottom, Top, Near, Far
+    
+    Frustum() : planes{
+        Plane(Vec3(0,0,0), 0), Plane(Vec3(0,0,0), 0), Plane(Vec3(0,0,0), 0),
+        Plane(Vec3(0,0,0), 0), Plane(Vec3(0,0,0), 0), Plane(Vec3(0,0,0), 0)
+    } {}
+};
+
+struct AABB {
+    Vec3 min, max;
+    
+    AABB(const Vec3& minPoint, const Vec3& maxPoint) : min(minPoint), max(maxPoint) {}
+};
+
 class Renderer {
 public:
     Renderer();
@@ -42,6 +70,15 @@ public:
     
     // Legacy triangle rendering (for debugging)
     void RenderTriangle();
+
+    // Frustum culling methods
+    void ExtractFrustum(const Mat4& viewMatrix, const Mat4& projMatrix);
+    bool IsChunkInFrustum(int chunkX, int chunkZ) const;
+    bool IsAABBInFrustum(const AABB& aabb) const;
+    
+    // Debug flag to disable frustum culling temporarily
+    // Starting with culling disabled until we verify it works correctly with 75° FOV
+    bool m_enableFrustumCulling = false;
 
 private:
     // Cube rendering data (legacy)
@@ -112,4 +149,7 @@ private:
     // Matrix operations
     Mat4 CreateProjectionMatrix(float fov, float aspect, float near, float far);
     Mat4 CreateTranslationMatrix(float x, float y, float z);
+    
+    // Frustum culling
+    Frustum m_frustum;
 }; 
