@@ -312,7 +312,7 @@ void Renderer::SetViewport(int width, int height) {
     
     // Update projection matrix
     float aspect = (float)width / (float)height;
-    m_projectionMatrix = CreateProjectionMatrix(75.0f, aspect, 0.1f, 100.0f);
+    m_projectionMatrix = CreateProjectionMatrix(65.0f, aspect, 0.1f, 100.0f);
     
     std::cout << "Aspect ratio: " << aspect << std::endl;
 }
@@ -838,7 +838,7 @@ bool Renderer::CheckProgramLinking(unsigned int program) {
 Mat4 Renderer::CreateProjectionMatrix(float fov, float aspect, float near, float far) {
     Mat4 proj;
     
-    float tanFov = tan(fov * M_PI / 360.0f); // fov/2 in radians
+    float tanFov = tan(fov * M_PI / 360.0f); // fov/2 in radians (treating as vertical FOV)
     
     proj.m[0] = 1.0f / (aspect * tanFov);
     proj.m[5] = 1.0f / tanFov;
@@ -1174,7 +1174,7 @@ bool Renderer::IsChunkInFrustum(int chunkX, int chunkZ) const {
     
     // Make culling much more conservative by expanding the AABB significantly
     // This prevents false positives where chunks at the edge get culled incorrectly
-    // Using a large margin because 75° FOV is quite wide
+            // Using a large margin because 70° FOV is still quite wide
     float margin = 16.0f; // 16 block margin - very conservative
     AABB expandedAABB(Vec3(chunkMin.x - margin, chunkMin.y - margin, chunkMin.z - margin),
                       Vec3(chunkMax.x + margin, chunkMax.y + margin, chunkMax.z + margin));

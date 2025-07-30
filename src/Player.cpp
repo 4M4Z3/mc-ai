@@ -493,7 +493,7 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world, con
 Mat4 Player::GetViewMatrix() const {
     Mat4 view;
     
-    // Get camera position at eye level (1.62 blocks above feet)
+    // Get camera position at eye level (1.5 blocks above feet)
     Vec3 cameraPos = GetCameraPosition();
     
     // Create look-at matrix manually
@@ -550,8 +550,8 @@ Vec3 Player::GetUpVector() const {
 Vec3 Player::GetCameraPosition() const {
     // Camera should be at eye level, which is approximately 1.5 blocks above the feet
     // Since m_position represents the center bottom of the player (feet level),
-    // we add the eye height offset (adjusted to look more natural)
-    return Vec3(m_position.x, m_position.y + 1.2f, m_position.z);
+    // we add the eye height offset (1.5f works for proper block indicator alignment)
+    return Vec3(m_position.x, m_position.y + 1.5f, m_position.z);
 }
 
 void Player::UpdateVectors() {

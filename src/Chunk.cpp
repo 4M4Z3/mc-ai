@@ -237,7 +237,7 @@ void Chunk::BatchBlockUpdate(int x, int y, int z, BlockType oldType, BlockType n
     m_hasPendingUpdates = true;
 }
 
-void Chunk::ProcessBatchedUpdates(const World* world) {
+void Chunk::ProcessBatchedUpdates(const World* world, const BlockManager* blockManager) {
     if (!m_hasPendingUpdates || m_pendingUpdates.empty()) {
         return;
     }
@@ -256,8 +256,8 @@ void Chunk::ProcessBatchedUpdates(const World* world) {
     m_pendingUpdates.clear();
     m_hasPendingUpdates = false;
     
-    // Regenerate mesh once for all updates
-    GenerateMesh(world);
+    // Regenerate mesh once for all updates with proper BlockManager
+    GenerateMesh(world, blockManager);
     
     std::cout << "[CHUNK] Completed batched mesh update for chunk (" << m_chunkX << ", " << m_chunkZ << ")" << std::endl;
 }

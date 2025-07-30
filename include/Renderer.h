@@ -77,7 +77,7 @@ public:
     bool IsAABBInFrustum(const AABB& aabb) const;
     
     // Debug flag to disable frustum culling temporarily
-    // Starting with culling disabled until we verify it works correctly with 75° FOV
+    // Starting with culling disabled until we verify it works correctly with 70° FOV
     bool m_enableFrustumCulling = false;
 
 private:

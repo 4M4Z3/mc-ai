@@ -417,40 +417,8 @@ void Game::UpdateGame() {
 
             // Apply block break to client world (if we have one)
             if (m_world) {
-                m_world->SetBlock(x, y, z, BlockType::AIR);
-                
-                // Regenerate affected chunk meshes
-                int chunkX, chunkZ, localX, localZ;
-                m_world->WorldToChunkCoords(x, z, chunkX, chunkZ, localX, localZ);
-                
-                // Regenerate the chunk containing the broken block
-                Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
-                if (chunk) {
-                    chunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
-                }
-                
-                // Check if we need to regenerate neighboring chunks
-                // (if the broken block was on a chunk boundary)
-                if (localX == 0) {
-                    // Block was on the left edge, regenerate left neighbor
-                    Chunk* leftChunk = m_world->GetChunk(chunkX - 1, chunkZ);
-                    if (leftChunk) leftChunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
-                }
-                if (localX == 15) {
-                    // Block was on the right edge, regenerate right neighbor
-                    Chunk* rightChunk = m_world->GetChunk(chunkX + 1, chunkZ);
-                    if (rightChunk) rightChunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
-                }
-                if (localZ == 0) {
-                    // Block was on the back edge, regenerate back neighbor
-                    Chunk* backChunk = m_world->GetChunk(chunkX, chunkZ - 1);
-                    if (backChunk) backChunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
-                }
-                if (localZ == 15) {
-                    // Block was on the front edge, regenerate front neighbor
-                    Chunk* frontChunk = m_world->GetChunk(chunkX, chunkZ + 1);
-                    if (frontChunk) frontChunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
-                }
+                // Use the unified mesh update method for consistency
+                m_world->SetBlockWithMeshUpdate(x, y, z, BlockType::AIR, &(m_renderer.m_blockManager));
             }
             m_pendingBlockBreaks.pop();
         }
@@ -466,7 +434,7 @@ void Game::UpdateGame() {
             if (m_world) {
                 try {
                     // Use efficient mesh update method
-                    m_world->SetBlockWithMeshUpdate(update.x, update.y, update.z, static_cast<BlockType>(update.blockType));
+                    m_world->SetBlockWithMeshUpdate(update.x, update.y, update.z, static_cast<BlockType>(update.blockType), &(m_renderer.m_blockManager));
                 } catch (const std::exception& e) {
                     std::cerr << "[CLIENT] Error processing block update: " << e.what() << std::endl;
                 }
@@ -864,7 +832,7 @@ void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int m
                 std::cout << "Breaking block at (" << blockX << ", " << blockY << ", " << blockZ << ")" << std::endl;
                 
                 // Break the block immediately on client (client prediction) with efficient mesh update
-                s_instance->m_world->SetBlockWithMeshUpdate(blockX, blockY, blockZ, BlockType::AIR);
+                s_instance->m_world->SetBlockWithMeshUpdate(blockX, blockY, blockZ, BlockType::AIR, &(s_instance->m_renderer.m_blockManager));
                 
                 // Send to server for synchronization with other clients using the new streaming system
                 if (s_instance->m_networkClient && s_instance->m_networkClient->IsConnected()) {
@@ -1314,7 +1282,7 @@ void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t
     if (m_world) {
         try {
             // Use efficient mesh update method
-            m_world->SetBlockWithMeshUpdate(x, y, z, BlockType::AIR);
+            m_world->SetBlockWithMeshUpdate(x, y, z, BlockType::AIR, &(m_renderer.m_blockManager));
             std::cout << "[CLIENT] Applied block break at (" << x << ", " << y << ", " << z << ") with incremental mesh update" << std::endl;
         } catch (const std::exception& e) {
             std::cerr << "[CLIENT] Error processing block break: " << e.what() << std::endl;

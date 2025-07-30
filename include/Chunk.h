@@ -56,7 +56,7 @@ public:
     void GenerateMesh(const World* world, const BlockManager* blockManager = nullptr);
     void UpdateBlockMesh(int x, int y, int z, const World* world, const BlockManager* blockManager = nullptr); // Incremental mesh update for single block
     void BatchBlockUpdate(int x, int y, int z, BlockType oldType, BlockType newType); // Queue block update for batching
-    void ProcessBatchedUpdates(const World* world); // Process all batched updates at once
+    void ProcessBatchedUpdates(const World* world, const BlockManager* blockManager); // Process all batched updates at once
     void RenderMesh() const;
     void RenderMeshForBlockType(BlockType blockType) const;
     void RenderGrassMesh(GrassFaceType faceType) const;

@@ -146,14 +146,14 @@ private:
     float m_verticalVelocity;  // For gravity
     bool m_isOnGround;
     
-    // Physics constants
-    static constexpr float GRAVITY = 20.48f;        // blocks per second squared (moderately reduced for slower jump)
+    // Physics constants - Minecraft standard values
+    static constexpr float GRAVITY = 32.0f;        // blocks per second squared (Minecraft standard)
     static constexpr float TERMINAL_VELOCITY = 78.4f; // Maximum fall speed
-    static constexpr float JUMP_VELOCITY = 6.8f;   // Initial upward velocity when jumping (moderately reduced for slower jump)
+    static constexpr float JUMP_VELOCITY = 8.94f;  // Initial upward velocity when jumping (calculated for 1.25 block height)
     
     // Player positioning:
     // - m_position represents the CENTER of the player at GROUND LEVEL (feet)
-    // - Camera is at m_position.y + 1.6 (eye level)
+    // - Camera is at m_position.y + 1.5 (eye level - aligns with head position in model)
     // - Total player height is 1.8 blocks
     // - Collision detection uses m_position as center for entire 1.8 block height
     // - Player spans from m_position.y to m_position.y + 1.8

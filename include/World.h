@@ -21,10 +21,10 @@ public:
     void SetBlock(int worldX, int worldY, int worldZ, const Block& block);
     
     // Efficient block updates for streaming
-    void SetBlockWithMeshUpdate(int worldX, int worldY, int worldZ, BlockType type);
-    void UpdateNeighboringChunks(int worldX, int worldY, int worldZ);
+    void SetBlockWithMeshUpdate(int worldX, int worldY, int worldZ, BlockType type, const BlockManager* blockManager);
+    void UpdateNeighboringChunks(int worldX, int worldY, int worldZ, const BlockManager* blockManager);
     void SetBlockBatched(int worldX, int worldY, int worldZ, BlockType type); // Queue block update for batching
-    void ProcessAllBatchedUpdates(); // Process batched updates across all chunks
+    void ProcessAllBatchedUpdates(const BlockManager* blockManager); // Process batched updates across all chunks
     
     // Chunk access
     Chunk* GetChunk(int chunkX, int chunkZ);
