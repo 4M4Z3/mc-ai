@@ -56,16 +56,12 @@ Game::Game() :
     m_fontTitle(nullptr),
     m_showPauseMenu(false),
     m_showInventory(false),
-<<<<<<< Updated upstream
     m_showCraftingTable(false),
     m_showFurnace(false),
     m_selectedHotbarSlot(0),
     m_placementPreviewPosition(0, 0, 0),
-    m_showPlacementPreview(false)
-=======
-    m_showUI(true),
-    m_selectedHotbarSlot(0)
->>>>>>> Stashed changes
+    m_showPlacementPreview(false),
+    m_showUI(true)
 {
     s_instance = this;
 }
