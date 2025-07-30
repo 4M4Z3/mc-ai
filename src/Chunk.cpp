@@ -781,6 +781,9 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
         }
     }
     
+    // Generate ore veins in stone blocks
+    GenerateOreVeins(seed);
+    
     // Generate trees in forest biomes
     for (int x = 2; x < CHUNK_WIDTH - 2; x += 3) {  // Space trees apart
         for (int z = 2; z < CHUNK_DEPTH - 2; z += 3) {
@@ -1374,6 +1377,149 @@ void Chunk::GenerateBirchTree(int x, int z, int surfaceY, std::mt19937& rng, con
                     if (rng() % 4 != 0 && m_blocks[leafX][leafY][leafZ].GetType() == BlockType::AIR) {
                         BlockType birchLeavesType = blockManager ? blockManager->GetBlockTypeByKey("birch_leaves") : BlockType::AIR;
                         m_blocks[leafX][leafY][leafZ].SetType(birchLeavesType);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Chunk::GenerateOreVeins(int seed) {
+    // Set up random number generator for ore generation
+    std::mt19937 oreRng(seed + m_chunkX * 2357 + m_chunkZ * 3331); // Different seed offset for ores
+    
+    // Define ore properties: {oreType, minY, maxY, rarity (higher = rarer), veinSize, noiseScale}
+    struct OreConfig {
+        BlockType oreType;
+        int minY;
+        int maxY;
+        int rarity;      // 1 in rarity chance per block
+        int veinSize;    // Maximum connected ore blocks
+        double noiseScale;
+    };
+    
+    std::vector<OreConfig> oreConfigs = {
+        // Coal ore - common, higher levels
+        {BlockType::COAL_ORE, 5, 128, 8, 6, 0.15},
+        
+        // Iron ore - common, mid levels  
+        {BlockType::IRON_ORE, 0, 64, 10, 8, 0.12},
+        
+        // Copper ore - common, mid levels
+        {BlockType::COPPER_ORE, 0, 96, 12, 7, 0.13},
+        
+        // Gold ore - rare, lower levels
+        {BlockType::GOLD_ORE, 0, 32, 35, 4, 0.08},
+        
+        // Diamond ore - very rare, deep levels
+        {BlockType::DIAMOND_ORE, 0, 16, 80, 3, 0.06},
+        
+        // Emerald ore - very rare, higher levels (mountains)
+        {BlockType::EMERALD_ORE, 32, 96, 120, 2, 0.05}
+    };
+    
+    // Generate ores for each configuration
+    for (const auto& config : oreConfigs) {
+        for (int x = 0; x < CHUNK_WIDTH; ++x) {
+            for (int z = 0; z < CHUNK_DEPTH; ++z) {
+                for (int y = config.minY; y <= config.maxY && y < CHUNK_HEIGHT; ++y) {
+                    // Only replace stone blocks with ore
+                    if (m_blocks[x][y][z].GetType() != BlockType::STONE) {
+                        continue;
+                    }
+                    
+                    // Convert local coordinates to world coordinates for noise
+                    int worldX = m_chunkX * CHUNK_WIDTH + x;
+                    int worldZ = m_chunkZ * CHUNK_DEPTH + z;
+                    
+                    // Use 3D Perlin noise for more natural ore distribution
+                    // Each ore type gets its own noise pattern
+                    double oreNoise = Perlin(worldX * config.noiseScale, worldZ * config.noiseScale, 
+                                           seed + static_cast<int>(config.oreType) * 1000);
+                    
+                    // Add vertical variation
+                    double verticalNoise = sin(y * 0.3) * 0.3; // Gentle vertical waves
+                    double combinedNoise = oreNoise + verticalNoise;
+                    
+                    // Height-based probability modifier
+                    double heightFactor = 1.0;
+                    if (config.oreType == BlockType::COAL_ORE) {
+                        // Coal is more common at higher elevations
+                        heightFactor = 0.5 + 0.5 * (static_cast<double>(y - config.minY) / (config.maxY - config.minY));
+                    } else if (config.oreType == BlockType::DIAMOND_ORE) {
+                        // Diamond is most common at low levels
+                        heightFactor = 1.0 - 0.4 * (static_cast<double>(y - config.minY) / (config.maxY - config.minY));
+                    } else if (config.oreType == BlockType::GOLD_ORE) {
+                        // Gold has a peak around y=8-16
+                        double midPoint = (config.minY + config.maxY) * 0.5;
+                        double distance = abs(y - midPoint) / (config.maxY - config.minY);
+                        heightFactor = 1.0 - 0.5 * distance;
+                    }
+                    
+                    // Combine noise threshold with height factor and rarity
+                    double threshold = 0.6 - (0.3 * heightFactor / config.rarity);
+                    
+                    if (combinedNoise > threshold) {
+                        // Basic ore placement
+                        m_blocks[x][y][z].SetType(config.oreType);
+                        
+                        // Generate small ore veins for larger ore types
+                        if (config.veinSize > 3 && oreRng() % 3 == 0) {
+                            GenerateOreVein(x, y, z, config.oreType, config.veinSize, oreRng);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Chunk::GenerateOreVein(int startX, int startY, int startZ, BlockType oreType, int maxSize, std::mt19937& rng) {
+    // Generate a small connected vein of ore blocks
+    std::vector<std::array<int, 3>> veinBlocks;
+    std::vector<std::array<int, 3>> candidates;
+    
+    candidates.push_back({startX, startY, startZ});
+    
+    int placedBlocks = 0;
+    while (!candidates.empty() && placedBlocks < maxSize) {
+        // Pick a random candidate
+        int idx = rng() % candidates.size();
+        auto pos = candidates[idx];
+        candidates.erase(candidates.begin() + idx);
+        
+        int x = pos[0], y = pos[1], z = pos[2];
+        
+        // Check if position is valid and contains stone
+        if (!IsValidPosition(x, y, z) || m_blocks[x][y][z].GetType() != BlockType::STONE) {
+            continue;
+        }
+        
+        // Place ore block
+        m_blocks[x][y][z].SetType(oreType);
+        placedBlocks++;
+        
+        // Add neighboring stone blocks as candidates (50% chance each)
+        std::array<std::array<int, 3>, 6> neighbors = {{
+            {x+1, y, z}, {x-1, y, z},
+            {x, y+1, z}, {x, y-1, z}, 
+            {x, y, z+1}, {x, y, z-1}
+        }};
+        
+        for (const auto& neighbor : neighbors) {
+            if (rng() % 2 == 0) { // 50% chance
+                int nx = neighbor[0], ny = neighbor[1], nz = neighbor[2];
+                if (IsValidPosition(nx, ny, nz) && m_blocks[nx][ny][nz].GetType() == BlockType::STONE) {
+                    // Check if not already in candidates
+                    bool alreadyCandidate = false;
+                    for (const auto& candidate : candidates) {
+                        if (candidate[0] == nx && candidate[1] == ny && candidate[2] == nz) {
+                            alreadyCandidate = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyCandidate) {
+                        candidates.push_back({nx, ny, nz});
                     }
                 }
             }

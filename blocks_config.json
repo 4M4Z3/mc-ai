@@ -323,6 +323,13 @@
         "all": "chiseled_stone_bricks.png"
       }
     },
+    "coal_ore": {
+      "blockType": 224,
+      "blockName": "Coal Ore",
+      "textures": {
+        "all": "coal_ore.png"
+      }
+    },
     "conduit": {
       "blockType": 45,
       "blockName": "Conduit",
@@ -427,6 +434,13 @@
       "type": "transparent",
       "textures": {
         "all": "cyan_stained_glass.png"
+      }
+    },
+    "diamond_ore": {
+      "blockType": 225,
+      "blockName": "Diamond Ore",
+      "textures": {
+        "all": "diamond_ore.png"
       }
     },
     "dandelion": {

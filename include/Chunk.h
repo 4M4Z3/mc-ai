@@ -131,6 +131,10 @@ private:
     void GenerateOakTree(int x, int z, int surfaceY, std::mt19937& rng, const BlockManager* blockManager);
     void GenerateBirchTree(int x, int z, int surfaceY, std::mt19937& rng, const BlockManager* blockManager);
     
+    // Ore generation
+    void GenerateOreVeins(int seed);
+    void GenerateOreVein(int startX, int startY, int startZ, BlockType oreType, int maxSize, std::mt19937& rng);
+    
     // Terrain generation constants  
     static constexpr double NOISE_SCALE = 0.03;         // Scale for Perlin noise sampling
     static constexpr double NOISE_SCALE_FINE = 0.08;    // Fine detail noise scale
