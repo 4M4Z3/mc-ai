@@ -73,6 +73,20 @@ Item* ItemManager::getItemForBlock(BlockType blockType) const {
         case BlockType::SPRUCE_PLANKS:
             return getItem("spruce_planks");
             
+        // Saplings
+        case BlockType::ACACIA_SAPLING:
+            return getItem("acacia_sapling");
+        case BlockType::BIRCH_SAPLING:
+            return getItem("birch_sapling");
+        case BlockType::CHERRY_SAPLING:
+            return getItem("cherry_sapling");
+        case BlockType::DARK_OAK_SAPLING:
+            return getItem("dark_oak_sapling");
+        case BlockType::JUNGLE_SAPLING:
+            return getItem("jungle_sapling");
+        case BlockType::SPRUCE_SAPLING:
+            return getItem("spruce_sapling");
+            
         // Common blocks
         case BlockType::ANDESITE:
             return getItem("andesite");
@@ -82,12 +96,26 @@ Item* ItemManager::getItemForBlock(BlockType blockType) const {
             return getItem("gravel");
         case BlockType::SAND:
             return getItem("sand");
+        case BlockType::RED_SAND:
+            return getItem("red_sand");
         case BlockType::GLASS:
             return getItem("glass");
         case BlockType::OBSIDIAN:
             return getItem("obsidian");
         case BlockType::BEDROCK:
             return getItem("bedrock");
+        case BlockType::TINTED_GLASS:
+            return getItem("tinted_glass");
+        case BlockType::SMOOTH_STONE:
+            return getItem("smooth_stone");
+        case BlockType::SMOOTH_BASALT:
+            return getItem("smooth_basalt");
+        case BlockType::DRIPSTONE_BLOCK:
+            return getItem("dripstone_block");
+        case BlockType::AMETHYST_BLOCK:
+            return getItem("amethyst_block");
+        case BlockType::AMETHYST_CLUSTER:
+            return getItem("amethyst_cluster");
             
         // Ores
         case BlockType::COPPER_ORE:
@@ -99,7 +127,7 @@ Item* ItemManager::getItemForBlock(BlockType blockType) const {
         case BlockType::EMERALD_ORE:
             return getItem("emerald_ore");
             
-        // Blocks
+        // Metal blocks
         case BlockType::COPPER_BLOCK:
             return getItem("copper_block");
         case BlockType::IRON_BLOCK:
@@ -108,6 +136,32 @@ Item* ItemManager::getItemForBlock(BlockType blockType) const {
             return getItem("gold_block");
         case BlockType::EMERALD_BLOCK:
             return getItem("emerald_block");
+        case BlockType::RAW_COPPER_BLOCK:
+            return getItem("raw_copper_block");
+        case BlockType::RAW_IRON_BLOCK:
+            return getItem("raw_iron_block");
+        case BlockType::RAW_GOLD_BLOCK:
+            return getItem("raw_gold_block");
+            
+        // Copper variants
+        case BlockType::CHISELED_COPPER:
+            return getItem("chiseled_copper");
+        case BlockType::OXIDIZED_COPPER:
+            return getItem("oxidized_copper");
+        case BlockType::OXIDIZED_CHISELED_COPPER:
+            return getItem("oxidized_chiseled_copper");
+        case BlockType::COPPER_GRATE:
+            return getItem("copper_grate");
+        case BlockType::COPPER_BULB:
+            return getItem("copper_bulb");
+        case BlockType::COPPER_BULB_LIT:
+            return getItem("copper_bulb"); // Same item as unlit
+        case BlockType::COPPER_BULB_POWERED:
+            return getItem("copper_bulb"); // Same item as unlit
+        case BlockType::COPPER_BULB_LIT_POWERED:
+            return getItem("copper_bulb"); // Same item as unlit
+        case BlockType::COPPER_TRAPDOOR:
+            return getItem("copper_trapdoor");
             
         // Wool blocks
         case BlockType::BLUE_WOOL:
@@ -129,17 +183,334 @@ Item* ItemManager::getItemForBlock(BlockType blockType) const {
         case BlockType::YELLOW_WOOL:
             return getItem("yellow_wool");
             
-        // Misc blocks
+        // Stained glass
+        case BlockType::BLUE_STAINED_GLASS:
+            return getItem("blue_stained_glass");
+        case BlockType::BROWN_STAINED_GLASS:
+            return getItem("brown_stained_glass");
+        case BlockType::CYAN_STAINED_GLASS:
+            return getItem("cyan_stained_glass");
+        case BlockType::GRAY_STAINED_GLASS:
+            return getItem("gray_stained_glass");
+        case BlockType::GREEN_STAINED_GLASS:
+            return getItem("green_stained_glass");
+        case BlockType::LIGHT_BLUE_STAINED_GLASS:
+            return getItem("light_blue_stained_glass");
+        case BlockType::LIGHT_GRAY_STAINED_GLASS:
+            return getItem("light_gray_stained_glass");
+        case BlockType::LIME_STAINED_GLASS:
+            return getItem("lime_stained_glass");
+        case BlockType::MAGENTA_STAINED_GLASS:
+            return getItem("magenta_stained_glass");
+        case BlockType::ORANGE_STAINED_GLASS:
+            return getItem("orange_stained_glass");
+        case BlockType::PINK_STAINED_GLASS:
+            return getItem("pink_stained_glass");
+        case BlockType::YELLOW_STAINED_GLASS:
+            return getItem("yellow_stained_glass");
+            
+        // Terracotta
+        case BlockType::TERRACOTTA:
+            return getItem("terracotta");
+        case BlockType::BLUE_TERRACOTTA:
+            return getItem("blue_terracotta");
+        case BlockType::GRAY_TERRACOTTA:
+            return getItem("gray_terracotta");
+        case BlockType::GREEN_TERRACOTTA:
+            return getItem("green_terracotta");
+        case BlockType::LIGHT_BLUE_TERRACOTTA:
+            return getItem("light_blue_terracotta");
+        case BlockType::LIGHT_GRAY_TERRACOTTA:
+            return getItem("light_gray_terracotta");
+        case BlockType::ORANGE_TERRACOTTA:
+            return getItem("orange_terracotta");
+        case BlockType::PINK_TERRACOTTA:
+            return getItem("pink_terracotta");
+        case BlockType::YELLOW_TERRACOTTA:
+            return getItem("yellow_terracotta");
+            
+        // Concrete
+        case BlockType::BROWN_CONCRETE:
+            return getItem("brown_concrete");
+        case BlockType::GRAY_CONCRETE:
+            return getItem("gray_concrete");
+        case BlockType::GREEN_CONCRETE:
+            return getItem("green_concrete");
+        case BlockType::LIGHT_GRAY_CONCRETE:
+            return getItem("light_gray_concrete");
+        case BlockType::LIME_CONCRETE:
+            return getItem("lime_concrete");
+        case BlockType::ORANGE_CONCRETE:
+            return getItem("orange_concrete");
+        case BlockType::PINK_CONCRETE:
+            return getItem("pink_concrete");
+        case BlockType::RED_CONCRETE:
+            return getItem("red_concrete");
+            
+        // Concrete powder
+        case BlockType::BROWN_CONCRETE_POWDER:
+            return getItem("brown_concrete_powder");
+        case BlockType::GRAY_CONCRETE_POWDER:
+            return getItem("gray_concrete_powder");
+        case BlockType::GREEN_CONCRETE_POWDER:
+            return getItem("green_concrete_powder");
+        case BlockType::LIGHT_GRAY_CONCRETE_POWDER:
+            return getItem("light_gray_concrete_powder");
+        case BlockType::LIME_CONCRETE_POWDER:
+            return getItem("lime_concrete_powder");
+        case BlockType::ORANGE_CONCRETE_POWDER:
+            return getItem("orange_concrete_powder");
+        case BlockType::PINK_CONCRETE_POWDER:
+            return getItem("pink_concrete_powder");
+        case BlockType::RED_CONCRETE_POWDER:
+            return getItem("red_concrete_powder");
+            
+        // Glazed terracotta
+        case BlockType::BROWN_GLAZED_TERRACOTTA:
+            return getItem("brown_glazed_terracotta");
+        case BlockType::GRAY_GLAZED_TERRACOTTA:
+            return getItem("gray_glazed_terracotta");
+        case BlockType::GREEN_GLAZED_TERRACOTTA:
+            return getItem("green_glazed_terracotta");
+        case BlockType::LIGHT_GRAY_GLAZED_TERRACOTTA:
+            return getItem("light_gray_glazed_terracotta");
+        case BlockType::LIME_GLAZED_TERRACOTTA:
+            return getItem("lime_glazed_terracotta");
+        case BlockType::ORANGE_GLAZED_TERRACOTTA:
+            return getItem("orange_glazed_terracotta");
+        case BlockType::PINK_GLAZED_TERRACOTTA:
+            return getItem("pink_glazed_terracotta");
+        case BlockType::RED_GLAZED_TERRACOTTA:
+            return getItem("red_glazed_terracotta");
+            
+        // Stone variants
         case BlockType::BRICKS:
             return getItem("bricks");
         case BlockType::STONE_BRICKS:
             return getItem("stone_bricks");
+        case BlockType::CHISELED_STONE_BRICKS:
+            return getItem("chiseled_stone_bricks");
+        case BlockType::CRACKED_STONE_BRICKS:
+            return getItem("cracked_stone_bricks");
+        case BlockType::CHISELED_SANDSTONE:
+            return getItem("chiseled_sandstone");
+        case BlockType::CHISELED_RED_SANDSTONE:
+            return getItem("chiseled_red_sandstone");
+        case BlockType::POLISHED_GRANITE:
+            return getItem("polished_granite");
+        case BlockType::POLISHED_DIORITE:
+            return getItem("polished_diorite");
+        case BlockType::POLISHED_BLACKSTONE:
+            return getItem("polished_blackstone");
+        case BlockType::POLISHED_BLACKSTONE_BRICKS:
+            return getItem("polished_blackstone_bricks");
+        case BlockType::CHISELED_POLISHED_BLACKSTONE:
+            return getItem("chiseled_polished_blackstone");
+        case BlockType::CRACKED_POLISHED_BLACKSTONE_BRICKS:
+            return getItem("cracked_polished_blackstone_bricks");
+        case BlockType::CHISELED_DEEPSLATE:
+            return getItem("chiseled_deepslate");
+        case BlockType::POLISHED_DEEPSLATE:
+            return getItem("polished_deepslate");
+        case BlockType::CRACKED_DEEPSLATE_BRICKS:
+            return getItem("cracked_deepslate_bricks");
+        case BlockType::CRACKED_DEEPSLATE_TILES:
+            return getItem("cracked_deepslate_tiles");
+        case BlockType::POLISHED_TUFF:
+            return getItem("polished_tuff");
+        case BlockType::TUFF:
+            return getItem("tuff");
+        case BlockType::TUFF_BRICKS:
+            return getItem("tuff_bricks");
+            
+        // Special blocks
         case BlockType::GLOWSTONE:
             return getItem("glowstone");
         case BlockType::ICE:
             return getItem("ice");
+        case BlockType::FROSTED_ICE:
+            return getItem("ice"); // Frosted ice drops regular ice
         case BlockType::SNOW:
             return getItem("snow");
+        case BlockType::POWDER_SNOW:
+            return getItem("powder_snow");
+        case BlockType::SEA_LANTERN:
+            return getItem("sea_lantern");
+        case BlockType::LANTERN:
+            return getItem("lantern");
+        case BlockType::SOUL_LANTERN:
+            return getItem("soul_lantern");
+        case BlockType::SOUL_TORCH:
+            return getItem("soul_torch");
+        case BlockType::SOUL_SAND:
+            return getItem("soul_sand");
+        case BlockType::SOUL_SOIL:
+            return getItem("soul_soil");
+        case BlockType::BEACON:
+            return getItem("beacon");
+        case BlockType::CONDUIT:
+            return getItem("conduit");
+        case BlockType::SPAWNER:
+            return getItem("spawner");
+        case BlockType::SPONGE:
+            return getItem("sponge");
+        case BlockType::SLIME_BLOCK:
+            return getItem("slime_block");
+        case BlockType::HONEYCOMB_BLOCK:
+            return getItem("honeycomb_block");
+        case BlockType::SHROOMLIGHT:
+            return getItem("shroomlight");
+        case BlockType::JACK_O_LANTERN:
+            return getItem("jack_o_lantern");
+        case BlockType::HEAVY_CORE:
+            return getItem("heavy_core");
+        case BlockType::PURPUR_BLOCK:
+            return getItem("purpur_block");
+        case BlockType::QUARTZ_BRICKS:
+            return getItem("quartz_bricks");
+            
+        // Nether blocks
+        case BlockType::CHISELED_NETHER_BRICKS:
+            return getItem("chiseled_nether_bricks");
+        case BlockType::CRACKED_NETHER_BRICKS:
+            return getItem("cracked_nether_bricks");
+        case BlockType::RED_NETHER_BRICKS:
+            return getItem("red_nether_bricks");
+            
+        // Mushroom blocks
+        case BlockType::BROWN_MUSHROOM_BLOCK:
+            return getItem("brown_mushroom_block");
+        case BlockType::RED_MUSHROOM:
+            return getItem("red_mushroom");
+        case BlockType::RED_MUSHROOM_BLOCK:
+            return getItem("red_mushroom_block");
+            
+        // Coral blocks
+        case BlockType::BRAIN_CORAL:
+            return getItem("brain_coral");
+        case BlockType::BRAIN_CORAL_BLOCK:
+            return getItem("brain_coral_block");
+        case BlockType::HORN_CORAL:
+            return getItem("horn_coral");
+        case BlockType::HORN_CORAL_BLOCK:
+            return getItem("horn_coral_block");
+        case BlockType::HORN_CORAL_FAN:
+            return getItem("horn_coral_fan");
+        case BlockType::TUBE_CORAL:
+            return getItem("tube_coral");
+        case BlockType::TUBE_CORAL_BLOCK:
+            return getItem("tube_coral_block");
+        case BlockType::TUBE_CORAL_FAN:
+            return getItem("tube_coral_fan");
+        case BlockType::DEAD_BRAIN_CORAL_FAN:
+            return getItem("dead_brain_coral_fan");
+        case BlockType::DEAD_BUBBLE_CORAL_FAN:
+            return getItem("dead_bubble_coral_fan");
+        case BlockType::DEAD_FIRE_CORAL_FAN:
+            return getItem("dead_fire_coral_fan");
+            
+        // Plant blocks
+        case BlockType::ALLIUM:
+            return getItem("allium");
+        case BlockType::AZURE_BLUET:
+            return getItem("azure_bluet");
+        case BlockType::DANDELION:
+            return getItem("dandelion");
+        case BlockType::DEAD_BUSH:
+            return getItem("dead_bush");
+        case BlockType::AZALEA_PLANT:
+            return getItem("azalea_plant");
+        case BlockType::SPORE_BLOSSOM:
+            return getItem("spore_blossom");
+        case BlockType::SPORE_BLOSSOM_BASE:
+            return getItem("spore_blossom_base");
+        case BlockType::PINK_PETALS:
+            return getItem("pink_petals");
+        case BlockType::PINK_PETALS_STEM:
+            return getItem("pink_petals_stem");
+        case BlockType::TWISTING_VINES:
+            return getItem("twisting_vines");
+        case BlockType::TWISTING_VINES_PLANT:
+            return getItem("twisting_vines_plant");
+        case BlockType::KELP:
+            return getItem("kelp");
+        case BlockType::KELP_META:
+            return getItem("kelp"); // Same as regular kelp
+            
+        // Misc utility blocks
+        case BlockType::MOSS_BLOCK:
+            return getItem("moss_block");
+        case BlockType::MUD:
+            return getItem("mud");
+        case BlockType::ROOTED_DIRT:
+            return getItem("rooted_dirt");
+        case BlockType::ITEM_FRAME:
+            return getItem("item_frame");
+        case BlockType::RAIL:
+            return getItem("rail");
+        case BlockType::RAIL_CORNER:
+            return getItem("rail"); // Same as regular rail
+        case BlockType::TRIPWIRE:
+            return getItem("tripwire");
+        case BlockType::TRIPWIRE_HOOK:
+            return getItem("tripwire_hook");
+        case BlockType::SPRUCE_TRAPDOOR:
+            return getItem("spruce_trapdoor");
+            
+        // Resin blocks
+        case BlockType::RESIN_BLOCK:
+            return getItem("resin_block");
+        case BlockType::RESIN_BRICKS:
+            return getItem("resin_bricks");
+        case BlockType::CHISELED_RESIN_BRICKS:
+            return getItem("chiseled_resin_bricks");
+        case BlockType::RESIN_CLUMP:
+            return getItem("resin_clump");
+            
+        // Shulker boxes
+        case BlockType::GRAY_SHULKER_BOX:
+            return getItem("gray_shulker_box");
+            
+        // Candles
+        case BlockType::BLACK_CANDLE:
+            return getItem("black_candle");
+        case BlockType::BLACK_CANDLE_LIT:
+            return getItem("black_candle"); // Same item as unlit
+        case BlockType::BLUE_CANDLE:
+            return getItem("blue_candle");
+        case BlockType::BLUE_CANDLE_LIT:
+            return getItem("blue_candle"); // Same item as unlit
+        case BlockType::RED_CANDLE:
+            return getItem("red_candle");
+        case BlockType::RED_CANDLE_LIT:
+            return getItem("red_candle"); // Same item as unlit
+        case BlockType::WHITE_CANDLE:
+            return getItem("white_candle");
+        case BlockType::WHITE_CANDLE_LIT:
+            return getItem("white_candle"); // Same item as unlit
+        case BlockType::YELLOW_CANDLE:
+            return getItem("yellow_candle");
+        case BlockType::YELLOW_CANDLE_LIT:
+            return getItem("yellow_candle"); // Same item as unlit
+            
+        // Crop stages - these typically don't drop themselves
+        case BlockType::WHEAT_STAGE0:
+        case BlockType::WHEAT_STAGE1:
+        case BlockType::WHEAT_STAGE_2:
+        case BlockType::WHEAT_STAGE_3:
+        case BlockType::WHEAT_STAGE_4:
+        case BlockType::WHEAT_STAGE_5:
+        case BlockType::WHEAT_STAGE_6:
+        case BlockType::WHEAT_STAGE_7:
+            return getItem("wheat_seeds"); // Wheat crops drop seeds (except final stage which drops wheat)
+        case BlockType::POTATOES_STAGE3:
+            return getItem("potato");
+            
+        // Destroy stages - these are visual only, shouldn't be collectable
+        case BlockType::DESTROY_STAGE_7:
+        case BlockType::DESTROY_STAGE_8:
+        case BlockType::DESTROY_STAGE_9:
+            return nullptr;
             
         // Special cases that shouldn't be collectable
         case BlockType::AIR:
@@ -293,6 +664,11 @@ void ItemManager::InitializeTestItems() {
     itemsById[spruce_planks->itemId] = spruce_planks.get();
     items["spruce_planks"] = std::move(spruce_planks);
     
+    // Tools and materials
+    auto stick = std::make_unique<Item>(itemId++, "Stick", ItemType::ITEM, "item/stick.png", true, 64);
+    itemsById[stick->itemId] = stick.get();
+    items["stick"] = std::move(stick);
+    
     // Common blocks
     auto andesite = std::make_unique<Item>(itemId++, "Andesite", ItemType::ITEM, "item/andesite.png", true, 64);
     itemsById[andesite->itemId] = andesite.get();
@@ -413,6 +789,258 @@ void ItemManager::InitializeTestItems() {
     auto snow = std::make_unique<Item>(itemId++, "Snow", ItemType::ITEM, "item/snow.png", true, 64);
     itemsById[snow->itemId] = snow.get();
     items["snow"] = std::move(snow);
+    
+    // ========== ADDITIONAL COMPREHENSIVE ITEMS ==========
+    
+    // Saplings
+    auto acacia_sapling = std::make_unique<Item>(itemId++, "Acacia Sapling", ItemType::ITEM, "item/acacia_sapling.png", true, 64);
+    itemsById[acacia_sapling->itemId] = acacia_sapling.get();
+    items["acacia_sapling"] = std::move(acacia_sapling);
+    
+    auto birch_sapling = std::make_unique<Item>(itemId++, "Birch Sapling", ItemType::ITEM, "item/birch_sapling.png", true, 64);
+    itemsById[birch_sapling->itemId] = birch_sapling.get();
+    items["birch_sapling"] = std::move(birch_sapling);
+    
+    auto cherry_sapling = std::make_unique<Item>(itemId++, "Cherry Sapling", ItemType::ITEM, "item/cherry_sapling.png", true, 64);
+    itemsById[cherry_sapling->itemId] = cherry_sapling.get();
+    items["cherry_sapling"] = std::move(cherry_sapling);
+    
+    auto dark_oak_sapling = std::make_unique<Item>(itemId++, "Dark Oak Sapling", ItemType::ITEM, "item/dark_oak_sapling.png", true, 64);
+    itemsById[dark_oak_sapling->itemId] = dark_oak_sapling.get();
+    items["dark_oak_sapling"] = std::move(dark_oak_sapling);
+    
+    auto jungle_sapling = std::make_unique<Item>(itemId++, "Jungle Sapling", ItemType::ITEM, "item/jungle_sapling.png", true, 64);
+    itemsById[jungle_sapling->itemId] = jungle_sapling.get();
+    items["jungle_sapling"] = std::move(jungle_sapling);
+    
+    auto spruce_sapling = std::make_unique<Item>(itemId++, "Spruce Sapling", ItemType::ITEM, "item/spruce_sapling.png", true, 64);
+    itemsById[spruce_sapling->itemId] = spruce_sapling.get();
+    items["spruce_sapling"] = std::move(spruce_sapling);
+    
+    // Additional sand and stone types
+    auto red_sand = std::make_unique<Item>(itemId++, "Red Sand", ItemType::ITEM, "item/red_sand.png", true, 64);
+    itemsById[red_sand->itemId] = red_sand.get();
+    items["red_sand"] = std::move(red_sand);
+    
+    auto tinted_glass = std::make_unique<Item>(itemId++, "Tinted Glass", ItemType::ITEM, "item/tinted_glass.png", true, 64);
+    itemsById[tinted_glass->itemId] = tinted_glass.get();
+    items["tinted_glass"] = std::move(tinted_glass);
+    
+    auto smooth_stone = std::make_unique<Item>(itemId++, "Smooth Stone", ItemType::ITEM, "item/smooth_stone.png", true, 64);
+    itemsById[smooth_stone->itemId] = smooth_stone.get();
+    items["smooth_stone"] = std::move(smooth_stone);
+    
+    auto smooth_basalt = std::make_unique<Item>(itemId++, "Smooth Basalt", ItemType::ITEM, "item/smooth_basalt.png", true, 64);
+    itemsById[smooth_basalt->itemId] = smooth_basalt.get();
+    items["smooth_basalt"] = std::move(smooth_basalt);
+    
+    auto dripstone_block = std::make_unique<Item>(itemId++, "Dripstone Block", ItemType::ITEM, "item/dripstone_block.png", true, 64);
+    itemsById[dripstone_block->itemId] = dripstone_block.get();
+    items["dripstone_block"] = std::move(dripstone_block);
+    
+    auto amethyst_block = std::make_unique<Item>(itemId++, "Amethyst Block", ItemType::ITEM, "item/amethyst_block.png", true, 64);
+    itemsById[amethyst_block->itemId] = amethyst_block.get();
+    items["amethyst_block"] = std::move(amethyst_block);
+    
+    auto amethyst_cluster = std::make_unique<Item>(itemId++, "Amethyst Cluster", ItemType::ITEM, "item/amethyst_cluster.png", true, 64);
+    itemsById[amethyst_cluster->itemId] = amethyst_cluster.get();
+    items["amethyst_cluster"] = std::move(amethyst_cluster);
+    
+    // Raw metal blocks
+    auto raw_copper_block = std::make_unique<Item>(itemId++, "Raw Copper Block", ItemType::ITEM, "item/raw_copper_block.png", true, 64);
+    itemsById[raw_copper_block->itemId] = raw_copper_block.get();
+    items["raw_copper_block"] = std::move(raw_copper_block);
+    
+    auto raw_iron_block = std::make_unique<Item>(itemId++, "Raw Iron Block", ItemType::ITEM, "item/raw_iron_block.png", true, 64);
+    itemsById[raw_iron_block->itemId] = raw_iron_block.get();
+    items["raw_iron_block"] = std::move(raw_iron_block);
+    
+    auto raw_gold_block = std::make_unique<Item>(itemId++, "Raw Gold Block", ItemType::ITEM, "item/raw_gold_block.png", true, 64);
+    itemsById[raw_gold_block->itemId] = raw_gold_block.get();
+    items["raw_gold_block"] = std::move(raw_gold_block);
+    
+    // Copper variants
+    auto chiseled_copper = std::make_unique<Item>(itemId++, "Chiseled Copper", ItemType::ITEM, "item/chiseled_copper.png", true, 64);
+    itemsById[chiseled_copper->itemId] = chiseled_copper.get();
+    items["chiseled_copper"] = std::move(chiseled_copper);
+    
+    auto oxidized_copper = std::make_unique<Item>(itemId++, "Oxidized Copper", ItemType::ITEM, "item/oxidized_copper.png", true, 64);
+    itemsById[oxidized_copper->itemId] = oxidized_copper.get();
+    items["oxidized_copper"] = std::move(oxidized_copper);
+    
+    auto oxidized_chiseled_copper = std::make_unique<Item>(itemId++, "Oxidized Chiseled Copper", ItemType::ITEM, "item/oxidized_chiseled_copper.png", true, 64);
+    itemsById[oxidized_chiseled_copper->itemId] = oxidized_chiseled_copper.get();
+    items["oxidized_chiseled_copper"] = std::move(oxidized_chiseled_copper);
+    
+    auto copper_grate = std::make_unique<Item>(itemId++, "Copper Grate", ItemType::ITEM, "item/copper_grate.png", true, 64);
+    itemsById[copper_grate->itemId] = copper_grate.get();
+    items["copper_grate"] = std::move(copper_grate);
+    
+    auto copper_bulb = std::make_unique<Item>(itemId++, "Copper Bulb", ItemType::ITEM, "item/copper_bulb.png", true, 64);
+    itemsById[copper_bulb->itemId] = copper_bulb.get();
+    items["copper_bulb"] = std::move(copper_bulb);
+    
+    auto copper_trapdoor = std::make_unique<Item>(itemId++, "Copper Trapdoor", ItemType::ITEM, "item/copper_trapdoor.png", true, 64);
+    itemsById[copper_trapdoor->itemId] = copper_trapdoor.get();
+    items["copper_trapdoor"] = std::move(copper_trapdoor);
+    
+    // Stained glass
+    auto blue_stained_glass = std::make_unique<Item>(itemId++, "Blue Stained Glass", ItemType::ITEM, "item/blue_stained_glass.png", true, 64);
+    itemsById[blue_stained_glass->itemId] = blue_stained_glass.get();
+    items["blue_stained_glass"] = std::move(blue_stained_glass);
+    
+    auto brown_stained_glass = std::make_unique<Item>(itemId++, "Brown Stained Glass", ItemType::ITEM, "item/brown_stained_glass.png", true, 64);
+    itemsById[brown_stained_glass->itemId] = brown_stained_glass.get();
+    items["brown_stained_glass"] = std::move(brown_stained_glass);
+    
+    auto cyan_stained_glass = std::make_unique<Item>(itemId++, "Cyan Stained Glass", ItemType::ITEM, "item/cyan_stained_glass.png", true, 64);
+    itemsById[cyan_stained_glass->itemId] = cyan_stained_glass.get();
+    items["cyan_stained_glass"] = std::move(cyan_stained_glass);
+    
+    auto gray_stained_glass = std::make_unique<Item>(itemId++, "Gray Stained Glass", ItemType::ITEM, "item/gray_stained_glass.png", true, 64);
+    itemsById[gray_stained_glass->itemId] = gray_stained_glass.get();
+    items["gray_stained_glass"] = std::move(gray_stained_glass);
+    
+    auto green_stained_glass = std::make_unique<Item>(itemId++, "Green Stained Glass", ItemType::ITEM, "item/green_stained_glass.png", true, 64);
+    itemsById[green_stained_glass->itemId] = green_stained_glass.get();
+    items["green_stained_glass"] = std::move(green_stained_glass);
+    
+    auto light_blue_stained_glass = std::make_unique<Item>(itemId++, "Light Blue Stained Glass", ItemType::ITEM, "item/light_blue_stained_glass.png", true, 64);
+    itemsById[light_blue_stained_glass->itemId] = light_blue_stained_glass.get();
+    items["light_blue_stained_glass"] = std::move(light_blue_stained_glass);
+    
+    auto light_gray_stained_glass = std::make_unique<Item>(itemId++, "Light Gray Stained Glass", ItemType::ITEM, "item/light_gray_stained_glass.png", true, 64);
+    itemsById[light_gray_stained_glass->itemId] = light_gray_stained_glass.get();
+    items["light_gray_stained_glass"] = std::move(light_gray_stained_glass);
+    
+    auto lime_stained_glass = std::make_unique<Item>(itemId++, "Lime Stained Glass", ItemType::ITEM, "item/lime_stained_glass.png", true, 64);
+    itemsById[lime_stained_glass->itemId] = lime_stained_glass.get();
+    items["lime_stained_glass"] = std::move(lime_stained_glass);
+    
+    auto magenta_stained_glass = std::make_unique<Item>(itemId++, "Magenta Stained Glass", ItemType::ITEM, "item/magenta_stained_glass.png", true, 64);
+    itemsById[magenta_stained_glass->itemId] = magenta_stained_glass.get();
+    items["magenta_stained_glass"] = std::move(magenta_stained_glass);
+    
+    auto orange_stained_glass = std::make_unique<Item>(itemId++, "Orange Stained Glass", ItemType::ITEM, "item/orange_stained_glass.png", true, 64);
+    itemsById[orange_stained_glass->itemId] = orange_stained_glass.get();
+    items["orange_stained_glass"] = std::move(orange_stained_glass);
+    
+    auto pink_stained_glass = std::make_unique<Item>(itemId++, "Pink Stained Glass", ItemType::ITEM, "item/pink_stained_glass.png", true, 64);
+    itemsById[pink_stained_glass->itemId] = pink_stained_glass.get();
+    items["pink_stained_glass"] = std::move(pink_stained_glass);
+    
+    auto yellow_stained_glass = std::make_unique<Item>(itemId++, "Yellow Stained Glass", ItemType::ITEM, "item/yellow_stained_glass.png", true, 64);
+    itemsById[yellow_stained_glass->itemId] = yellow_stained_glass.get();
+    items["yellow_stained_glass"] = std::move(yellow_stained_glass);
+    
+    // Essential stone variants
+    auto chiseled_stone_bricks = std::make_unique<Item>(itemId++, "Chiseled Stone Bricks", ItemType::ITEM, "item/chiseled_stone_bricks.png", true, 64);
+    itemsById[chiseled_stone_bricks->itemId] = chiseled_stone_bricks.get();
+    items["chiseled_stone_bricks"] = std::move(chiseled_stone_bricks);
+    
+    auto cracked_stone_bricks = std::make_unique<Item>(itemId++, "Cracked Stone Bricks", ItemType::ITEM, "item/cracked_stone_bricks.png", true, 64);
+    itemsById[cracked_stone_bricks->itemId] = cracked_stone_bricks.get();
+    items["cracked_stone_bricks"] = std::move(cracked_stone_bricks);
+    
+    auto polished_granite = std::make_unique<Item>(itemId++, "Polished Granite", ItemType::ITEM, "item/polished_granite.png", true, 64);
+    itemsById[polished_granite->itemId] = polished_granite.get();
+    items["polished_granite"] = std::move(polished_granite);
+    
+    auto polished_diorite = std::make_unique<Item>(itemId++, "Polished Diorite", ItemType::ITEM, "item/polished_diorite.png", true, 64);
+    itemsById[polished_diorite->itemId] = polished_diorite.get();
+    items["polished_diorite"] = std::move(polished_diorite);
+    
+    auto tuff = std::make_unique<Item>(itemId++, "Tuff", ItemType::ITEM, "item/tuff.png", true, 64);
+    itemsById[tuff->itemId] = tuff.get();
+    items["tuff"] = std::move(tuff);
+    
+    // Special utility blocks
+    auto sea_lantern = std::make_unique<Item>(itemId++, "Sea Lantern", ItemType::ITEM, "item/sea_lantern.png", true, 64);
+    itemsById[sea_lantern->itemId] = sea_lantern.get();
+    items["sea_lantern"] = std::move(sea_lantern);
+    
+    auto lantern = std::make_unique<Item>(itemId++, "Lantern", ItemType::ITEM, "item/lantern.png", true, 64);
+    itemsById[lantern->itemId] = lantern.get();
+    items["lantern"] = std::move(lantern);
+    
+    auto soul_lantern = std::make_unique<Item>(itemId++, "Soul Lantern", ItemType::ITEM, "item/soul_lantern.png", true, 64);
+    itemsById[soul_lantern->itemId] = soul_lantern.get();
+    items["soul_lantern"] = std::move(soul_lantern);
+    
+    auto soul_torch = std::make_unique<Item>(itemId++, "Soul Torch", ItemType::ITEM, "item/soul_torch.png", true, 64);
+    itemsById[soul_torch->itemId] = soul_torch.get();
+    items["soul_torch"] = std::move(soul_torch);
+    
+    auto soul_sand = std::make_unique<Item>(itemId++, "Soul Sand", ItemType::ITEM, "item/soul_sand.png", true, 64);
+    itemsById[soul_sand->itemId] = soul_sand.get();
+    items["soul_sand"] = std::move(soul_sand);
+    
+    auto soul_soil = std::make_unique<Item>(itemId++, "Soul Soil", ItemType::ITEM, "item/soul_soil.png", true, 64);
+    itemsById[soul_soil->itemId] = soul_soil.get();
+    items["soul_soil"] = std::move(soul_soil);
+    
+    auto beacon = std::make_unique<Item>(itemId++, "Beacon", ItemType::ITEM, "item/beacon.png", true, 64);
+    itemsById[beacon->itemId] = beacon.get();
+    items["beacon"] = std::move(beacon);
+    
+    auto conduit = std::make_unique<Item>(itemId++, "Conduit", ItemType::ITEM, "item/conduit.png", true, 64);
+    itemsById[conduit->itemId] = conduit.get();
+    items["conduit"] = std::move(conduit);
+    
+    auto spawner = std::make_unique<Item>(itemId++, "Spawner", ItemType::ITEM, "item/spawner.png", true, 1);
+    itemsById[spawner->itemId] = spawner.get();
+    items["spawner"] = std::move(spawner);
+    
+    auto sponge = std::make_unique<Item>(itemId++, "Sponge", ItemType::ITEM, "item/sponge.png", true, 64);
+    itemsById[sponge->itemId] = sponge.get();
+    items["sponge"] = std::move(sponge);
+    
+    auto slime_block = std::make_unique<Item>(itemId++, "Slime Block", ItemType::ITEM, "item/slime_block.png", true, 64);
+    itemsById[slime_block->itemId] = slime_block.get();
+    items["slime_block"] = std::move(slime_block);
+    
+    auto powder_snow = std::make_unique<Item>(itemId++, "Powder Snow", ItemType::ITEM, "item/powder_snow.png", true, 64);
+    itemsById[powder_snow->itemId] = powder_snow.get();
+    items["powder_snow"] = std::move(powder_snow);
+    
+    // Agricultural items
+    auto wheat_seeds = std::make_unique<Item>(itemId++, "Wheat Seeds", ItemType::ITEM, "item/wheat_seeds.png", true, 64);
+    itemsById[wheat_seeds->itemId] = wheat_seeds.get();
+    items["wheat_seeds"] = std::move(wheat_seeds);
+    
+    auto potato = std::make_unique<Item>(itemId++, "Potato", ItemType::ITEM, "item/potato.png", true, 64);
+    itemsById[potato->itemId] = potato.get();
+    items["potato"] = std::move(potato);
+    
+    auto kelp = std::make_unique<Item>(itemId++, "Kelp", ItemType::ITEM, "item/kelp.png", true, 64);
+    itemsById[kelp->itemId] = kelp.get();
+    items["kelp"] = std::move(kelp);
+    
+    // Basic plant items
+    auto dandelion = std::make_unique<Item>(itemId++, "Dandelion", ItemType::ITEM, "item/dandelion.png", true, 64);
+    itemsById[dandelion->itemId] = dandelion.get();
+    items["dandelion"] = std::move(dandelion);
+    
+    auto dead_bush = std::make_unique<Item>(itemId++, "Dead Bush", ItemType::ITEM, "item/dead_bush.png", true, 64);
+    itemsById[dead_bush->itemId] = dead_bush.get();
+    items["dead_bush"] = std::move(dead_bush);
+    
+    // Essential utility blocks
+    auto rail = std::make_unique<Item>(itemId++, "Rail", ItemType::ITEM, "item/rail.png", true, 64);
+    itemsById[rail->itemId] = rail.get();
+    items["rail"] = std::move(rail);
+    
+    auto item_frame = std::make_unique<Item>(itemId++, "Item Frame", ItemType::ITEM, "item/item_frame.png", true, 64);
+    itemsById[item_frame->itemId] = item_frame.get();
+    items["item_frame"] = std::move(item_frame);
+    
+    auto jack_o_lantern = std::make_unique<Item>(itemId++, "Jack o'Lantern", ItemType::ITEM, "item/jack_o_lantern.png", true, 64);
+    itemsById[jack_o_lantern->itemId] = jack_o_lantern.get();
+    items["jack_o_lantern"] = std::move(jack_o_lantern);
+    
+    auto spruce_trapdoor = std::make_unique<Item>(itemId++, "Spruce Trapdoor", ItemType::ITEM, "item/spruce_trapdoor.png", true, 64);
+    itemsById[spruce_trapdoor->itemId] = spruce_trapdoor.get();
+    items["spruce_trapdoor"] = std::move(spruce_trapdoor);
     
     DEBUG_INVENTORY("Initialized " << (itemId - 100) << " block items and " << items.size() << " total items");
 }

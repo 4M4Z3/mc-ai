@@ -10,13 +10,13 @@
 #include <chrono> // Added for jump delay timing
 
 Player::Player() : m_position(0.0f, 0.0f, 0.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
-                   m_isSurvivalMode(true), m_isPhysicsEnabled(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f) {
+                   m_isSurvivalMode(true), m_isPhysicsEnabled(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f), m_isSprinting(false), m_currentFOV(BASE_FOV) {
     UpdateVectors();
     std::cout << "Player spawned in survival mode with physics disabled - safe mode active until terrain verified" << std::endl;
 }
 
 Player::Player(float x, float y, float z) : m_position(x, y, z), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
-                                            m_isSurvivalMode(true), m_isPhysicsEnabled(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f) {
+                                            m_isSurvivalMode(true), m_isPhysicsEnabled(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f), m_isSprinting(false), m_currentFOV(BASE_FOV) {
     UpdateVectors();
     std::cout << "Player spawned in survival mode with physics disabled - safe mode active until terrain verified" << std::endl;
 }
@@ -555,11 +555,21 @@ void Player::ProcessMouseMovement(float xOffset, float yOffset, float sensitivit
 }
 
 void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world, const BlockManager* blockManager) {
-    float velocity = m_movementSpeed * deltaTime;
+    // Check for sprinting (Shift + W in survival mode)
+    bool wPressed = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
+    bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+    
+    if (m_isSurvivalMode) {
+        m_isSprinting = wPressed && shiftPressed;
+    } else {
+        m_isSprinting = false; // No sprinting in creative mode
+    }
+    
+    float velocity = GetCurrentMovementSpeed() * deltaTime;
     Vec3 intendedPosition = m_position;
     
     // Handle movement input
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    if (wPressed) {
         if (m_isSurvivalMode) {
             // In survival mode, only move horizontally
             Vec3 horizontalFront = Vec3(m_front.x, 0.0f, m_front.z);
@@ -736,7 +746,27 @@ void Player::InitializeTestInventory(ItemManager* itemManager) {
     // Clear inventory to start empty
     m_inventory.clear();
     DEBUG_INVENTORY("Player inventory initialized as empty");
-} 
+}
+
+void Player::UpdateFOV(float deltaTime) {
+    // Determine target FOV based on sprinting state
+    float targetFOV = BASE_FOV;
+    if (m_isSprinting && m_isSurvivalMode) {
+        targetFOV = BASE_FOV * SPRINT_FOV_MULTIPLIER;
+    }
+    
+    // Smooth interpolation towards target FOV
+    float fovDifference = targetFOV - m_currentFOV;
+    if (std::abs(fovDifference) > 0.01f) {  // Only interpolate if there's a meaningful difference
+        m_currentFOV += fovDifference * FOV_INTERPOLATION_SPEED * deltaTime;
+        
+        // Clamp to prevent overshooting
+        if ((fovDifference > 0 && m_currentFOV > targetFOV) || 
+            (fovDifference < 0 && m_currentFOV < targetFOV)) {
+            m_currentFOV = targetFOV;
+        }
+    }
+}
 
 bool Player::VerifyTerrainSafety(World* world) const {
     if (!world) return false;
@@ -805,4 +835,15 @@ bool Player::VerifyTerrainSafety(World* world) const {
     }
     
     return isSafe;
+}
+
+float Player::GetCurrentFOV() const {
+    return m_currentFOV;
+}
+
+float Player::GetCurrentMovementSpeed() const {
+    if (m_isSprinting && m_isSurvivalMode) {
+        return m_movementSpeed * SPRINT_SPEED_MULTIPLIER;
+    }
+    return m_movementSpeed;
 } 

@@ -663,26 +663,22 @@ void Chunk::Generate(int seed, const BlockManager* blockManager) {
         // Add specific blocks that we know have good textures
         std::vector<BlockType> knownGoodBlocks = {
             BlockType::STONE, BlockType::DIRT, BlockType::GRASS,
-            static_cast<BlockType>(4),  // ACACIA_LEAVES  
-            static_cast<BlockType>(5),  // ACACIA_PLANKS
-            static_cast<BlockType>(6),  // ACACIA_SAPLING
-            static_cast<BlockType>(7),  // ALLIUM
-            static_cast<BlockType>(8),  // AMETHYST_BLOCK
-            static_cast<BlockType>(9),  // AMETHYST_CLUSTER
-            static_cast<BlockType>(10), // ANDESITE
-            static_cast<BlockType>(11), // AZALEA_LEAVES
-            static_cast<BlockType>(12), // AZALEA_PLANT
-            static_cast<BlockType>(13), // AZURE_BLUET
-            static_cast<BlockType>(14), // BEACON
-            static_cast<BlockType>(15), // BEDROCK
-            static_cast<BlockType>(16), // BIRCH_LEAVES
-            static_cast<BlockType>(17), // BIRCH_PLANKS
-            static_cast<BlockType>(18), // BIRCH_SAPLING
-            static_cast<BlockType>(26), // BRICKS  
-            static_cast<BlockType>(44), // COPPER_BLOCK
-            static_cast<BlockType>(68), // EMERALD_BLOCK
-            static_cast<BlockType>(73), // GOLD_BLOCK
-            static_cast<BlockType>(96), // IRON_BLOCK
+            BlockType::ACACIA_LEAVES,
+            BlockType::ACACIA_PLANKS,
+            BlockType::ANDESITE,
+            BlockType::AZALEA_LEAVES,
+            BlockType::BEDROCK,
+            BlockType::BIRCH_LEAVES,
+            BlockType::BIRCH_PLANKS,
+            BlockType::BRICKS,
+            BlockType::COPPER_BLOCK,
+            BlockType::EMERALD_BLOCK,
+            BlockType::GOLD_BLOCK,
+            BlockType::IRON_BLOCK,
+            // Log blocks
+            BlockType::OAK_LOG,
+            BlockType::BIRCH_LOG,
+            BlockType::DARK_OAK_LOG,
         };
         
         // Add the known good blocks

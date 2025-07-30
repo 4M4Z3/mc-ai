@@ -381,9 +381,9 @@ void Renderer::SetViewport(int width, int height) {
     m_viewportHeight = height;
     glViewport(0, 0, width, height);
     
-    // Update projection matrix
+    // Update projection matrix with default FOV (will be overridden in BeginFrame)
     float aspect = (float)width / (float)height;
-    m_projectionMatrix = CreateProjectionMatrix(65.0f, aspect, 0.1f, 100.0f);
+    m_projectionMatrix = CreateProjectionMatrix(70.0f, aspect, 0.1f, 100.0f);
     
     DEBUG_INFO("Aspect ratio: " << aspect);
 }
@@ -397,6 +397,10 @@ void Renderer::BeginFrame(const Player& player) {
     // Set view matrix and store it for player rendering
     m_viewMatrix = player.GetViewMatrix();
     glUniformMatrix4fv(m_viewLoc, 1, GL_FALSE, m_viewMatrix.m);
+    
+    // Update projection matrix with current player FOV (for sprinting effect)
+    float aspect = (float)m_viewportWidth / (float)m_viewportHeight;
+    m_projectionMatrix = CreateProjectionMatrix(player.GetCurrentFOV(), aspect, 0.1f, 100.0f);
     
     // Set projection matrix
     glUniformMatrix4fv(m_projLoc, 1, GL_FALSE, m_projectionMatrix.m);

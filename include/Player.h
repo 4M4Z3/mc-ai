@@ -113,6 +113,7 @@ public:
     // Physics for survival mode
     void ApplyGravity(float deltaTime);
     void Update(float deltaTime, class World* world, const BlockManager* blockManager = nullptr);
+    void UpdateFOV(float deltaTime);  // FOV interpolation (always active)
     
     // Collision detection
     bool CheckCollision(const Vec3& newPosition, class World* world, const BlockManager* blockManager = nullptr) const;
@@ -145,6 +146,11 @@ public:
     bool CanJump() const;  // Check if enough time has passed since last jump
     bool HasLowCeiling(class World* world, const BlockManager* blockManager = nullptr) const;  // Check if there's a low ceiling above
     
+    // Sprinting
+    bool IsSprinting() const { return m_isSprinting; }
+    float GetCurrentFOV() const;
+    float GetCurrentMovementSpeed() const;
+
     // Inventory access
     Inventory& GetInventory() { return m_inventory; }
     const Inventory& GetInventory() const { return m_inventory; }
@@ -160,10 +166,14 @@ private:
     
     // Survival mode physics
     bool m_isSurvivalMode;
-    bool m_isPhysicsEnabled;      // New: Temporarily disable physics until terrain is safe
+    bool m_isPhysicsEnabled;      // Temporarily disable physics until terrain is safe
     float m_verticalVelocity;  // For gravity
     bool m_isOnGround;
     float m_lastJumpTime;      // Time of last jump (for jump delay)
+    
+    // Sprinting state
+    bool m_isSprinting;
+    float m_currentFOV;  // Current interpolated FOV value
     
     // Physics constants - Minecraft standard values
     static constexpr float GRAVITY = 32.0f;        // blocks per second squared (Minecraft standard)
@@ -171,6 +181,12 @@ private:
     static constexpr float JUMP_VELOCITY = 8.94f;  // Initial upward velocity when jumping (calculated for 1.25 block height)
     static constexpr float LOW_CEILING_JUMP_VELOCITY = 3.0f;  // Reduced jump velocity when ceiling is low
     static constexpr float JUMP_DELAY = 0.4f;      // Minimum time between jumps (in seconds)
+    
+    // Sprinting constants
+    static constexpr float SPRINT_SPEED_MULTIPLIER = 1.3f;  // 30% speed increase when sprinting
+    static constexpr float SPRINT_FOV_MULTIPLIER = 1.15f;   // 15% FOV increase when sprinting (like Minecraft)
+    static constexpr float BASE_FOV = 70.0f;                // Base FOV in degrees
+    static constexpr float FOV_INTERPOLATION_SPEED = 4.0f;  // FOV interpolation speed (higher = faster transition)
     
     // Player positioning:
     // - m_position represents the CENTER of the player at GROUND LEVEL (feet)

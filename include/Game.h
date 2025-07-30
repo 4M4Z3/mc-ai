@@ -9,6 +9,7 @@
 #include "NetworkClient.h"
 #include "ServerDiscovery.h"
 #include "Item.h"
+#include "CraftingSystem.h"
 #include <memory>
 #include <unordered_map>
 #include <chrono>
@@ -106,6 +107,9 @@ private:
     
     // Item system
     std::unique_ptr<ItemManager> m_itemManager;
+    
+    // Crafting system
+    std::unique_ptr<CraftingSystem> m_craftingSystem;
     
     // Block targeting
     RaycastResult m_targetBlock;
@@ -226,6 +230,10 @@ private:
     bool IsDay() const;
     bool IsNight() const;
     float GetTimeOfDay() const; // Returns 0.0-1.0 where 0.5 is sunset
+    
+    // Crafting system methods
+    void UpdateCraftingResult();
+    void HandleCraftingResultClick();
 
     // Window callbacks
     static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);

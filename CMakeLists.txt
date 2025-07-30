@@ -108,6 +108,7 @@ set(SOURCES
     src/ServerDiscovery.cpp
     src/ItemManager.cpp
     src/Inventory.cpp
+    src/CraftingSystem.cpp
 )
 
 # Header files
@@ -123,6 +124,7 @@ set(HEADERS
     include/Server.h
     include/NetworkClient.h
     include/ServerDiscovery.h
+    include/CraftingSystem.h
 )
 
 # Add ImGui source files

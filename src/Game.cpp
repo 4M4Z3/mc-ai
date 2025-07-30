@@ -163,6 +163,9 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     if (!m_itemManager->loadFromConfig("items_config.json")) {
         std::cerr << "Warning: Failed to load items config, inventory will be empty" << std::endl;
     }
+    
+    // Initialize crafting system
+    m_craftingSystem = std::make_unique<CraftingSystem>(m_itemManager.get());
 
     // Player will be created when world becomes available
     
@@ -483,6 +486,8 @@ void Game::UpdateGame() {
     // Update player physics (gravity, etc.)
     if (m_player && m_world) {
         m_player->Update(m_deltaTime, m_world.get(), &(m_renderer.m_blockManager));
+        // Always update FOV interpolation (works in both creative and survival modes)
+        m_player->UpdateFOV(m_deltaTime);
     }
     
     // Update first-person arm animation
@@ -951,10 +956,12 @@ void Game::RenderInventory() {
     const float titleHeight = 40.0f;
     const float sectionSpacing = 30.0f;
     
-    // Calculate total window dimensions
-    const float inventoryWidth = (9 * slotSize) + (8 * slotSpacing) + (2 * padding);
+    // Calculate total window dimensions (including crafting area)
+    const float craftingAreaWidth = (2 * slotSize) + slotSpacing + slotSize + (2 * slotSpacing); // 2x2 grid + result slot + spacing
+    const float inventoryWidth = std::max((9 * slotSize) + (8 * slotSpacing), craftingAreaWidth) + (2 * padding);
     const float inventoryHeight = titleHeight + (3 * slotSize) + (2 * slotSpacing) + sectionSpacing + 
-                                  slotSize + (2 * padding); // 3 rows + spacing + hotbar + padding
+                                  (2 * slotSize) + slotSpacing + sectionSpacing + // crafting area
+                                  slotSize + (2 * padding); // hotbar + padding
     
     // Center the inventory window
     float centerX = (io.DisplaySize.x - inventoryWidth) * 0.5f;
@@ -1002,8 +1009,38 @@ void Game::RenderInventory() {
                 }
             }
             
-            // Add spacing between main inventory and hotbar
-            float hotbarY = startY + (3 * (slotSize + slotSpacing)) + sectionSpacing;
+            // Add crafting area between main inventory and hotbar
+            float craftingY = startY + (3 * (slotSize + slotSpacing)) + sectionSpacing;
+            
+            // Crafting label
+            ImGui::SetCursorPos(ImVec2(padding, craftingY - 20.0f));
+            ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.9f, 1.0f), "Crafting");
+            
+            // Render 2x2 crafting grid
+            for (int row = 0; row < 2; ++row) {
+                for (int col = 0; col < 2; ++col) {
+                    int slotIndex = Inventory::CRAFTING_GRID_START + (row * 2) + col;
+                    const auto& slot = inventory.getSlot(slotIndex);
+                    
+                    float slotX = padding + (col * (slotSize + slotSpacing));
+                    float slotY = craftingY + (row * (slotSize + slotSpacing));
+                    
+                    RenderCustomInventorySlot(slot, slotX, slotY, slotSize, slotIndex);
+                }
+            }
+            
+            // Render crafting result slot (to the right of the 2x2 grid)
+            const auto& resultSlot = inventory.getSlot(Inventory::CRAFTING_RESULT_SLOT);
+            float resultX = padding + (2 * (slotSize + slotSpacing)) + slotSpacing;
+            float resultY = craftingY + (slotSize / 2); // Center vertically relative to 2x2 grid
+            
+            RenderCustomInventorySlot(resultSlot, resultX, resultY, slotSize, Inventory::CRAFTING_RESULT_SLOT);
+            
+            // Update crafting result based on crafting grid contents
+            UpdateCraftingResult();
+            
+            // Add spacing between crafting area and hotbar
+            float hotbarY = craftingY + (2 * (slotSize + slotSpacing)) + sectionSpacing;
             
             // Hotbar label
             ImGui::SetCursorPos(ImVec2(padding, hotbarY - 20.0f));
@@ -1025,6 +1062,78 @@ void Game::RenderInventory() {
     
     // Render cursor item on top of everything
     RenderCursorItem();
+}
+
+void Game::UpdateCraftingResult() {
+    if (!m_player || !m_craftingSystem) return;
+    
+    auto& inventory = m_player->GetInventory();
+    
+    // Get crafting grid contents
+    CraftingRecipe::CraftingSlot craftingSlots[4];
+    for (int i = 0; i < 4; i++) {
+        const auto& slot = inventory.getCraftingSlot(i);
+        if (!slot.isEmpty()) {
+            craftingSlots[i] = CraftingRecipe::CraftingSlot(slot.item, slot.quantity);
+        }
+    }
+    
+    // Check if we can craft something
+    auto result = m_craftingSystem->checkCrafting(craftingSlots);
+    
+    // Update result slot
+    auto& resultSlot = inventory.getCraftingResultSlot();
+    if (result.canCraft) {
+        resultSlot.item = result.resultItem;
+        resultSlot.quantity = result.resultQuantity;
+    } else {
+        resultSlot.clear();
+    }
+}
+
+void Game::HandleCraftingResultClick() {
+    if (!m_player || !m_craftingSystem) return;
+    
+    auto& inventory = m_player->GetInventory();
+    auto& resultSlot = inventory.getCraftingResultSlot();
+    auto& cursorSlot = inventory.getCursorSlot();
+    
+    if (resultSlot.isEmpty() || !cursorSlot.isEmpty()) {
+        return; // No result to take or cursor is already holding something
+    }
+    
+    // Get crafting grid contents
+    CraftingRecipe::CraftingSlot craftingSlots[4];
+    for (int i = 0; i < 4; i++) {
+        auto& slot = inventory.getCraftingSlot(i);
+        if (!slot.isEmpty()) {
+            craftingSlots[i] = CraftingRecipe::CraftingSlot(slot.item, slot.quantity);
+        }
+    }
+    
+    // Perform the crafting (this will consume ingredients)
+    auto result = m_craftingSystem->performCrafting(craftingSlots);
+    
+    if (result.canCraft) {
+        // Move result to cursor
+        cursorSlot.item = result.resultItem;
+        cursorSlot.quantity = result.resultQuantity;
+        
+        // Update the crafting grid with consumed ingredients
+        for (int i = 0; i < 4; i++) {
+            auto& slot = inventory.getCraftingSlot(i);
+            if (craftingSlots[i].quantity <= 0) {
+                slot.clear();
+            } else {
+                slot.quantity = craftingSlots[i].quantity;
+            }
+        }
+        
+        // Clear result slot since we took the item
+        resultSlot.clear();
+        
+        std::cout << "Crafted: " << result.resultQuantity << "x " << result.resultItem->itemName << std::endl;
+    }
 }
 
 void Game::RenderCustomInventorySlot(const InventorySlot& slot, float x, float y, float size, int slotIndex) {
@@ -1209,6 +1318,18 @@ void Game::HandleSlotClick(int slotIndex) {
     auto& inventory = m_player->GetInventory();
     auto& clickedSlot = inventory.getSlot(slotIndex);
     auto& cursorSlot = inventory.getCursorSlot();
+    
+    // Special handling for crafting result slot
+    if (slotIndex == Inventory::CRAFTING_RESULT_SLOT) {
+        if (!clickedSlot.isEmpty() && cursorSlot.isEmpty()) {
+            // Pick up crafted item and consume ingredients
+            HandleCraftingResultClick();
+            return;
+        } else {
+            // Can't place items into result slot
+            return;
+        }
+    }
     
     // If cursor is empty, pick up the clicked item
     if (cursorSlot.isEmpty()) {
