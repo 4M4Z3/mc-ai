@@ -29,6 +29,10 @@ void BlockManager::InitializeDefaultBlocks() {
     stoneBlock.blockName = "Stone";
     stoneBlock.blockType = BlockType::STONE;
     stoneBlock.textures.all = "stone.png";
+    // Ensure stone has proper white tint (no color modification)
+    stoneBlock.textures.tintR = 1.0f;
+    stoneBlock.textures.tintG = 1.0f;
+    stoneBlock.textures.tintB = 1.0f;
     m_blocksByType[BlockType::STONE] = stoneBlock;
     m_blocksByKey["stone"] = BlockType::STONE;
     
@@ -38,6 +42,10 @@ void BlockManager::InitializeDefaultBlocks() {
     dirtBlock.blockName = "Dirt";
     dirtBlock.blockType = BlockType::DIRT;
     dirtBlock.textures.all = "dirt.png";
+    // Ensure dirt has proper white tint (no color modification)
+    dirtBlock.textures.tintR = 1.0f;
+    dirtBlock.textures.tintG = 1.0f;
+    dirtBlock.textures.tintB = 1.0f;
     m_blocksByType[BlockType::DIRT] = dirtBlock;
     m_blocksByKey["dirt"] = BlockType::DIRT;
     
@@ -291,6 +299,36 @@ bool BlockManager::ParseBlocksSection(const std::string& blocksContent) {
                     currentBlock.textures.overlay = value.substr(firstQuote + 1, lastQuote - firstQuote - 1);
                     currentBlock.textures.hasOverlay = true;
                 }
+            }
+        }
+        // Parse tintR value
+        else if (inTextures && line.find("\"tintR\":") != std::string::npos) {
+            size_t colonPos = line.find(":");
+            if (colonPos != std::string::npos) {
+                std::string value = line.substr(colonPos + 1);
+                value.erase(0, value.find_first_not_of(" \t,"));
+                value.erase(value.find_last_not_of(" \t,") + 1);
+                currentBlock.textures.tintR = std::stof(value);
+            }
+        }
+        // Parse tintG value
+        else if (inTextures && line.find("\"tintG\":") != std::string::npos) {
+            size_t colonPos = line.find(":");
+            if (colonPos != std::string::npos) {
+                std::string value = line.substr(colonPos + 1);
+                value.erase(0, value.find_first_not_of(" \t,"));
+                value.erase(value.find_last_not_of(" \t,") + 1);
+                currentBlock.textures.tintG = std::stof(value);
+            }
+        }
+        // Parse tintB value
+        else if (inTextures && line.find("\"tintB\":") != std::string::npos) {
+            size_t colonPos = line.find(":");
+            if (colonPos != std::string::npos) {
+                std::string value = line.substr(colonPos + 1);
+                value.erase(0, value.find_first_not_of(" \t,"));
+                value.erase(value.find_last_not_of(" \t,") + 1);
+                currentBlock.textures.tintB = std::stof(value);
             }
         }
         // End of textures section

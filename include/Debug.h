@@ -43,7 +43,7 @@
 // Conditional debug macros for specific systems
 #define DEBUG_TEXTURE_LOADING   0   // Set to 1 to enable texture loading messages
 #define DEBUG_SHADER_LOADING    0   // Set to 1 to enable shader loading messages  
-#define DEBUG_BLOCK_LOADING     0   // Set to 1 to enable block loading messages
+#define DEBUG_BLOCK_LOADING     1   // Set to 1 to enable block loading messages
 #define DEBUG_NETWORK_VERBOSE   0   // Set to 1 to enable verbose network messages
 #define DEBUG_INVENTORY_LOADING 0   // Set to 1 to enable inventory loading messages
 
