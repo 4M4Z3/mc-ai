@@ -82,3 +82,5 @@ conan/
 # Custom build scripts output
 *.tar.gz
 *.zip 
+
+.env
