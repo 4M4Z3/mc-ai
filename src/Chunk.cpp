@@ -95,7 +95,7 @@ void Chunk::ClearMesh() {
     m_meshGenerated = false;
 }
 
-void Chunk::GenerateMesh(const World* world) {
+void Chunk::GenerateMesh(const World* world, const BlockManager* blockManager) {
     // Clear existing meshes
     ClearMesh();
     
@@ -113,7 +113,7 @@ void Chunk::GenerateMesh(const World* world) {
                 if (blockType != BlockType::AIR) {
                     // Check each face for visibility
                     for (int face = 0; face < 6; ++face) {
-                        if (ShouldRenderFace(x, y, z, face, world)) {
+                        if (ShouldRenderFace(x, y, z, face, world, blockManager)) {
                             // Handle grass blocks specially
                             if (blockType == BlockType::GRASS) {
                                 // Group grass faces by face type for different textures
@@ -213,10 +213,10 @@ void Chunk::GenerateMesh(const World* world) {
     m_meshGenerated = true;
 }
 
-void Chunk::UpdateBlockMesh(int x, int y, int z, const World* world) {
+void Chunk::UpdateBlockMesh(int x, int y, int z, const World* world, const BlockManager* blockManager) {
     // For now, fall back to full mesh regeneration
     // TODO: Implement truly incremental mesh updates
-    GenerateMesh(world);
+    GenerateMesh(world, blockManager);
 }
 
 void Chunk::BatchBlockUpdate(int x, int y, int z, BlockType oldType, BlockType newType) {
@@ -302,9 +302,22 @@ std::vector<BlockType> Chunk::GetBlockTypesInChunk() const {
     return blockTypes;
 }
 
-bool Chunk::ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world) const {
+bool Chunk::ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world, const BlockManager* blockManager) const {
     Block neighbor = GetNeighborBlock(x, y, z, faceDirection, world);
-    return neighbor.IsAir();
+    
+    // Always show faces adjacent to air
+    if (neighbor.IsAir()) {
+        return true;
+    }
+    
+    // If we have a BlockManager, also show faces adjacent to transparent or ground blocks
+    if (blockManager) {
+        BlockType neighborType = neighbor.GetType();
+        return blockManager->IsTransparent(neighborType) || blockManager->IsGround(neighborType);
+    }
+    
+    // Fallback to original behavior if no BlockManager
+    return false;
 }
 
 Block Chunk::GetNeighborBlock(int x, int y, int z, int faceDirection, const World* world) const {

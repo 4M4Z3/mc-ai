@@ -17,10 +17,17 @@ struct BlockTextureInfo {
     bool hasOverlay = false;   // Needs overlay rendering
 };
 
+enum class BlockCategory {
+    SOLID,
+    TRANSPARENT,
+    GROUND
+};
+
 struct BlockDefinition {
     std::string blockKey;
     std::string blockName;
     BlockType blockType;
+    BlockCategory category = BlockCategory::SOLID;  // Default to solid
     BlockTextureInfo textures;
 };
 
@@ -46,6 +53,12 @@ public:
     
     // Get texture information
     const BlockTextureInfo& GetTextureInfo(BlockType blockType) const;
+    
+    // Block category checks
+    BlockCategory GetBlockCategory(BlockType blockType) const;
+    bool IsTransparent(BlockType blockType) const;
+    bool IsGround(BlockType blockType) const;
+    bool IsSolid(BlockType blockType) const;
     
 private:
     std::unordered_map<BlockType, BlockDefinition> m_blocksByType;

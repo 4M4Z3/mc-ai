@@ -41,7 +41,9 @@ public:
     
     // Mesh generation
     void GenerateAllMeshes();
+    void GenerateAllMeshes(const BlockManager* blockManager);
     void RegenerateMeshes();
+    void RegenerateMeshes(const BlockManager* blockManager);
     
     // Utility functions
     bool IsValidWorldPosition(int worldX, int worldY, int worldZ) const;

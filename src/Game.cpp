@@ -426,7 +426,7 @@ void Game::UpdateGame() {
                 // Regenerate the chunk containing the broken block
                 Chunk* chunk = m_world->GetChunk(chunkX, chunkZ);
                 if (chunk) {
-                    chunk->GenerateMesh(m_world.get());
+                    chunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
                 }
                 
                 // Check if we need to regenerate neighboring chunks
@@ -434,22 +434,22 @@ void Game::UpdateGame() {
                 if (localX == 0) {
                     // Block was on the left edge, regenerate left neighbor
                     Chunk* leftChunk = m_world->GetChunk(chunkX - 1, chunkZ);
-                    if (leftChunk) leftChunk->GenerateMesh(m_world.get());
+                    if (leftChunk) leftChunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
                 }
                 if (localX == 15) {
                     // Block was on the right edge, regenerate right neighbor
                     Chunk* rightChunk = m_world->GetChunk(chunkX + 1, chunkZ);
-                    if (rightChunk) rightChunk->GenerateMesh(m_world.get());
+                    if (rightChunk) rightChunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
                 }
                 if (localZ == 0) {
                     // Block was on the back edge, regenerate back neighbor
                     Chunk* backChunk = m_world->GetChunk(chunkX, chunkZ - 1);
-                    if (backChunk) backChunk->GenerateMesh(m_world.get());
+                    if (backChunk) backChunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
                 }
                 if (localZ == 15) {
                     // Block was on the front edge, regenerate front neighbor
                     Chunk* frontChunk = m_world->GetChunk(chunkX, chunkZ + 1);
-                    if (frontChunk) frontChunk->GenerateMesh(m_world.get());
+                    if (frontChunk) frontChunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
                 }
             }
             m_pendingBlockBreaks.pop();
@@ -496,7 +496,7 @@ void Game::UpdateGame() {
                     chunk->ApplyServerData(blockData.data());
                     
                     // Generate mesh for the updated chunk
-                    chunk->GenerateMesh(m_world.get());
+                    chunk->GenerateMesh(m_world.get(), &(m_renderer.m_blockManager));
                     
                     std::cout << "[CLIENT] Updated chunk (" << chunkX << ", " << chunkZ << ") with server data" << std::endl;
                 } else {

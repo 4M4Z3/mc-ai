@@ -176,6 +176,26 @@ bool BlockManager::ParseBlocksSection(const std::string& blocksContent) {
                 }
             }
         }
+        // Look for type (category) field
+        else if (line.find("\"type\":") != std::string::npos && inBlock) {
+            size_t colonPos = line.find(":");
+            if (colonPos != std::string::npos) {
+                std::string value = line.substr(colonPos + 1);
+                // Extract string value between quotes
+                size_t firstQuote = value.find("\"");
+                size_t lastQuote = value.find_last_of("\"");
+                if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote != lastQuote) {
+                    std::string categoryStr = value.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+                    if (categoryStr == "solid") {
+                        currentBlock.category = BlockCategory::SOLID;
+                    } else if (categoryStr == "transparent") {
+                        currentBlock.category = BlockCategory::TRANSPARENT;
+                    } else if (categoryStr == "ground") {
+                        currentBlock.category = BlockCategory::GROUND;
+                    }
+                }
+            }
+        }
         // Look for textures section
         else if (line.find("\"textures\":") != std::string::npos && inBlock) {
             inTextures = true;
@@ -264,4 +284,21 @@ bool BlockManager::IsValidBlockType(BlockType blockType) const {
 const BlockTextureInfo& BlockManager::GetTextureInfo(BlockType blockType) const {
     const BlockDefinition* def = GetBlockDefinition(blockType);
     return def->textures;
+}
+
+BlockCategory BlockManager::GetBlockCategory(BlockType blockType) const {
+    const BlockDefinition* def = GetBlockDefinition(blockType);
+    return def->category;
+}
+
+bool BlockManager::IsTransparent(BlockType blockType) const {
+    return GetBlockCategory(blockType) == BlockCategory::TRANSPARENT;
+}
+
+bool BlockManager::IsGround(BlockType blockType) const {
+    return GetBlockCategory(blockType) == BlockCategory::GROUND;
+}
+
+bool BlockManager::IsSolid(BlockType blockType) const {
+    return GetBlockCategory(blockType) == BlockCategory::SOLID;
 }

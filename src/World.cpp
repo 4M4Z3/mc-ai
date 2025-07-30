@@ -204,7 +204,7 @@ void World::GenerateWithBlockManager(const BlockManager* blockManager) {
     }
     
     // Generate meshes after all chunks are generated
-    GenerateAllMeshes();
+    GenerateAllMeshes(blockManager);
 }
 
 void World::RegenerateWithSeed(int newSeed) {
@@ -236,9 +236,25 @@ void World::GenerateAllMeshes() {
     }
 }
 
+void World::GenerateAllMeshes(const BlockManager* blockManager) {
+    // Generate meshes for all chunks with BlockManager for proper face culling
+    for (int x = 0; x < WORLD_SIZE; ++x) {
+        for (int z = 0; z < WORLD_SIZE; ++z) {
+            if (m_chunks[x][z]) {
+                m_chunks[x][z]->GenerateMesh(this, blockManager);
+            }
+        }
+    }
+}
+
 void World::RegenerateMeshes() {
     // Regenerate meshes for all chunks (useful when blocks change)
     GenerateAllMeshes();
+}
+
+void World::RegenerateMeshes(const BlockManager* blockManager) {
+    // Regenerate meshes for all chunks with BlockManager for proper face culling
+    GenerateAllMeshes(blockManager);
 }
 
 bool World::IsValidWorldPosition(int worldX, int worldY, int worldZ) const {

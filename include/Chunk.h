@@ -53,8 +53,8 @@ public:
     void Generate(int seed, const BlockManager* blockManager = nullptr);
     
     // Mesh generation and rendering
-    void GenerateMesh(const World* world);
-    void UpdateBlockMesh(int x, int y, int z, const World* world); // Incremental mesh update for single block
+    void GenerateMesh(const World* world, const BlockManager* blockManager = nullptr);
+    void UpdateBlockMesh(int x, int y, int z, const World* world, const BlockManager* blockManager = nullptr); // Incremental mesh update for single block
     void BatchBlockUpdate(int x, int y, int z, BlockType oldType, BlockType newType); // Queue block update for batching
     void ProcessBatchedUpdates(const World* world); // Process all batched updates at once
     void RenderMesh() const;
@@ -99,7 +99,7 @@ private:
     bool m_hasPendingUpdates = false;
     
     // Face culling helpers
-    bool ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world) const;
+    bool ShouldRenderFace(int x, int y, int z, int faceDirection, const World* world, const BlockManager* blockManager = nullptr) const;
     Block GetNeighborBlock(int x, int y, int z, int faceDirection, const World* world) const;
     void AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int faceDirection, const World* world, bool flipTextureV = false) const;
     

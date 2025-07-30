@@ -3,13 +3,15 @@
     "acacia_leaves": {
       "blockType": 4,
       "blockName": "Acacia Leaves",
+      "type": "transparent",
       "textures": {
         "all": "acacia_leaves.png"
       }
     },
     "acacia_planks": {
       "blockType": 5,
-      "blockName": "Acacia Planks",
+      "blockName": "Acacia Planks", 
+      "type": "solid",
       "textures": {
         "all": "acacia_planks.png"
       }
@@ -17,6 +19,7 @@
     "acacia_sapling": {
       "blockType": 6,
       "blockName": "Acacia Sapling",
+      "type": "ground", 
       "textures": {
         "all": "acacia_sapling.png"
       }
@@ -24,6 +27,7 @@
     "allium": {
       "blockType": 7,
       "blockName": "Allium",
+      "type": "ground",
       "textures": {
         "all": "allium.png"
       }
@@ -31,6 +35,7 @@
     "amethyst_block": {
       "blockType": 8,
       "blockName": "Amethyst Block",
+      "type": "solid",
       "textures": {
         "all": "amethyst_block.png"
       }
@@ -38,6 +43,7 @@
     "amethyst_cluster": {
       "blockType": 9,
       "blockName": "Amethyst Cluster",
+      "type": "ground",
       "textures": {
         "all": "amethyst_cluster.png"
       }
@@ -45,6 +51,7 @@
     "andesite": {
       "blockType": 10,
       "blockName": "Andesite",
+      "type": "solid",
       "textures": {
         "all": "andesite.png"
       }
@@ -80,6 +87,7 @@
     "bedrock": {
       "blockType": 15,
       "blockName": "Bedrock",
+      "type": "solid",
       "textures": {
         "all": "bedrock.png"
       }
@@ -87,6 +95,7 @@
     "birch_leaves": {
       "blockType": 16,
       "blockName": "Birch Leaves",
+      "type": "transparent",
       "textures": {
         "all": "birch_leaves.png"
       }
@@ -94,6 +103,7 @@
     "birch_planks": {
       "blockType": 17,
       "blockName": "Birch Planks",
+      "type": "solid",
       "textures": {
         "all": "birch_planks.png"
       }
@@ -101,6 +111,7 @@
     "birch_sapling": {
       "blockType": 18,
       "blockName": "Birch Sapling",
+      "type": "ground",
       "textures": {
         "all": "birch_sapling.png"
       }
@@ -136,6 +147,7 @@
     "blue_stained_glass": {
       "blockType": 23,
       "blockName": "Blue Stained Glass",
+      "type": "transparent",
       "textures": {
         "all": "blue_stained_glass.png"
       }
@@ -143,6 +155,7 @@
     "blue_terracotta": {
       "blockType": 24,
       "blockName": "Blue Terracotta",
+      "type": "solid",
       "textures": {
         "all": "blue_terracotta.png"
       }
@@ -150,6 +163,7 @@
     "blue_wool": {
       "blockType": 25,
       "blockName": "Blue Wool",
+      "type": "solid",
       "textures": {
         "all": "blue_wool.png"
       }
@@ -395,6 +409,7 @@
     "dandelion": {
       "blockType": 60,
       "blockName": "Dandelion",
+      "type": "ground",
       "textures": {
         "all": "dandelion.png"
       }
@@ -486,6 +501,7 @@
     "glass": {
       "blockType": 73,
       "blockName": "Glass",
+      "type": "transparent",
       "textures": {
         "all": "glass.png"
       }
@@ -493,6 +509,7 @@
     "glowstone": {
       "blockType": 74,
       "blockName": "Glowstone",
+      "type": "solid",
       "textures": {
         "all": "glowstone.png"
       }
@@ -500,6 +517,7 @@
     "gold_block": {
       "blockType": 75,
       "blockName": "Gold Block",
+      "type": "solid",
       "textures": {
         "all": "gold_block.png"
       }
@@ -1508,14 +1526,83 @@
     "yellow_wool": {
       "blockType": 220,
       "blockName": "Yellow Wool",
+      "type": "solid",
       "textures": {
         "all": "yellow_wool.png"
+      }
+    },
+    
+    "_examples_complex_textures": {
+      "_comment": "Examples of different texture patterns",
+      
+      "grass_block": {
+        "blockType": 221,
+        "blockName": "Grass Block", 
+        "type": "solid",
+        "textures": {
+          "top": "grass_block_top.png",
+          "bottom": "dirt.png",
+          "side": "grass_block_side.png"
+        }
+      },
+      
+      "oak_log": {
+        "blockType": 222,
+        "blockName": "Oak Log",
+        "type": "solid", 
+        "textures": {
+          "top": "oak_log_top.png",
+          "bottom": "oak_log_top.png", 
+          "side": "oak_log.png"
+        }
+      },
+      
+      "furnace": {
+        "blockType": 223,
+        "blockName": "Furnace",
+        "type": "solid",
+        "textures": {
+          "front": "furnace_front.png",
+          "back": "furnace_side.png",
+          "left": "furnace_side.png", 
+          "right": "furnace_side.png",
+          "top": "furnace_top.png",
+          "bottom": "furnace_top.png"
+        }
+      },
+      
+      "glass": {
+        "blockType": 224,
+        "blockName": "Glass", 
+        "type": "transparent",
+        "textures": {
+          "all": "glass.png"
+        }
+      },
+      
+      "dandelion": {
+        "blockType": 225,
+        "blockName": "Dandelion",
+        "type": "ground",
+        "textures": {
+          "all": "dandelion.png"
+        }
       }
     }
   },
   "metadata": {
-    "total_blocks": 216,
-    "id_range": "4-220",
-    "description": "Single-texture blocks from CSV"
+    "total_blocks": 225,
+    "id_range": "4-225", 
+    "description": "Blocks with hierarchical texture system and type categories",
+    "block_types": {
+      "solid": "Regular opaque blocks (stone, wood, etc)",
+      "transparent": "Blocks with transparency (glass, leaves, etc)", 
+      "ground": "Decorative blocks that sit on ground (flowers, saplings, etc)"
+    },
+    "texture_patterns": {
+      "all": "Same texture on all faces",
+      "top/bottom/side": "Different textures for top, bottom, and sides", 
+      "individual_faces": "Specific texture for each face (front, back, left, right, top, bottom)"
+    }
   }
 }
