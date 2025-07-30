@@ -882,6 +882,9 @@ void Game::RenderInventory() {
     ImGui::End();
     ImGui::PopStyleColor(4); // Pop all color styles
     ImGui::PopStyleVar(3); // Pop all var styles
+    
+    // Render cursor item on top of everything
+    RenderCursorItem();
 }
 
 void Game::RenderCustomInventorySlot(const InventorySlot& slot, float x, float y, float size, int slotIndex) {
@@ -951,10 +954,232 @@ void Game::RenderCustomInventorySlot(const InventorySlot& slot, float x, float y
         ImGui::SetTooltip("%s\nQuantity: %d", slot.item->itemName.c_str(), slot.quantity);
     }
     
-    // Handle click interactions (basic for now)
+    // Handle click interactions
     if (is_hovered && ImGui::IsMouseClicked(0)) {
-        // TODO: Implement slot click handling for item interaction
-        std::cout << "Clicked slot " << slotIndex << std::endl;
+        HandleSlotClick(slotIndex);
+    }
+}
+
+void Game::RenderCustomHotbarSlot(const InventorySlot& slot, float x, float y, float size, int slotIndex, bool isSelected) {
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImVec2 canvas_pos = ImGui::GetWindowPos();
+    
+    // Slot position in screen coordinates
+    ImVec2 slot_min(canvas_pos.x + x, canvas_pos.y + y);
+    ImVec2 slot_max(slot_min.x + size, slot_min.y + size);
+    
+    // Check if mouse is hovering over this slot
+    bool is_hovered = ImGui::IsMouseHoveringRect(slot_min, slot_max);
+    
+    // Slot background color - different for selected slot
+    ImU32 slot_bg_color;
+    if (isSelected) {
+        // Selected slot has a brighter background
+        slot_bg_color = is_hovered ? IM_COL32(100, 140, 180, 255) : IM_COL32(80, 120, 160, 255);
+    } else if (slot.isEmpty()) {
+        slot_bg_color = is_hovered ? IM_COL32(70, 70, 80, 255) : IM_COL32(50, 50, 60, 255);
+    } else {
+        slot_bg_color = is_hovered ? IM_COL32(80, 80, 90, 255) : IM_COL32(60, 60, 70, 255);
+    }
+    
+    // Draw slot background
+    draw_list->AddRectFilled(slot_min, slot_max, slot_bg_color, 4.0f);
+    
+    // Draw slot border - selected slot has a special border
+    ImU32 border_color;
+    float border_thickness;
+    if (isSelected) {
+        border_color = IM_COL32(150, 200, 255, 255); // Bright blue for selected
+        border_thickness = 3.0f;
+    } else {
+        border_color = is_hovered ? IM_COL32(120, 120, 140, 255) : IM_COL32(80, 80, 100, 255);
+        border_thickness = 2.0f;
+    }
+    draw_list->AddRect(slot_min, slot_max, border_color, 4.0f, 0, border_thickness);
+    
+    // Render item if slot is not empty
+    if (!slot.isEmpty() && slot.item) {
+        // Load item texture
+        unsigned int itemTexture = m_renderer.GetItemTexture(slot.item->icon);
+        
+        if (itemTexture != 0) {
+            // Item icon size and positioning (slightly smaller than slot for padding)
+            const float itemPadding = 6.0f;
+            const float itemSize = size - (itemPadding * 2);
+            ImVec2 item_min(slot_min.x + itemPadding, slot_min.y + itemPadding);
+            ImVec2 item_max(item_min.x + itemSize, item_min.y + itemSize);
+            
+            // Render item icon
+            draw_list->AddImage(reinterpret_cast<void*>(static_cast<uintptr_t>(itemTexture)),
+                               item_min, item_max);
+            
+            // Render quantity text if more than 1
+            if (slot.quantity > 1) {
+                char quantityText[16];
+                snprintf(quantityText, sizeof(quantityText), "%d", slot.quantity);
+                
+                // Position text in bottom-right corner of slot
+                ImVec2 text_size = ImGui::CalcTextSize(quantityText);
+                ImVec2 text_pos(slot_max.x - text_size.x - 3.0f, slot_max.y - text_size.y - 3.0f);
+                
+                // Draw text background for better readability
+                ImVec2 text_bg_min(text_pos.x - 2.0f, text_pos.y - 1.0f);
+                ImVec2 text_bg_max(text_pos.x + text_size.x + 2.0f, text_pos.y + text_size.y + 1.0f);
+                draw_list->AddRectFilled(text_bg_min, text_bg_max, IM_COL32(0, 0, 0, 200), 2.0f);
+                
+                // Draw quantity text
+                draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), quantityText);
+            }
+        }
+    }
+    
+    // Add slot number indicator for hotbar
+    char slotNumberText[8];
+    snprintf(slotNumberText, sizeof(slotNumberText), "%d", (slotIndex - Inventory::HOTBAR_START) + 1);
+    ImVec2 number_size = ImGui::CalcTextSize(slotNumberText);
+    ImVec2 number_pos(slot_min.x + 2.0f, slot_min.y + 2.0f);
+    
+    // Draw number background
+    ImVec2 number_bg_min(number_pos.x - 1.0f, number_pos.y);
+    ImVec2 number_bg_max(number_pos.x + number_size.x + 1.0f, number_pos.y + number_size.y);
+    draw_list->AddRectFilled(number_bg_min, number_bg_max, IM_COL32(0, 0, 0, 150), 2.0f);
+    
+    // Draw slot number
+    ImU32 number_color = isSelected ? IM_COL32(255, 255, 0, 255) : IM_COL32(200, 200, 200, 255);
+    draw_list->AddText(number_pos, number_color, slotNumberText);
+    
+    // Add hover tooltip with item information
+    if (is_hovered && !slot.isEmpty() && slot.item) {
+        ImGui::SetTooltip("Slot %d: %s\nQuantity: %d", (slotIndex - Inventory::HOTBAR_START) + 1, slot.item->itemName.c_str(), slot.quantity);
+    }
+    
+    // Handle click interactions
+    if (is_hovered && ImGui::IsMouseClicked(0)) {
+        // Update selected hotbar slot when clicking hotbar
+        m_selectedHotbarSlot = slotIndex - Inventory::HOTBAR_START;
+        
+        // Handle item pickup/placement
+        HandleSlotClick(slotIndex);
+    }
+}
+
+void Game::HandleSlotClick(int slotIndex) {
+    if (!m_player) return;
+    
+    auto& inventory = m_player->GetInventory();
+    auto& clickedSlot = inventory.getSlot(slotIndex);
+    auto& cursorSlot = inventory.getCursorSlot();
+    
+    // If cursor is empty, pick up the clicked item
+    if (cursorSlot.isEmpty()) {
+        if (!clickedSlot.isEmpty()) {
+            // Move item from clicked slot to cursor
+            cursorSlot = clickedSlot;
+            clickedSlot.clear();
+            std::cout << "Picked up: " << cursorSlot.item->itemName << " x" << cursorSlot.quantity << std::endl;
+        }
+    }
+    // If cursor has an item, try to place it
+    else {
+        if (clickedSlot.isEmpty()) {
+            // Place cursor item in empty slot
+            clickedSlot = cursorSlot;
+            cursorSlot.clear();
+            std::cout << "Placed: " << clickedSlot.item->itemName << " x" << clickedSlot.quantity << std::endl;
+        }
+        else if (clickedSlot.item->itemId == cursorSlot.item->itemId && clickedSlot.item->stackable) {
+            // Try to stack items
+            int spaceAvailable = clickedSlot.item->maxStackSize - clickedSlot.quantity;
+            int amountToAdd = std::min(cursorSlot.quantity, spaceAvailable);
+            
+            if (amountToAdd > 0) {
+                clickedSlot.quantity += amountToAdd;
+                cursorSlot.quantity -= amountToAdd;
+                
+                if (cursorSlot.quantity <= 0) {
+                    cursorSlot.clear();
+                }
+                
+                std::cout << "Stacked items: " << clickedSlot.item->itemName << " x" << clickedSlot.quantity << std::endl;
+            }
+            else {
+                // Can't stack, swap items instead
+                SwapSlots(slotIndex, Inventory::CURSOR_SLOT);
+            }
+        }
+        else {
+            // Different items, swap them
+            SwapSlots(slotIndex, Inventory::CURSOR_SLOT);
+            std::cout << "Swapped items" << std::endl;
+        }
+    }
+}
+
+void Game::SwapSlots(int slotA, int slotB) {
+    if (!m_player) return;
+    
+    auto& inventory = m_player->GetInventory();
+    auto& slotAData = inventory.getSlot(slotA);
+    auto& slotBData = inventory.getSlot(slotB);
+    
+    // Simple swap
+    InventorySlot temp = slotAData;
+    slotAData = slotBData;
+    slotBData = temp;
+}
+
+void Game::RenderCursorItem() {
+    if (!m_player) return;
+    
+    const auto& inventory = m_player->GetInventory();
+    const auto& cursorSlot = inventory.getCursorSlot();
+    
+    // Only render if cursor slot has an item
+    if (cursorSlot.isEmpty() || !cursorSlot.item) return;
+    
+    ImGuiIO& io = ImGui::GetIO();
+    ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+    
+    // Get mouse position
+    ImVec2 mouse_pos = io.MousePos;
+    
+    // Item size for cursor (slightly smaller than slot size)
+    const float itemSize = 32.0f;
+    const float halfSize = itemSize * 0.5f;
+    
+    // Position item centered on mouse cursor
+    ImVec2 item_min(mouse_pos.x - halfSize, mouse_pos.y - halfSize);
+    ImVec2 item_max(mouse_pos.x + halfSize, mouse_pos.y + halfSize);
+    
+    // Load and render item texture
+    unsigned int itemTexture = m_renderer.GetItemTexture(cursorSlot.item->icon);
+    if (itemTexture != 0) {
+        // Add semi-transparent background for better visibility
+        ImVec2 bg_min(item_min.x - 2, item_min.y - 2);
+        ImVec2 bg_max(item_max.x + 2, item_max.y + 2);
+        draw_list->AddRectFilled(bg_min, bg_max, IM_COL32(0, 0, 0, 100), 4.0f);
+        
+        // Render item icon with slight transparency to show it's being dragged
+        draw_list->AddImage(reinterpret_cast<void*>(static_cast<uintptr_t>(itemTexture)),
+                           item_min, item_max, ImVec2(0, 0), ImVec2(1, 1), IM_COL32(255, 255, 255, 200));
+        
+        // Render quantity text if more than 1
+        if (cursorSlot.quantity > 1) {
+            char quantityText[16];
+            snprintf(quantityText, sizeof(quantityText), "%d", cursorSlot.quantity);
+            
+            // Position text in bottom-right corner
+            ImVec2 text_size = ImGui::CalcTextSize(quantityText);
+            ImVec2 text_pos(item_max.x - text_size.x - 2.0f, item_max.y - text_size.y - 2.0f);
+            
+            // Draw text background
+            ImVec2 text_bg_min(text_pos.x - 2.0f, text_pos.y - 1.0f);
+            ImVec2 text_bg_max(text_pos.x + text_size.x + 2.0f, text_pos.y + text_size.y + 1.0f);
+            draw_list->AddRectFilled(text_bg_min, text_bg_max, IM_COL32(0, 0, 0, 200), 2.0f);
+            
+            // Draw quantity text
+            draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), quantityText);
+        }
     }
 }
 
@@ -1012,6 +1237,15 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
                 } else {
                     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
                 }
+            }
+        }
+        
+        // Handle number keys (1-9) for hotbar selection
+        if (s_instance->m_currentState == GameState::GAME && action == GLFW_PRESS) {
+            if (key >= GLFW_KEY_1 && key <= GLFW_KEY_9) {
+                int hotbarSlot = key - GLFW_KEY_1; // Convert to 0-8 range
+                s_instance->m_selectedHotbarSlot = hotbarSlot;
+                std::cout << "Selected hotbar slot: " << (hotbarSlot + 1) << std::endl;
             }
         }
     }
@@ -1556,10 +1790,15 @@ float Game::GetTimeOfDay() const {
 void Game::RenderHotbar() {
     ImGuiIO& io = ImGui::GetIO();
     
-    // Hotbar dimensions - based on typical Minecraft hotbar size
-    const float hotbarWidth = 182.0f * 2.0f;  // Scale up for visibility
-    const float hotbarHeight = 22.0f * 2.0f;
+    // Custom hotbar dimensions
+    const float slotSize = 48.0f;
+    const float slotSpacing = 4.0f;
+    const float padding = 8.0f;
     const float margin = 20.0f; // Distance from bottom of screen
+    
+    // Calculate total hotbar dimensions
+    const float hotbarWidth = (9 * slotSize) + (8 * slotSpacing) + (2 * padding);
+    const float hotbarHeight = slotSize + (2 * padding);
     
     // Position hotbar at bottom center of screen
     ImVec2 windowPos = ImVec2(
@@ -1567,82 +1806,42 @@ void Game::RenderHotbar() {
         io.DisplaySize.y - hotbarHeight - margin  // Bottom with margin
     );
     
-    // Create invisible window for hotbar rendering
+    // Create hotbar window
     ImGui::SetNextWindowPos(windowPos, ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(hotbarWidth, hotbarHeight), ImGuiCond_Always);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f)); // Transparent background
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f)); // No padding
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f); // No border
+    
+    // Style the hotbar window
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padding, padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.15f, 0.9f)); // Dark background
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.3f, 0.4f, 0.8f)); // Subtle border
     
     if (ImGui::Begin("Hotbar", nullptr, 
                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | 
                      ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | 
-                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus |
-                     ImGuiWindowFlags_NoBackground)) {
+                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoBringToFrontOnFocus)) {
         
-        // Get hotbar texture from renderer
-        unsigned int hotbarTexture = m_renderer.GetHotbarTexture();
-        if (hotbarTexture != 0) {
-            // Render hotbar background
-            ImGui::Image(reinterpret_cast<void*>(static_cast<uintptr_t>(hotbarTexture)), 
-                        ImVec2(hotbarWidth, hotbarHeight));
+        if (m_player) {
+            const auto& inventory = m_player->GetInventory();
             
-            // Render items in hotbar slots
-            if (m_player) {
-                const auto& inventory = m_player->GetInventory();
+            // Render hotbar slots (1x9 grid)
+            for (int i = 0; i < 9; ++i) {
+                const auto& slot = inventory.getHotbarSlot(i);
+                bool isSelected = (i == m_selectedHotbarSlot);
                 
-                // Calculate slot dimensions and positions  
-                // The hotbar image is 364px wide (scaled to hotbarWidth), we want 9 evenly spaced slots
-                const float slotSize = 32.0f; // Size of each slot item (scaled up from 16px)
-                const float slotSpacing = 40.0f; // Space between slot centers 
-                const float firstSlotOffsetX = 8.0f; // Start offset from left edge (scaled)
-                const float slotOffsetY = 6.0f; // Vertical offset from top of hotbar (scaled)
+                float slotX = padding + (i * (slotSize + slotSpacing));
+                float slotY = padding;
                 
-                for (int i = 0; i < 9; ++i) {  // 9 hotbar slots
-                    const auto& slot = inventory.getHotbarSlot(i);
-                    
-                    if (!slot.isEmpty() && slot.item) {
-                        // Load item texture
-                        unsigned int itemTexture = m_renderer.GetItemTexture(slot.item->icon);
-                        
-                        if (itemTexture != 0) {
-                            // Calculate absolute position for this slot within the window
-                            // Position relative to the top-left of the window (not cursor)
-                            float slotX = firstSlotOffsetX + (i * slotSpacing);
-                            float slotY = slotOffsetY;
-                            
-                            // Set cursor position for this item
-                            ImGui::SetCursorPos(ImVec2(slotX, slotY));
-                            
-                            // Render item icon
-                            ImGui::Image(reinterpret_cast<void*>(static_cast<uintptr_t>(itemTexture)), 
-                                        ImVec2(slotSize, slotSize));
-                            
-                            // Render quantity text if more than 1
-                            if (slot.quantity > 1) {
-                                // Position text in bottom right of slot
-                                ImGui::SetCursorPos(ImVec2(slotX + slotSize - 16, 
-                                                         slotY + slotSize - 16));
-                                
-                                // Use small font for quantity
-                                if (m_fontSmall) {
-                                    ImGui::PushFont(m_fontSmall);
-                                }
-                                
-                                ImGui::TextColored(ImVec4(1.0f, 1.0f, 1.0f, 1.0f), "%d", slot.quantity);
-                                
-                                if (m_fontSmall) {
-                                    ImGui::PopFont();
-                                }
-                            }
-                        }
-                    }
-                }
+                RenderCustomHotbarSlot(slot, slotX, slotY, slotSize, Inventory::HOTBAR_START + i, isSelected);
             }
         }
     }
     ImGui::End();
     
-    ImGui::PopStyleVar(2); // Remove padding and border styles
-    ImGui::PopStyleColor(); // Remove background color
+    ImGui::PopStyleColor(2); // Remove background and border colors
+    ImGui::PopStyleVar(3); // Remove padding, rounding, and border styles
+    
+    // Render cursor item on top of hotbar too
+    RenderCursorItem();
 } 

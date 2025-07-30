@@ -190,7 +190,12 @@ private:
     void RenderInventory();
     void RenderCustomInventorySlot(const InventorySlot& slot, float x, float y, float size, int slotIndex);
     void RenderCustomHotbarSlot(const InventorySlot& slot, float x, float y, float size, int slotIndex, bool isSelected);
+    void RenderCursorItem(); // Render item following mouse cursor
     void RenderHotbar();
+    
+    // Inventory interaction helpers
+    void HandleSlotClick(int slotIndex);
+    void SwapSlots(int slotA, int slotB);
     
     // Helper method to get current interpolated positions for rendering
     std::unordered_map<uint32_t, PlayerPosition> GetInterpolatedPlayerPositions() const;
