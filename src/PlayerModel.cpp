@@ -479,119 +479,119 @@ unsigned int PlayerModel::LoadSkinTexture(const std::string& skinPath) {
 std::vector<std::vector<float>> PlayerModel::GetHeadUVMapping() {
     // Head mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
-    // UV coordinates: front-bottom, back-bottom, back-top, back-top, front-top, front-bottom (for side faces)
+    // UV order: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (head front) - (8, 8) to (16, 16)
         {0.125f, 0.25f,  0.25f, 0.25f,  0.25f, 0.125f,  0.25f, 0.125f,  0.125f, 0.125f,  0.125f, 0.25f},
         // Back face (head back) - (24, 8) to (32, 16) - flipped horizontally
         {0.5f, 0.25f,  0.375f, 0.25f,  0.375f, 0.125f,  0.375f, 0.125f,  0.5f, 0.125f,  0.5f, 0.25f},
-        // Left face (head right texture) - (0, 8) to (8, 16) (player's right side appears on left)
-        {0.0f, 0.25f,  0.125f, 0.25f,  0.125f, 0.125f,  0.125f, 0.125f,  0.0f, 0.125f,  0.0f, 0.25f},
-        // Right face (head left texture) - (16, 8) to (24, 16) (player's left side appears on right)  
-        {0.375f, 0.25f,  0.25f, 0.25f,  0.25f, 0.125f,  0.25f, 0.125f,  0.375f, 0.125f,  0.375f, 0.25f},
-        // Bottom face (head bottom) - (16, 0) to (24, 8)
-        {0.25f, 0.125f,  0.375f, 0.125f,  0.375f, 0.0f,  0.375f, 0.0f,  0.25f, 0.0f,  0.25f, 0.125f},
+        // Left face (head right texture) - (0, 8) to (8, 16) 
+        {0.125f, 0.25f,  0.0f, 0.25f,  0.0f, 0.125f,  0.0f, 0.125f,  0.125f, 0.125f,  0.125f, 0.25f},
+        // Right face (head left texture) - (16, 8) to (24, 16)
+        {0.25f, 0.25f,  0.375f, 0.25f,  0.375f, 0.125f,  0.375f, 0.125f,  0.25f, 0.125f,  0.25f, 0.25f},
+        // Bottom face (head bottom) - (16, 0) to (24, 8) - rotated 180°
+        {0.375f, 0.125f,  0.25f, 0.125f,  0.25f, 0.0f,  0.25f, 0.0f,  0.375f, 0.0f,  0.375f, 0.125f},
         // Top face (head top) - (8, 0) to (16, 8)
-        {0.125f, 0.125f,  0.25f, 0.125f,  0.25f, 0.0f,  0.25f, 0.0f,  0.125f, 0.0f,  0.125f, 0.125f}
+        {0.125f, 0.0f,  0.25f, 0.0f,  0.25f, 0.125f,  0.25f, 0.125f,  0.125f, 0.125f,  0.125f, 0.0f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetTorsoUVMapping() {
     // Torso mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
-    // UV coordinates: front-bottom, back-bottom, back-top, back-top, front-top, front-bottom (for side faces)
+    // UV order: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (torso front) - (20, 20) to (28, 32)
         {0.3125f, 0.5f,  0.4375f, 0.5f,  0.4375f, 0.3125f,  0.4375f, 0.3125f,  0.3125f, 0.3125f,  0.3125f, 0.5f},
         // Back face (torso back) - (32, 20) to (40, 32) - flipped horizontally
         {0.625f, 0.5f,  0.5f, 0.5f,  0.5f, 0.3125f,  0.5f, 0.3125f,  0.625f, 0.3125f,  0.625f, 0.5f},
-        // Left face (torso right texture) - (16, 20) to (20, 32) (player's right side appears on left)
-        {0.25f, 0.5f,  0.3125f, 0.5f,  0.3125f, 0.3125f,  0.3125f, 0.3125f,  0.25f, 0.3125f,  0.25f, 0.5f},
-        // Right face (torso left texture) - (28, 20) to (32, 32) (player's left side appears on right)
-        {0.5f, 0.5f,  0.4375f, 0.5f,  0.4375f, 0.3125f,  0.4375f, 0.3125f,  0.5f, 0.3125f,  0.5f, 0.5f},
-        // Bottom face (torso bottom) - (28, 16) to (36, 20)
-        {0.4375f, 0.3125f,  0.5625f, 0.3125f,  0.5625f, 0.25f,  0.5625f, 0.25f,  0.4375f, 0.25f,  0.4375f, 0.3125f},
+        // Left face (torso right texture) - (16, 20) to (20, 32)
+        {0.3125f, 0.5f,  0.25f, 0.5f,  0.25f, 0.3125f,  0.25f, 0.3125f,  0.3125f, 0.3125f,  0.3125f, 0.5f},
+        // Right face (torso left texture) - (28, 20) to (32, 32)
+        {0.4375f, 0.5f,  0.5f, 0.5f,  0.5f, 0.3125f,  0.5f, 0.3125f,  0.4375f, 0.3125f,  0.4375f, 0.5f},
+        // Bottom face (torso bottom) - (28, 16) to (36, 20) - rotated 180°
+        {0.5625f, 0.3125f,  0.4375f, 0.3125f,  0.4375f, 0.25f,  0.4375f, 0.25f,  0.5625f, 0.25f,  0.5625f, 0.3125f},
         // Top face (torso top) - (20, 16) to (28, 20)
-        {0.3125f, 0.3125f,  0.4375f, 0.3125f,  0.4375f, 0.25f,  0.4375f, 0.25f,  0.3125f, 0.25f,  0.3125f, 0.3125f}
+        {0.3125f, 0.25f,  0.4375f, 0.25f,  0.4375f, 0.3125f,  0.4375f, 0.3125f,  0.3125f, 0.3125f,  0.3125f, 0.25f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetRightArmUVMapping() {
     // Right arm mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
-    // UV coordinates: front-bottom, back-bottom, back-top, back-top, front-top, front-bottom (for side faces)
+    // UV order: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (right arm front) - (44, 20) to (48, 32)
         {0.6875f, 0.5f,  0.75f, 0.5f,  0.75f, 0.3125f,  0.75f, 0.3125f,  0.6875f, 0.3125f,  0.6875f, 0.5f},
         // Back face (right arm back) - (52, 20) to (56, 32) - flipped horizontally
         {0.875f, 0.5f,  0.8125f, 0.5f,  0.8125f, 0.3125f,  0.8125f, 0.3125f,  0.875f, 0.3125f,  0.875f, 0.5f},
-        // Left face (right arm right texture) - (40, 20) to (44, 32) (arm's right side appears on left)
-        {0.625f, 0.5f,  0.6875f, 0.5f,  0.6875f, 0.3125f,  0.6875f, 0.3125f,  0.625f, 0.3125f,  0.625f, 0.5f},
-        // Right face (right arm left texture) - (48, 20) to (52, 32) (arm's left side appears on right)
-        {0.8125f, 0.5f,  0.75f, 0.5f,  0.75f, 0.3125f,  0.75f, 0.3125f,  0.8125f, 0.3125f,  0.8125f, 0.5f},
-        // Bottom face (right arm bottom) - (48, 16) to (52, 20)
-        {0.75f, 0.3125f,  0.8125f, 0.3125f,  0.8125f, 0.25f,  0.8125f, 0.25f,  0.75f, 0.25f,  0.75f, 0.3125f},
+        // Left face (right arm right texture) - (40, 20) to (44, 32)
+        {0.6875f, 0.5f,  0.625f, 0.5f,  0.625f, 0.3125f,  0.625f, 0.3125f,  0.6875f, 0.3125f,  0.6875f, 0.5f},
+        // Right face (right arm left texture) - (48, 20) to (52, 32)
+        {0.75f, 0.5f,  0.8125f, 0.5f,  0.8125f, 0.3125f,  0.8125f, 0.3125f,  0.75f, 0.3125f,  0.75f, 0.5f},
+        // Bottom face (right arm bottom) - (48, 16) to (52, 20) - rotated 180°
+        {0.8125f, 0.3125f,  0.75f, 0.3125f,  0.75f, 0.25f,  0.75f, 0.25f,  0.8125f, 0.25f,  0.8125f, 0.3125f},
         // Top face (right arm top) - (44, 16) to (48, 20)
-        {0.6875f, 0.3125f,  0.75f, 0.3125f,  0.75f, 0.25f,  0.75f, 0.25f,  0.6875f, 0.25f,  0.6875f, 0.3125f}
+        {0.6875f, 0.25f,  0.75f, 0.25f,  0.75f, 0.3125f,  0.75f, 0.3125f,  0.6875f, 0.3125f,  0.6875f, 0.25f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetLeftArmUVMapping() {
     // Left arm mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
-    // UV coordinates: front-bottom, back-bottom, back-top, back-top, front-top, front-bottom (for side faces)
+    // UV order: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (left arm front) - (36, 52) to (40, 64)
         {0.5625f, 1.0f,  0.625f, 1.0f,  0.625f, 0.8125f,  0.625f, 0.8125f,  0.5625f, 0.8125f,  0.5625f, 1.0f},
         // Back face (left arm back) - (44, 52) to (48, 64) - flipped horizontally
         {0.75f, 1.0f,  0.6875f, 1.0f,  0.6875f, 0.8125f,  0.6875f, 0.8125f,  0.75f, 0.8125f,  0.75f, 1.0f},
-        // Left face (left arm right texture) - (32, 52) to (36, 64) (arm's right side appears on left)
-        {0.5f, 1.0f,  0.5625f, 1.0f,  0.5625f, 0.8125f,  0.5625f, 0.8125f,  0.5f, 0.8125f,  0.5f, 1.0f},
-        // Right face (left arm left texture) - (40, 52) to (44, 64) (arm's left side appears on right)
-        {0.6875f, 1.0f,  0.625f, 1.0f,  0.625f, 0.8125f,  0.625f, 0.8125f,  0.6875f, 0.8125f,  0.6875f, 1.0f},
-        // Bottom face (left arm bottom) - (40, 48) to (44, 52)
-        {0.625f, 0.8125f,  0.6875f, 0.8125f,  0.6875f, 0.75f,  0.6875f, 0.75f,  0.625f, 0.75f,  0.625f, 0.8125f},
+        // Left face (left arm right texture) - (32, 52) to (36, 64)
+        {0.5625f, 1.0f,  0.5f, 1.0f,  0.5f, 0.8125f,  0.5f, 0.8125f,  0.5625f, 0.8125f,  0.5625f, 1.0f},
+        // Right face (left arm left texture) - (40, 52) to (44, 64)
+        {0.625f, 1.0f,  0.6875f, 1.0f,  0.6875f, 0.8125f,  0.6875f, 0.8125f,  0.625f, 0.8125f,  0.625f, 1.0f},
+        // Bottom face (left arm bottom) - (40, 48) to (44, 52) - rotated 180°
+        {0.6875f, 0.8125f,  0.625f, 0.8125f,  0.625f, 0.75f,  0.625f, 0.75f,  0.6875f, 0.75f,  0.6875f, 0.8125f},
         // Top face (left arm top) - (36, 48) to (40, 52)
-        {0.5625f, 0.8125f,  0.625f, 0.8125f,  0.625f, 0.75f,  0.625f, 0.75f,  0.5625f, 0.75f,  0.5625f, 0.8125f}
+        {0.5625f, 0.75f,  0.625f, 0.75f,  0.625f, 0.8125f,  0.625f, 0.8125f,  0.5625f, 0.8125f,  0.5625f, 0.75f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetRightLegUVMapping() {
     // Right leg mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
-    // UV coordinates: front-bottom, back-bottom, back-top, back-top, front-top, front-bottom (for side faces)
+    // UV order: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (right leg front) - (4, 20) to (8, 32)
         {0.0625f, 0.5f,  0.125f, 0.5f,  0.125f, 0.3125f,  0.125f, 0.3125f,  0.0625f, 0.3125f,  0.0625f, 0.5f},
         // Back face (right leg back) - (12, 20) to (16, 32) - flipped horizontally
         {0.25f, 0.5f,  0.1875f, 0.5f,  0.1875f, 0.3125f,  0.1875f, 0.3125f,  0.25f, 0.3125f,  0.25f, 0.5f},
-        // Left face (right leg right texture) - (0, 20) to (4, 32) (leg's right side appears on left)
-        {0.0f, 0.5f,  0.0625f, 0.5f,  0.0625f, 0.3125f,  0.0625f, 0.3125f,  0.0f, 0.3125f,  0.0f, 0.5f},
-        // Right face (right leg left texture) - (8, 20) to (12, 32) (leg's left side appears on right)
-        {0.1875f, 0.5f,  0.125f, 0.5f,  0.125f, 0.3125f,  0.125f, 0.3125f,  0.1875f, 0.3125f,  0.1875f, 0.5f},
-        // Bottom face (right leg bottom) - (8, 16) to (12, 20)
-        {0.125f, 0.3125f,  0.1875f, 0.3125f,  0.1875f, 0.25f,  0.1875f, 0.25f,  0.125f, 0.25f,  0.125f, 0.3125f},
+        // Left face (right leg right texture) - (0, 20) to (4, 32)
+        {0.0625f, 0.5f,  0.0f, 0.5f,  0.0f, 0.3125f,  0.0f, 0.3125f,  0.0625f, 0.3125f,  0.0625f, 0.5f},
+        // Right face (right leg left texture) - (8, 20) to (12, 32)
+        {0.125f, 0.5f,  0.1875f, 0.5f,  0.1875f, 0.3125f,  0.1875f, 0.3125f,  0.125f, 0.3125f,  0.125f, 0.5f},
+        // Bottom face (right leg bottom) - (8, 16) to (12, 20) - rotated 180°
+        {0.1875f, 0.3125f,  0.125f, 0.3125f,  0.125f, 0.25f,  0.125f, 0.25f,  0.1875f, 0.25f,  0.1875f, 0.3125f},
         // Top face (right leg top) - (4, 16) to (8, 20)
-        {0.0625f, 0.3125f,  0.125f, 0.3125f,  0.125f, 0.25f,  0.125f, 0.25f,  0.0625f, 0.25f,  0.0625f, 0.3125f}
+        {0.0625f, 0.25f,  0.125f, 0.25f,  0.125f, 0.3125f,  0.125f, 0.3125f,  0.0625f, 0.3125f,  0.0625f, 0.25f}
     };
 }
 
 std::vector<std::vector<float>> PlayerModel::GetLeftLegUVMapping() {
     // Left leg mapping: front, back, left, right, bottom, top
     // Face order matches CreateCubeVerticesWithUV: Front, Back, Left, Right, Bottom, Top
-    // UV coordinates: front-bottom, back-bottom, back-top, back-top, front-top, front-bottom (for side faces)
+    // UV order: bottom-left, bottom-right, top-right, top-right, top-left, bottom-left
     return {
         // Front face (left leg front) - (20, 52) to (24, 64)
         {0.3125f, 1.0f,  0.375f, 1.0f,  0.375f, 0.8125f,  0.375f, 0.8125f,  0.3125f, 0.8125f,  0.3125f, 1.0f},
         // Back face (left leg back) - (28, 52) to (32, 64) - flipped horizontally
         {0.5f, 1.0f,  0.4375f, 1.0f,  0.4375f, 0.8125f,  0.4375f, 0.8125f,  0.5f, 0.8125f,  0.5f, 1.0f},
-        // Left face (left leg right texture) - (16, 52) to (20, 64) (leg's right side appears on left)
-        {0.25f, 1.0f,  0.3125f, 1.0f,  0.3125f, 0.8125f,  0.3125f, 0.8125f,  0.25f, 0.8125f,  0.25f, 1.0f},
-        // Right face (left leg left texture) - (24, 52) to (28, 64) (leg's left side appears on right)
-        {0.4375f, 1.0f,  0.375f, 1.0f,  0.375f, 0.8125f,  0.375f, 0.8125f,  0.4375f, 0.8125f,  0.4375f, 1.0f},
-        // Bottom face (left leg bottom) - (24, 48) to (28, 52)
-        {0.375f, 0.8125f,  0.4375f, 0.8125f,  0.4375f, 0.75f,  0.4375f, 0.75f,  0.375f, 0.75f,  0.375f, 0.8125f},
+        // Left face (left leg right texture) - (16, 52) to (20, 64)
+        {0.3125f, 1.0f,  0.25f, 1.0f,  0.25f, 0.8125f,  0.25f, 0.8125f,  0.3125f, 0.8125f,  0.3125f, 1.0f},
+        // Right face (left leg left texture) - (24, 52) to (28, 64)
+        {0.375f, 1.0f,  0.4375f, 1.0f,  0.4375f, 0.8125f,  0.4375f, 0.8125f,  0.375f, 0.8125f,  0.375f, 1.0f},
+        // Bottom face (left leg bottom) - (24, 48) to (28, 52) - rotated 180°
+        {0.4375f, 0.8125f,  0.375f, 0.8125f,  0.375f, 0.75f,  0.375f, 0.75f,  0.4375f, 0.75f,  0.4375f, 0.8125f},
         // Top face (left leg top) - (20, 48) to (24, 52)
-        {0.3125f, 0.8125f,  0.375f, 0.8125f,  0.375f, 0.75f,  0.375f, 0.75f,  0.3125f, 0.75f,  0.3125f, 0.8125f}
+        {0.3125f, 0.75f,  0.375f, 0.75f,  0.375f, 0.8125f,  0.375f, 0.8125f,  0.3125f, 0.8125f,  0.3125f, 0.75f}
     };
 } 
