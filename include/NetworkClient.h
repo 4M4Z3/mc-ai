@@ -26,7 +26,7 @@ public:
     void SendBlockBreak(int32_t x, int32_t y, int32_t z);
     
     // Send block update to server (for placing/breaking blocks)
-    void SendBlockUpdate(int32_t x, int32_t y, int32_t z, uint8_t blockType);
+    void SendBlockUpdate(int32_t x, int32_t y, int32_t z, uint16_t blockType);
     
     // Send chunk request to server
     void RequestChunk(int32_t chunkX, int32_t chunkZ);
@@ -38,8 +38,8 @@ public:
     void SetWorldSeedCallback(std::function<void(int32_t worldSeed)> callback);
     void SetGameTimeCallback(std::function<void(float gameTime)> callback);
     void SetBlockBreakCallback(std::function<void(uint32_t playerId, int32_t x, int32_t y, int32_t z)> callback);
-    void SetBlockUpdateCallback(std::function<void(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType)> callback);
-    void SetChunkDataCallback(std::function<void(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData)> callback);
+    void SetBlockUpdateCallback(std::function<void(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint16_t blockType)> callback);
+    void SetChunkDataCallback(std::function<void(int32_t chunkX, int32_t chunkZ, const uint16_t* blockData)> callback);
     void SetMyPlayerIdCallback(std::function<void(uint32_t myPlayerId)> callback); // New callback for receiving own player ID
     
     // Get other players
@@ -70,8 +70,8 @@ private:
     std::function<void(int32_t)> m_onWorldSeed;
     std::function<void(float)> m_onGameTime;
     std::function<void(uint32_t, int32_t, int32_t, int32_t)> m_onBlockBreak;
-    std::function<void(uint32_t, int32_t, int32_t, int32_t, uint8_t)> m_onBlockUpdate;
-    std::function<void(int32_t, int32_t, const uint8_t*)> m_onChunkData;
+    std::function<void(uint32_t, int32_t, int32_t, int32_t, uint16_t)> m_onBlockUpdate;
+    std::function<void(int32_t, int32_t, const uint16_t*)> m_onChunkData;
     std::function<void(uint32_t)> m_onMyPlayerId; // Callback for receiving own player ID
     
     // Thread-safe outgoing message queue

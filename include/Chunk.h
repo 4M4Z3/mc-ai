@@ -61,7 +61,7 @@ public:
     void RenderGrassMesh(GrassFaceType faceType) const;
     
     // Apply chunk data received from server
-    void ApplyServerData(const uint8_t* blockData);
+    void ApplyServerData(const uint16_t* blockData);
     
     // World generation
     std::vector<BlockType> GetBlockTypesInChunk() const;

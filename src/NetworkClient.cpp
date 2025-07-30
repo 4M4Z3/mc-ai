@@ -161,7 +161,7 @@ void NetworkClient::SendBlockBreak(int32_t x, int32_t y, int32_t z) {
     QueueMessage(message);
 }
 
-void NetworkClient::SendBlockUpdate(int32_t x, int32_t y, int32_t z, uint8_t blockType) {
+void NetworkClient::SendBlockUpdate(int32_t x, int32_t y, int32_t z, uint16_t blockType) {
     if (!m_connected) {
         return;
     }
@@ -475,11 +475,11 @@ void NetworkClient::SetBlockBreakCallback(std::function<void(uint32_t, int32_t, 
     m_onBlockBreak = callback;
 }
 
-void NetworkClient::SetBlockUpdateCallback(std::function<void(uint32_t, int32_t, int32_t, int32_t, uint8_t)> callback) {
+void NetworkClient::SetBlockUpdateCallback(std::function<void(uint32_t, int32_t, int32_t, int32_t, uint16_t)> callback) {
     m_onBlockUpdate = callback;
 }
 
-void NetworkClient::SetChunkDataCallback(std::function<void(int32_t, int32_t, const uint8_t*)> callback) {
+void NetworkClient::SetChunkDataCallback(std::function<void(int32_t, int32_t, const uint16_t*)> callback) {
     m_onChunkData = callback;
 }
 

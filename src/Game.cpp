@@ -479,7 +479,7 @@ void Game::UpdateGame() {
             auto& chunkInfo = m_pendingChunkData.front();
             int32_t chunkX = chunkInfo.chunkX;
             int32_t chunkZ = chunkInfo.chunkZ;
-            const std::vector<uint8_t>& blockData = chunkInfo.blockData;
+            const std::vector<uint16_t>& blockData = chunkInfo.blockData;
             
             std::cout << "[CLIENT] Applying chunk data for (" << chunkX << ", " << chunkZ << ")" << std::endl;
             
@@ -856,7 +856,7 @@ void Game::MouseButtonCallback(GLFWwindow* window, int button, int action, int m
                 
                 // Send to server for synchronization with other clients using the new streaming system
                 if (s_instance->m_networkClient && s_instance->m_networkClient->IsConnected()) {
-                    s_instance->m_networkClient->SendBlockUpdate(blockX, blockY, blockZ, static_cast<uint8_t>(BlockType::AIR));
+                    s_instance->m_networkClient->SendBlockUpdate(blockX, blockY, blockZ, static_cast<uint16_t>(BlockType::AIR));
                 }
             }
         }
@@ -956,7 +956,7 @@ void Game::StartHost() {
             }
         });
         
-        m_networkClient->SetBlockUpdateCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType) {
+        m_networkClient->SetBlockUpdateCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z, uint16_t blockType) {
             try {
                 OnBlockUpdateReceived(playerId, x, y, z, blockType);
             } catch (const std::exception& e) {
@@ -964,7 +964,7 @@ void Game::StartHost() {
             }
         });
         
-        m_networkClient->SetChunkDataCallback([this](int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
+        m_networkClient->SetChunkDataCallback([this](int32_t chunkX, int32_t chunkZ, const uint16_t* blockData) {
             try {
                 OnChunkDataReceived(chunkX, chunkZ, blockData);
             } catch (const std::exception& e) {
@@ -1068,7 +1068,7 @@ void Game::JoinServer(const std::string& serverIP) {
             }
         });
         
-        m_networkClient->SetBlockUpdateCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType) {
+        m_networkClient->SetBlockUpdateCallback([this](uint32_t playerId, int32_t x, int32_t y, int32_t z, uint16_t blockType) {
             try {
                 OnBlockUpdateReceived(playerId, x, y, z, blockType);
             } catch (const std::exception& e) {
@@ -1076,7 +1076,7 @@ void Game::JoinServer(const std::string& serverIP) {
             }
         });
         
-        m_networkClient->SetChunkDataCallback([this](int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
+        m_networkClient->SetChunkDataCallback([this](int32_t chunkX, int32_t chunkZ, const uint16_t* blockData) {
             try {
                 OnChunkDataReceived(chunkX, chunkZ, blockData);
             } catch (const std::exception& e) {
@@ -1312,7 +1312,7 @@ void Game::OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t
     }
 }
 
-void Game::OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType) {
+void Game::OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint16_t blockType) {
     // Queue the block update for processing on the main thread (to avoid OpenGL calls from network thread)
     {
         std::lock_guard<std::mutex> lock(m_pendingBlockUpdatesMutex);
@@ -1326,7 +1326,7 @@ void Game::OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_
     }
 }
 
-void Game::OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData) {
+void Game::OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint16_t* blockData) {
     std::cout << "[CLIENT] Queuing chunk data for (" << chunkX << ", " << chunkZ << ")" << std::endl;
     
     // Queue the chunk data for processing on the main thread

@@ -59,7 +59,7 @@ struct NetworkMessage {
     // Block data
     struct {
         int32_t x, y, z;
-        uint8_t blockType; // For block updates, 0 for breaks
+        uint16_t blockType; // For block updates, 0 for breaks
     } blockData;
     
     // Chunk request data
@@ -72,7 +72,7 @@ struct NetworkMessage {
 struct ChunkDataMessage {
     NetworkMessageHeader header;
     int32_t chunkX, chunkZ;
-    uint8_t blocks[16 * 256 * 16];
+    uint16_t blocks[16 * 256 * 16];
 };
 
 // Server announcement for UDP broadcast discovery

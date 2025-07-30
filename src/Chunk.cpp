@@ -503,7 +503,7 @@ void Chunk::Generate(int seed) {
     m_meshGenerated = false;
 }
 
-void Chunk::ApplyServerData(const uint8_t* blockData) {
+void Chunk::ApplyServerData(const uint16_t* blockData) {
     // Clear existing blocks
     Clear();
     

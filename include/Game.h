@@ -118,7 +118,7 @@ private:
     struct PendingBlockUpdate {
         uint32_t playerId;
         int32_t x, y, z;
-        uint8_t blockType;
+        uint16_t blockType;
     };
     std::queue<PendingBlockUpdate> m_pendingBlockUpdates;
     std::mutex m_pendingBlockUpdatesMutex;
@@ -126,7 +126,7 @@ private:
     // Thread-safe queue for chunk data received from network
     struct PendingChunkData {
         int32_t chunkX, chunkZ;
-        std::vector<uint8_t> blockData; // Copy the block data
+        std::vector<uint16_t> blockData; // Copy the block data
     };
     std::queue<PendingChunkData> m_pendingChunkData;
     std::mutex m_pendingChunkDataMutex;
@@ -193,8 +193,8 @@ private:
     void OnGameTimeReceived(float gameTime);
     void OnMyPlayerIdReceived(uint32_t myPlayerId); // Handle receiving own player ID
     void OnBlockBreakReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z);
-    void OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint8_t blockType);
-    void OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint8_t* blockData);
+    void OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint16_t blockType);
+    void OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint16_t* blockData);
     
     // Time utility methods
     bool IsDay() const;
