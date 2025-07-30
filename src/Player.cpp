@@ -9,7 +9,7 @@
 #include <vector> // Added for std::vector
 #include <chrono> // Added for jump delay timing
 
-Player::Player() : m_position(0.0f, 64.0f, 0.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
+Player::Player() : m_position(0.0f, 0.0f, 0.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
                    m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_lastJumpTime(0.0f) {
     UpdateVectors();
 }

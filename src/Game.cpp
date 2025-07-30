@@ -163,12 +163,8 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
         std::cerr << "Warning: Failed to load items config, inventory will be empty" << std::endl;
     }
 
-    // Create player
-    m_player = std::make_unique<Player>(0.0f, 5.0f, 3.0f);
+    // Player will be created when world becomes available
     
-    // Initialize player's inventory with test items
-    m_player->InitializeTestInventory(m_itemManager.get());
-
     // Initialize server discovery
     m_serverDiscovery = std::make_unique<ServerDiscovery>();
     if (!m_serverDiscovery->Start()) {
@@ -313,8 +309,14 @@ void Game::SetState(GameState newState) {
         
         // Initialize player if we have a world but no player yet
         if (m_world && !m_player) {
-            float spawnY = static_cast<float>(m_world->FindHighestBlock(0, 0));
-            m_player = std::make_unique<Player>(0.0f, spawnY, 0.0f);
+            // Create player at terrain-based spawn position
+            Vec3 spawnPos = CalculateSpawnPosition();
+            m_player = std::make_unique<Player>(spawnPos.x, spawnPos.y, spawnPos.z);
+            
+            // Initialize player's inventory with test items
+            m_player->InitializeTestInventory(m_itemManager.get());
+            
+            std::cout << "Created player at terrain spawn position (" << spawnPos.x << ", " << spawnPos.y << ", " << spawnPos.z << ")" << std::endl;
         }
     }
 }
@@ -336,13 +338,14 @@ void Game::UpdateMainMenu() {
             // Create player immediately after world creation
             if (!m_player) {
                 DEBUG_INFO("Creating player at spawn position...");
-                float spawnY = static_cast<float>(m_world->FindHighestBlock(0, 0));
-                m_player = std::make_unique<Player>(0.0f, spawnY, 0.0f);
+                // Create player at terrain-based spawn position
+                Vec3 spawnPos = CalculateSpawnPosition();
+                m_player = std::make_unique<Player>(spawnPos.x, spawnPos.y, spawnPos.z);
                 
                 // Initialize player's inventory with test items
                 m_player->InitializeTestInventory(m_itemManager.get());
                 
-                DEBUG_INFO("Player created at spawn position (0, " << spawnY << ", 0)");
+                DEBUG_INFO("Player created at terrain spawn position (" << spawnPos.x << ", " << spawnPos.y << ", " << spawnPos.z << ")");
             }
             
             // Request initial chunks around spawn position from server
@@ -1683,13 +1686,17 @@ void Game::TestUDPConnectivity(const std::string& targetIP) {
 }
 
 void Game::OnPlayerJoin(uint32_t playerId, const PlayerPosition& position) {
-    // Don't add ourselves to the other players list
-    if (playerId == m_myPlayerId) {
-        std::cout << "[GAME] Ignoring own player join (ID: " << playerId << ")" << std::endl;
-        return;
+    // If this is our own player in multiplayer, update our position to the server's spawn position
+    if (playerId == m_myPlayerId && m_networkClient && m_networkClient->IsConnected()) {
+        if (m_player) {
+            m_player->SetPosition(Vec3(position.x, position.y, position.z));
+            m_player->SetRotation(position.yaw, position.pitch);
+            std::cout << "[GAME] Updated own player position to server spawn: (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+        }
+        return; // Don't add ourselves to the other players list
     }
     
-    // Create new interpolated player
+    // Create new interpolated player for other players
     InterpolatedPlayer& player = m_otherPlayers[playerId];
     player.currentPos = position;
     player.previousPos = position; // Start with same position to avoid interpolation artifacts
@@ -1814,7 +1821,7 @@ float Game::GetTimeOfDay() const {
     // Convert game time (0-900 seconds) to 0.0-1.0 
     // where 0.0 = sunrise, 0.5 = sunset, 1.0 = sunrise again
     return m_gameTime / 900.0f;
-} 
+}
 
 void Game::RenderHotbar() {
     ImGuiIO& io = ImGui::GetIO();
@@ -1873,4 +1880,18 @@ void Game::RenderHotbar() {
     
     // Render cursor item on top of hotbar too
     RenderCursorItem();
-} 
+}
+
+
+Vec3 Game::CalculateSpawnPosition() const {
+    if (!m_world) {
+        // No world available, use default safe height
+        return Vec3(0.0f, 65.0f, 0.0f);
+    }
+    
+    // Find highest block at world origin (0, 0)
+    int highestY = m_world->FindHighestBlock(0, 0);
+    
+    // Spawn player 1 block above the highest block
+    return Vec3(0.0f, static_cast<float>(highestY + 1), 0.0f);
+}

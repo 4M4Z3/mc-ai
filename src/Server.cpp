@@ -754,17 +754,20 @@ PlayerPosition Server::CalculateSpawnPosition(uint32_t playerId) {
     position.pitch = 0.0f;
     position.playerId = playerId;
     
-    // Calculate spawn Y position based on terrain
+    // Calculate spawn Y position based on terrain at spawn location
     if (m_world) {
-        position.y = static_cast<float>(m_world->FindHighestBlock(static_cast<int>(position.x), static_cast<int>(position.z))) + 1.0f; // +1 to spawn above ground
-        std::cout << "[SERVER] Calculated spawn position for player " << playerId << " at (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
+        int highestY = m_world->FindHighestBlock(static_cast<int>(position.x), static_cast<int>(position.z));
+        position.y = static_cast<float>(highestY + 1); // Spawn 1 block above terrain
+        std::cout << "[SERVER] Spawning player " << playerId << " at terrain position (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
     } else {
-        position.y = 65.0f; // Fallback height (slightly above typical ground level)
+        position.y = 65.0f; // Fallback height
         std::cout << "[SERVER] Using fallback spawn height for player " << playerId << " at (" << position.x << ", " << position.y << ", " << position.z << ")" << std::endl;
     }
     
     return position;
 }
+
+
 
 // Time management methods
 void Server::SendGameTime(socket_t clientSocket) {

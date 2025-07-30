@@ -215,6 +215,9 @@ private:
     void OnBlockUpdateReceived(uint32_t playerId, int32_t x, int32_t y, int32_t z, uint16_t blockType);
     void OnChunkDataReceived(int32_t chunkX, int32_t chunkZ, const uint16_t* blockData);
     
+    // Centralized spawn position calculation
+    Vec3 CalculateSpawnPosition() const;
+    
     // Time utility methods
     bool IsDay() const;
     bool IsNight() const;
