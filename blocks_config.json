@@ -1,0 +1,1521 @@
+{
+  "blocks": {
+    "acacia_leaves": {
+      "blockType": 4,
+      "blockName": "Acacia Leaves",
+      "textures": {
+        "all": "acacia_leaves.png"
+      }
+    },
+    "acacia_planks": {
+      "blockType": 5,
+      "blockName": "Acacia Planks",
+      "textures": {
+        "all": "acacia_planks.png"
+      }
+    },
+    "acacia_sapling": {
+      "blockType": 6,
+      "blockName": "Acacia Sapling",
+      "textures": {
+        "all": "acacia_sapling.png"
+      }
+    },
+    "allium": {
+      "blockType": 7,
+      "blockName": "Allium",
+      "textures": {
+        "all": "allium.png"
+      }
+    },
+    "amethyst_block": {
+      "blockType": 8,
+      "blockName": "Amethyst Block",
+      "textures": {
+        "all": "amethyst_block.png"
+      }
+    },
+    "amethyst_cluster": {
+      "blockType": 9,
+      "blockName": "Amethyst Cluster",
+      "textures": {
+        "all": "amethyst_cluster.png"
+      }
+    },
+    "andesite": {
+      "blockType": 10,
+      "blockName": "Andesite",
+      "textures": {
+        "all": "andesite.png"
+      }
+    },
+    "azalea_leaves": {
+      "blockType": 11,
+      "blockName": "Azalea Leaves",
+      "textures": {
+        "all": "azalea_leaves.png"
+      }
+    },
+    "azalea_plant": {
+      "blockType": 12,
+      "blockName": "Azalea Plant",
+      "textures": {
+        "all": "azalea_plant.png"
+      }
+    },
+    "azure_bluet": {
+      "blockType": 13,
+      "blockName": "Azure Bluet",
+      "textures": {
+        "all": "azure_bluet.png"
+      }
+    },
+    "beacon": {
+      "blockType": 14,
+      "blockName": "Beacon",
+      "textures": {
+        "all": "beacon.png"
+      }
+    },
+    "bedrock": {
+      "blockType": 15,
+      "blockName": "Bedrock",
+      "textures": {
+        "all": "bedrock.png"
+      }
+    },
+    "birch_leaves": {
+      "blockType": 16,
+      "blockName": "Birch Leaves",
+      "textures": {
+        "all": "birch_leaves.png"
+      }
+    },
+    "birch_planks": {
+      "blockType": 17,
+      "blockName": "Birch Planks",
+      "textures": {
+        "all": "birch_planks.png"
+      }
+    },
+    "birch_sapling": {
+      "blockType": 18,
+      "blockName": "Birch Sapling",
+      "textures": {
+        "all": "birch_sapling.png"
+      }
+    },
+    "black_candle": {
+      "blockType": 19,
+      "blockName": "Black Candle",
+      "textures": {
+        "all": "black_candle.png"
+      }
+    },
+    "black_candle_lit": {
+      "blockType": 20,
+      "blockName": "Black Candle (Lit)",
+      "textures": {
+        "all": "black_candle_lit.png"
+      }
+    },
+    "blue_candle": {
+      "blockType": 21,
+      "blockName": "Blue Candle",
+      "textures": {
+        "all": "blue_candle.png"
+      }
+    },
+    "blue_candle_lit": {
+      "blockType": 22,
+      "blockName": "Blue Candle (Lit)",
+      "textures": {
+        "all": "blue_candle_lit.png"
+      }
+    },
+    "blue_stained_glass": {
+      "blockType": 23,
+      "blockName": "Blue Stained Glass",
+      "textures": {
+        "all": "blue_stained_glass.png"
+      }
+    },
+    "blue_terracotta": {
+      "blockType": 24,
+      "blockName": "Blue Terracotta",
+      "textures": {
+        "all": "blue_terracotta.png"
+      }
+    },
+    "blue_wool": {
+      "blockType": 25,
+      "blockName": "Blue Wool",
+      "textures": {
+        "all": "blue_wool.png"
+      }
+    },
+    "brain_coral": {
+      "blockType": 26,
+      "blockName": "Brain Coral",
+      "textures": {
+        "all": "brain_coral.png"
+      }
+    },
+    "brain_coral_block": {
+      "blockType": 27,
+      "blockName": "Brain Coral Block",
+      "textures": {
+        "all": "brain_coral_block.png"
+      }
+    },
+    "bricks": {
+      "blockType": 28,
+      "blockName": "Bricks",
+      "textures": {
+        "all": "bricks.png"
+      }
+    },
+    "brown_concrete": {
+      "blockType": 29,
+      "blockName": "Brown Concrete",
+      "textures": {
+        "all": "brown_concrete.png"
+      }
+    },
+    "brown_concrete_powder": {
+      "blockType": 30,
+      "blockName": "Brown Concrete Powder",
+      "textures": {
+        "all": "brown_concrete_powder.png"
+      }
+    },
+    "brown_glazed_terracotta": {
+      "blockType": 31,
+      "blockName": "Brown Glazed Terracotta",
+      "textures": {
+        "all": "brown_glazed_terracotta.png"
+      }
+    },
+    "brown_mushroom_block": {
+      "blockType": 32,
+      "blockName": "Brown Mushroom Block",
+      "textures": {
+        "all": "brown_mushroom_block.png"
+      }
+    },
+    "brown_stained_glass": {
+      "blockType": 33,
+      "blockName": "Brown Stained Glass",
+      "textures": {
+        "all": "brown_stained_glass.png"
+      }
+    },
+    "cherry_leaves": {
+      "blockType": 34,
+      "blockName": "Cherry Leaves",
+      "textures": {
+        "all": "cherry_leaves.png"
+      }
+    },
+    "cherry_planks": {
+      "blockType": 35,
+      "blockName": "Cherry Planks",
+      "textures": {
+        "all": "cherry_planks.png"
+      }
+    },
+    "cherry_sapling": {
+      "blockType": 36,
+      "blockName": "Cherry Sapling",
+      "textures": {
+        "all": "cherry_sapling.png"
+      }
+    },
+    "chiseled_copper": {
+      "blockType": 37,
+      "blockName": "Chiseled Copper",
+      "textures": {
+        "all": "chiseled_copper.png"
+      }
+    },
+    "chiseled_deepslate": {
+      "blockType": 38,
+      "blockName": "Chiseled Deepslate",
+      "textures": {
+        "all": "chiseled_deepslate.png"
+      }
+    },
+    "chiseled_nether_bricks": {
+      "blockType": 39,
+      "blockName": "Chiseled Nether Bricks",
+      "textures": {
+        "all": "chiseled_nether_bricks.png"
+      }
+    },
+    "chiseled_polished_blackstone": {
+      "blockType": 40,
+      "blockName": "Chiseled Polished Blackstone",
+      "textures": {
+        "all": "chiseled_polished_blackstone.png"
+      }
+    },
+    "chiseled_red_sandstone": {
+      "blockType": 41,
+      "blockName": "Chiseled Red Sandstone",
+      "textures": {
+        "all": "chiseled_red_sandstone.png"
+      }
+    },
+    "chiseled_resin_bricks": {
+      "blockType": 42,
+      "blockName": "Chiseled Resin Bricks",
+      "textures": {
+        "all": "chiseled_resin_bricks.png"
+      }
+    },
+    "chiseled_sandstone": {
+      "blockType": 43,
+      "blockName": "Chiseled Sandstone",
+      "textures": {
+        "all": "chiseled_sandstone.png"
+      }
+    },
+    "chiseled_stone_bricks": {
+      "blockType": 44,
+      "blockName": "Chiseled Stone Bricks",
+      "textures": {
+        "all": "chiseled_stone_bricks.png"
+      }
+    },
+    "conduit": {
+      "blockType": 45,
+      "blockName": "Conduit",
+      "textures": {
+        "all": "conduit.png"
+      }
+    },
+    "copper_block": {
+      "blockType": 46,
+      "blockName": "Copper Block",
+      "textures": {
+        "all": "copper_block.png"
+      }
+    },
+    "copper_bulb": {
+      "blockType": 47,
+      "blockName": "Copper Bulb",
+      "textures": {
+        "all": "copper_bulb.png"
+      }
+    },
+    "copper_bulb_lit": {
+      "blockType": 48,
+      "blockName": "Copper Bulb Lit",
+      "textures": {
+        "all": "copper_bulb_lit.png"
+      }
+    },
+    "copper_bulb_lit_powered": {
+      "blockType": 49,
+      "blockName": "Copper Bulb Lit Powered",
+      "textures": {
+        "all": "copper_bulb_lit_powered.png"
+      }
+    },
+    "copper_bulb_powered": {
+      "blockType": 50,
+      "blockName": "Copper Bulb Powered",
+      "textures": {
+        "all": "copper_bulb_powered.png"
+      }
+    },
+    "copper_grate": {
+      "blockType": 51,
+      "blockName": "Copper Grate",
+      "textures": {
+        "all": "copper_grate.png"
+      }
+    },
+    "copper_ore": {
+      "blockType": 52,
+      "blockName": "Copper Ore",
+      "textures": {
+        "all": "copper_ore.png"
+      }
+    },
+    "copper_trapdoor": {
+      "blockType": 53,
+      "blockName": "Copper Trapdoor",
+      "textures": {
+        "all": "copper_trapdoor.png"
+      }
+    },
+    "cracked_deepslate_bricks": {
+      "blockType": 54,
+      "blockName": "Cracked Deepslate Bricks",
+      "textures": {
+        "all": "cracked_deepslate_bricks.png"
+      }
+    },
+    "cracked_deepslate_tiles": {
+      "blockType": 55,
+      "blockName": "Cracked Deepslate Tiles",
+      "textures": {
+        "all": "cracked_deepslate_tiles.png"
+      }
+    },
+    "cracked_nether_bricks": {
+      "blockType": 56,
+      "blockName": "Cracked Nether Bricks",
+      "textures": {
+        "all": "cracked_nether_bricks.png"
+      }
+    },
+    "cracked_polished_blackstone_bricks": {
+      "blockType": 57,
+      "blockName": "Cracked Polished Blackstone Bricks",
+      "textures": {
+        "all": "cracked_polished_blackstone_bricks.png"
+      }
+    },
+    "cracked_stone_bricks": {
+      "blockType": 58,
+      "blockName": "Cracked Stone Bricks",
+      "textures": {
+        "all": "cracked_stone_bricks.png"
+      }
+    },
+    "cyan_stained_glass": {
+      "blockType": 59,
+      "blockName": "Cyan Stained Glass",
+      "textures": {
+        "all": "cyan_stained_glass.png"
+      }
+    },
+    "dandelion": {
+      "blockType": 60,
+      "blockName": "Dandelion",
+      "textures": {
+        "all": "dandelion.png"
+      }
+    },
+    "dark_oak_sapling": {
+      "blockType": 61,
+      "blockName": "Dark Oak Sapling",
+      "textures": {
+        "all": "dark_oak_sapling.png"
+      }
+    },
+    "dead_brain_coral_fan": {
+      "blockType": 62,
+      "blockName": "Dead Brain Coral Fan",
+      "textures": {
+        "all": "dead_brain_coral_fan.png"
+      }
+    },
+    "dead_bubble_coral_fan": {
+      "blockType": 63,
+      "blockName": "Dead Bubble Coral Fan",
+      "textures": {
+        "all": "dead_bubble_coral_fan.png"
+      }
+    },
+    "dead_bush": {
+      "blockType": 64,
+      "blockName": "Dead Bush",
+      "textures": {
+        "all": "dead_bush.png"
+      }
+    },
+    "dead_fire_coral_fan": {
+      "blockType": 65,
+      "blockName": "Dead Fire Coral Fan",
+      "textures": {
+        "all": "dead_fire_coral_fan.png"
+      }
+    },
+    "destroy_stage_7": {
+      "blockType": 66,
+      "blockName": "Destroy Stage 7",
+      "textures": {
+        "all": "destroy_stage_7.png"
+      }
+    },
+    "destroy_stage_8": {
+      "blockType": 67,
+      "blockName": "Destroy Stage 8",
+      "textures": {
+        "all": "destroy_stage_8.png"
+      }
+    },
+    "destroy_stage_9": {
+      "blockType": 68,
+      "blockName": "Destroy Stage 9",
+      "textures": {
+        "all": "destroy_stage_9.png"
+      }
+    },
+    "dripstone_block": {
+      "blockType": 69,
+      "blockName": "Dripstone Block",
+      "textures": {
+        "all": "dripstone_block.png"
+      }
+    },
+    "emerald_block": {
+      "blockType": 70,
+      "blockName": "Emerald Block",
+      "textures": {
+        "all": "emerald_block.png"
+      }
+    },
+    "emerald_ore": {
+      "blockType": 71,
+      "blockName": "Emerald Ore",
+      "textures": {
+        "all": "emerald_ore.png"
+      }
+    },
+    "frosted_ice": {
+      "blockType": 72,
+      "blockName": "Frosted Ice",
+      "textures": {
+        "all": "frosted_ice_0.png, frosted_ice_1.png, frosted_ice_2.png, frosted_ice_3.png"
+      }
+    },
+    "glass": {
+      "blockType": 73,
+      "blockName": "Glass",
+      "textures": {
+        "all": "glass.png"
+      }
+    },
+    "glowstone": {
+      "blockType": 74,
+      "blockName": "Glowstone",
+      "textures": {
+        "all": "glowstone.png"
+      }
+    },
+    "gold_block": {
+      "blockType": 75,
+      "blockName": "Gold Block",
+      "textures": {
+        "all": "gold_block.png"
+      }
+    },
+    "gold_ore": {
+      "blockType": 76,
+      "blockName": "Gold Ore",
+      "textures": {
+        "all": "gold_ore.png"
+      }
+    },
+    "granite": {
+      "blockType": 77,
+      "blockName": "Granite",
+      "textures": {
+        "all": "granite.png"
+      }
+    },
+    "gravel": {
+      "blockType": 78,
+      "blockName": "Gravel",
+      "textures": {
+        "all": "gravel.png"
+      }
+    },
+    "gray_concrete": {
+      "blockType": 79,
+      "blockName": "Gray Concrete",
+      "textures": {
+        "all": "gray_concrete.png"
+      }
+    },
+    "gray_concrete_powder": {
+      "blockType": 80,
+      "blockName": "Gray Concrete Powder",
+      "textures": {
+        "all": "gray_concrete_powder.png"
+      }
+    },
+    "gray_glazed_terracotta": {
+      "blockType": 81,
+      "blockName": "Gray Glazed Terracotta",
+      "textures": {
+        "all": "gray_glazed_terracotta.png"
+      }
+    },
+    "gray_shulker_box": {
+      "blockType": 82,
+      "blockName": "Gray Shulker Box",
+      "textures": {
+        "all": "gray_shulker_box.png"
+      }
+    },
+    "gray_stained_glass": {
+      "blockType": 83,
+      "blockName": "Gray Stained Glass",
+      "textures": {
+        "all": "gray_stained_glass.png"
+      }
+    },
+    "gray_terracotta": {
+      "blockType": 84,
+      "blockName": "Gray Terracotta",
+      "textures": {
+        "all": "gray_terracotta.png"
+      }
+    },
+    "gray_wool": {
+      "blockType": 85,
+      "blockName": "Gray Wool",
+      "textures": {
+        "all": "gray_wool.png"
+      }
+    },
+    "green_concrete": {
+      "blockType": 86,
+      "blockName": "Green Concrete",
+      "textures": {
+        "all": "green_concrete.png"
+      }
+    },
+    "green_concrete_powder": {
+      "blockType": 87,
+      "blockName": "Green Concrete Powder",
+      "textures": {
+        "all": "green_concrete_powder.png"
+      }
+    },
+    "green_glazed_terracotta": {
+      "blockType": 88,
+      "blockName": "Green Glazed Terracotta",
+      "textures": {
+        "all": "green_glazed_terracotta.png"
+      }
+    },
+    "green_stained_glass": {
+      "blockType": 89,
+      "blockName": "Green Stained Glass",
+      "textures": {
+        "all": "green_stained_glass.png"
+      }
+    },
+    "green_terracotta": {
+      "blockType": 90,
+      "blockName": "Green Terracotta",
+      "textures": {
+        "all": "green_terracotta.png"
+      }
+    },
+    "green_wool": {
+      "blockType": 91,
+      "blockName": "Green Wool",
+      "textures": {
+        "all": "green_wool.png"
+      }
+    },
+    "heavy_core": {
+      "blockType": 92,
+      "blockName": "Heavy Core",
+      "textures": {
+        "all": "heavy_core.png"
+      }
+    },
+    "honeycomb_block": {
+      "blockType": 93,
+      "blockName": "Honeycomb Block",
+      "textures": {
+        "all": "honeycomb_block.png"
+      }
+    },
+    "horn_coral": {
+      "blockType": 94,
+      "blockName": "Horn Coral",
+      "textures": {
+        "all": "horn_coral.png"
+      }
+    },
+    "horn_coral_block": {
+      "blockType": 95,
+      "blockName": "Horn Coral Block",
+      "textures": {
+        "all": "horn_coral_block.png"
+      }
+    },
+    "horn_coral_fan": {
+      "blockType": 96,
+      "blockName": "Horn Coral Fan",
+      "textures": {
+        "all": "horn_coral_fan.png"
+      }
+    },
+    "ice": {
+      "blockType": 97,
+      "blockName": "Ice",
+      "textures": {
+        "all": "ice.png"
+      }
+    },
+    "iron_block": {
+      "blockType": 98,
+      "blockName": "Iron Block",
+      "textures": {
+        "all": "iron_block.png"
+      }
+    },
+    "iron_ore": {
+      "blockType": 99,
+      "blockName": "Iron Ore",
+      "textures": {
+        "all": "iron_ore.png"
+      }
+    },
+    "item_frame": {
+      "blockType": 100,
+      "blockName": "Item Frame",
+      "textures": {
+        "all": "item_frame.png"
+      }
+    },
+    "jack_o_lantern": {
+      "blockType": 101,
+      "blockName": "Jack o' Lantern",
+      "textures": {
+        "all": "jack_o_lantern.png"
+      }
+    },
+    "jungle_leaves": {
+      "blockType": 102,
+      "blockName": "Jungle Leaves",
+      "textures": {
+        "all": "jungle_leaves.png"
+      }
+    },
+    "jungle_planks": {
+      "blockType": 103,
+      "blockName": "Jungle Planks",
+      "textures": {
+        "all": "jungle_planks.png"
+      }
+    },
+    "jungle_sapling": {
+      "blockType": 104,
+      "blockName": "Jungle Sapling",
+      "textures": {
+        "all": "jungle_sapling.png"
+      }
+    },
+    "kelp": {
+      "blockType": 105,
+      "blockName": "Kelp",
+      "textures": {
+        "all": "kelp.png"
+      }
+    },
+    "kelp_meta": {
+      "blockType": 106,
+      "blockName": "Kelp Meta",
+      "textures": {
+        "all": "kelp.png.mcmeta"
+      }
+    },
+    "lantern": {
+      "blockType": 107,
+      "blockName": "Lantern",
+      "textures": {
+        "all": "lantern.png"
+      }
+    },
+    "light_blue_stained_glass": {
+      "blockType": 108,
+      "blockName": "Light Blue Stained Glass",
+      "textures": {
+        "all": "light_blue_stained_glass.png"
+      }
+    },
+    "light_blue_terracotta": {
+      "blockType": 109,
+      "blockName": "Light Blue Terracotta",
+      "textures": {
+        "all": "light_blue_terracotta.png"
+      }
+    },
+    "light_blue_wool": {
+      "blockType": 110,
+      "blockName": "Light Blue Wool",
+      "textures": {
+        "all": "light_blue_wool.png"
+      }
+    },
+    "light_gray_concrete": {
+      "blockType": 111,
+      "blockName": "Light Gray Concrete",
+      "textures": {
+        "all": "light_gray_concrete.png"
+      }
+    },
+    "light_gray_concrete_powder": {
+      "blockType": 112,
+      "blockName": "Light Gray Concrete Powder",
+      "textures": {
+        "all": "light_gray_concrete_powder.png"
+      }
+    },
+    "light_gray_glazed_terracotta": {
+      "blockType": 113,
+      "blockName": "Light Gray Glazed Terracotta",
+      "textures": {
+        "all": "light_gray_glazed_terracotta.png"
+      }
+    },
+    "light_gray_stained_glass": {
+      "blockType": 114,
+      "blockName": "Light Gray Stained Glass",
+      "textures": {
+        "all": "light_gray_stained_glass.png"
+      }
+    },
+    "light_gray_terracotta": {
+      "blockType": 115,
+      "blockName": "Light Gray Terracotta",
+      "textures": {
+        "all": "light_gray_terracotta.png"
+      }
+    },
+    "light_gray_wool": {
+      "blockType": 116,
+      "blockName": "Light Gray Wool",
+      "textures": {
+        "all": "light_gray_wool.png"
+      }
+    },
+    "lime_concrete": {
+      "blockType": 117,
+      "blockName": "Lime Concrete",
+      "textures": {
+        "all": "lime_concrete.png"
+      }
+    },
+    "lime_concrete_powder": {
+      "blockType": 118,
+      "blockName": "Lime Concrete Powder",
+      "textures": {
+        "all": "lime_concrete_powder.png"
+      }
+    },
+    "lime_glazed_terracotta": {
+      "blockType": 119,
+      "blockName": "Lime Glazed Terracotta",
+      "textures": {
+        "all": "lime_glazed_terracotta.png"
+      }
+    },
+    "lime_stained_glass": {
+      "blockType": 120,
+      "blockName": "Lime Stained Glass",
+      "textures": {
+        "all": "lime_stained_glass.png"
+      }
+    },
+    "magenta_stained_glass": {
+      "blockType": 121,
+      "blockName": "Magenta Stained Glass",
+      "textures": {
+        "all": "magenta_stained_glass.png"
+      }
+    },
+    "mangrove_leaves": {
+      "blockType": 122,
+      "blockName": "Mangrove Leaves",
+      "textures": {
+        "all": "mangrove_leaves.png"
+      }
+    },
+    "moss_block": {
+      "blockType": 123,
+      "blockName": "Moss Block",
+      "textures": {
+        "all": "moss_block.png"
+      }
+    },
+    "mud": {
+      "blockType": 124,
+      "blockName": "Mud",
+      "textures": {
+        "all": "mud.png"
+      }
+    },
+    "nether_portal": {
+      "blockType": 125,
+      "blockName": "Nether Portal",
+      "textures": {
+        "all": "nether_portal.png"
+      }
+    },
+    "obsidian": {
+      "blockType": 126,
+      "blockName": "Obsidian",
+      "textures": {
+        "all": "obsidian.png"
+      }
+    },
+    "orange_concrete": {
+      "blockType": 127,
+      "blockName": "Orange Concrete",
+      "textures": {
+        "all": "orange_concrete.png"
+      }
+    },
+    "orange_concrete_powder": {
+      "blockType": 128,
+      "blockName": "Orange Concrete Powder",
+      "textures": {
+        "all": "orange_concrete_powder.png"
+      }
+    },
+    "orange_glazed_terracotta": {
+      "blockType": 129,
+      "blockName": "Orange Glazed Terracotta",
+      "textures": {
+        "all": "orange_glazed_terracotta.png"
+      }
+    },
+    "orange_stained_glass": {
+      "blockType": 130,
+      "blockName": "Orange Stained Glass",
+      "textures": {
+        "all": "orange_stained_glass.png"
+      }
+    },
+    "orange_terracotta": {
+      "blockType": 131,
+      "blockName": "Orange Terracotta",
+      "textures": {
+        "all": "orange_terracotta.png"
+      }
+    },
+    "orange_wool": {
+      "blockType": 132,
+      "blockName": "Orange Wool",
+      "textures": {
+        "all": "orange_wool.png"
+      }
+    },
+    "oxidized_chiseled_copper": {
+      "blockType": 133,
+      "blockName": "Oxidized Chiseled Copper",
+      "textures": {
+        "all": "oxidized_chiseled_copper.png"
+      }
+    },
+    "oxidized_copper": {
+      "blockType": 134,
+      "blockName": "Oxidized Copper",
+      "textures": {
+        "all": "oxidized_copper.png"
+      }
+    },
+    "pink_concrete": {
+      "blockType": 135,
+      "blockName": "Pink Concrete",
+      "textures": {
+        "all": "pink_concrete.png"
+      }
+    },
+    "pink_concrete_powder": {
+      "blockType": 136,
+      "blockName": "Pink Concrete Powder",
+      "textures": {
+        "all": "pink_concrete_powder.png"
+      }
+    },
+    "pink_glazed_terracotta": {
+      "blockType": 137,
+      "blockName": "Pink Glazed Terracotta",
+      "textures": {
+        "all": "pink_glazed_terracotta.png"
+      }
+    },
+    "pink_petals": {
+      "blockType": 138,
+      "blockName": "Pink Petals",
+      "textures": {
+        "all": "pink_petals.png"
+      }
+    },
+    "pink_petals_stem": {
+      "blockType": 139,
+      "blockName": "Pink Petals Stem",
+      "textures": {
+        "all": "pink_petals_stem.png"
+      }
+    },
+    "pink_stained_glass": {
+      "blockType": 140,
+      "blockName": "Pink Stained Glass",
+      "textures": {
+        "all": "pink_stained_glass.png"
+      }
+    },
+    "pink_terracotta": {
+      "blockType": 141,
+      "blockName": "Pink Terracotta",
+      "textures": {
+        "all": "pink_terracotta.png"
+      }
+    },
+    "pink_wool": {
+      "blockType": 142,
+      "blockName": "Pink Wool",
+      "textures": {
+        "all": "pink_wool.png"
+      }
+    },
+    "polished_blackstone": {
+      "blockType": 143,
+      "blockName": "Polished Blackstone",
+      "textures": {
+        "all": "polished_blackstone.png"
+      }
+    },
+    "polished_blackstone_bricks": {
+      "blockType": 144,
+      "blockName": "Polished Blackstone Bricks",
+      "textures": {
+        "all": "polished_blackstone_bricks.png"
+      }
+    },
+    "polished_deepslate": {
+      "blockType": 145,
+      "blockName": "Polished Deepslate",
+      "textures": {
+        "all": "polished_deepslate.png"
+      }
+    },
+    "polished_diorite": {
+      "blockType": 146,
+      "blockName": "Polished Diorite",
+      "textures": {
+        "all": "polished_diorite.png"
+      }
+    },
+    "polished_granite": {
+      "blockType": 147,
+      "blockName": "Polished Granite",
+      "textures": {
+        "all": "polished_granite.png"
+      }
+    },
+    "polished_tuff": {
+      "blockType": 148,
+      "blockName": "Polished Tuff",
+      "textures": {
+        "all": "polished_tuff.png"
+      }
+    },
+    "potatoes_stage3": {
+      "blockType": 149,
+      "blockName": "Potatoes Stage 3",
+      "textures": {
+        "all": "potatoes_stage3.png"
+      }
+    },
+    "powder_snow": {
+      "blockType": 150,
+      "blockName": "Powder Snow",
+      "textures": {
+        "all": "powder_snow.png"
+      }
+    },
+    "purple_wool": {
+      "blockType": 151,
+      "blockName": "Purple Wool",
+      "textures": {
+        "all": "purple_wool.png"
+      }
+    },
+    "purpur_block": {
+      "blockType": 152,
+      "blockName": "Purpur Block",
+      "textures": {
+        "all": "purpur_block.png"
+      }
+    },
+    "quartz_bricks": {
+      "blockType": 153,
+      "blockName": "Quartz Bricks",
+      "textures": {
+        "all": "quartz_bricks.png"
+      }
+    },
+    "rail": {
+      "blockType": 154,
+      "blockName": "Rail",
+      "textures": {
+        "all": "rail.png"
+      }
+    },
+    "rail_corner": {
+      "blockType": 155,
+      "blockName": "Rail Corner",
+      "textures": {
+        "all": "rail_corner.png"
+      }
+    },
+    "raw_copper_block": {
+      "blockType": 156,
+      "blockName": "Raw Copper Block",
+      "textures": {
+        "all": "raw_copper_block.png"
+      }
+    },
+    "raw_gold_block": {
+      "blockType": 157,
+      "blockName": "Raw Gold Block",
+      "textures": {
+        "all": "raw_gold_block.png"
+      }
+    },
+    "raw_iron_block": {
+      "blockType": 158,
+      "blockName": "Raw Iron Block",
+      "textures": {
+        "all": "raw_iron_block.png"
+      }
+    },
+    "red_candle": {
+      "blockType": 159,
+      "blockName": "Red Candle",
+      "textures": {
+        "all": "red_candle.png"
+      }
+    },
+    "red_candle_lit": {
+      "blockType": 160,
+      "blockName": "Lit Red Candle",
+      "textures": {
+        "all": "red_candle_lit.png"
+      }
+    },
+    "red_concrete": {
+      "blockType": 161,
+      "blockName": "Red Concrete",
+      "textures": {
+        "all": "red_concrete.png"
+      }
+    },
+    "red_concrete_powder": {
+      "blockType": 162,
+      "blockName": "Red Concrete Powder",
+      "textures": {
+        "all": "red_concrete_powder.png"
+      }
+    },
+    "red_glazed_terracotta": {
+      "blockType": 163,
+      "blockName": "Red Glazed Terracotta",
+      "textures": {
+        "all": "red_glazed_terracotta.png"
+      }
+    },
+    "red_mushroom": {
+      "blockType": 164,
+      "blockName": "Red Mushroom",
+      "textures": {
+        "all": "red_mushroom.png"
+      }
+    },
+    "red_mushroom_block": {
+      "blockType": 165,
+      "blockName": "Red Mushroom Block",
+      "textures": {
+        "all": "red_mushroom_block.png"
+      }
+    },
+    "red_nether_bricks": {
+      "blockType": 166,
+      "blockName": "Red Nether Bricks",
+      "textures": {
+        "all": "red_nether_bricks.png"
+      }
+    },
+    "red_sand": {
+      "blockType": 167,
+      "blockName": "Red Sand",
+      "textures": {
+        "all": "red_sand.png"
+      }
+    },
+    "resin_block": {
+      "blockType": 168,
+      "blockName": "Resin Block",
+      "textures": {
+        "all": "resin_block.png"
+      }
+    },
+    "resin_bricks": {
+      "blockType": 169,
+      "blockName": "Resin Bricks",
+      "textures": {
+        "all": "resin_bricks.png"
+      }
+    },
+    "resin_clump": {
+      "blockType": 170,
+      "blockName": "Resin Clump",
+      "textures": {
+        "all": "resin_clump.png"
+      }
+    },
+    "rooted_dirt": {
+      "blockType": 171,
+      "blockName": "Rooted Dirt",
+      "textures": {
+        "all": "rooted_dirt.png"
+      }
+    },
+    "sand": {
+      "blockType": 172,
+      "blockName": "Sand",
+      "textures": {
+        "all": "sand.png"
+      }
+    },
+    "sea_lantern": {
+      "blockType": 173,
+      "blockName": "Sea Lantern",
+      "textures": {
+        "all": "sea_lantern.png"
+      }
+    },
+    "shroomlight": {
+      "blockType": 174,
+      "blockName": "Shroomlight",
+      "textures": {
+        "all": "shroomlight.png"
+      }
+    },
+    "slime_block": {
+      "blockType": 175,
+      "blockName": "Slime Block",
+      "textures": {
+        "all": "slime_block.png"
+      }
+    },
+    "smooth_basalt": {
+      "blockType": 176,
+      "blockName": "Smooth Basalt",
+      "textures": {
+        "all": "smooth_basalt.png"
+      }
+    },
+    "smooth_stone": {
+      "blockType": 177,
+      "blockName": "Smooth Stone",
+      "textures": {
+        "all": "smooth_stone.png"
+      }
+    },
+    "snow": {
+      "blockType": 178,
+      "blockName": "Snow",
+      "textures": {
+        "all": "snow.png"
+      }
+    },
+    "soul_lantern": {
+      "blockType": 179,
+      "blockName": "Soul Lantern",
+      "textures": {
+        "all": "soul_lantern.png"
+      }
+    },
+    "soul_sand": {
+      "blockType": 180,
+      "blockName": "Soul Sand",
+      "textures": {
+        "all": "soul_sand.png"
+      }
+    },
+    "soul_soil": {
+      "blockType": 181,
+      "blockName": "Soul Soil",
+      "textures": {
+        "all": "soul_soil.png"
+      }
+    },
+    "soul_torch": {
+      "blockType": 182,
+      "blockName": "Soul Torch",
+      "textures": {
+        "all": "soul_torch.png"
+      }
+    },
+    "spawner": {
+      "blockType": 183,
+      "blockName": "Spawner",
+      "textures": {
+        "all": "spawner.png"
+      }
+    },
+    "sponge": {
+      "blockType": 184,
+      "blockName": "Sponge",
+      "textures": {
+        "all": "sponge.png"
+      }
+    },
+    "spore_blossom": {
+      "blockType": 185,
+      "blockName": "Spore Blossom",
+      "textures": {
+        "all": "spore_blossom.png"
+      }
+    },
+    "spore_blossom_base": {
+      "blockType": 186,
+      "blockName": "Spore Blossom Base",
+      "textures": {
+        "all": "spore_blossom_base.png"
+      }
+    },
+    "spruce_leaves": {
+      "blockType": 187,
+      "blockName": "Spruce Leaves",
+      "textures": {
+        "all": "spruce_leaves.png"
+      }
+    },
+    "spruce_planks": {
+      "blockType": 188,
+      "blockName": "Spruce Planks",
+      "textures": {
+        "all": "spruce_planks.png"
+      }
+    },
+    "spruce_sapling": {
+      "blockType": 189,
+      "blockName": "Spruce Sapling",
+      "textures": {
+        "all": "spruce_sapling.png"
+      }
+    },
+    "spruce_trapdoor": {
+      "blockType": 190,
+      "blockName": "Spruce Trapdoor",
+      "textures": {
+        "all": "spruce_trapdoor.png"
+      }
+    },
+    "stone_bricks": {
+      "blockType": 192,
+      "blockName": "Stone Bricks",
+      "textures": {
+        "all": "stone_bricks.png"
+      }
+    },
+    "terracotta": {
+      "blockType": 193,
+      "blockName": "Terracotta",
+      "textures": {
+        "all": "terracotta.png"
+      }
+    },
+    "tinted_glass": {
+      "blockType": 194,
+      "blockName": "Tinted Glass",
+      "textures": {
+        "all": "tinted_glass.png"
+      }
+    },
+    "tripwire": {
+      "blockType": 195,
+      "blockName": "Tripwire",
+      "textures": {
+        "all": "tripwire.png"
+      }
+    },
+    "tripwire_hook": {
+      "blockType": 196,
+      "blockName": "Tripwire Hook",
+      "textures": {
+        "all": "tripwire_hook.png"
+      }
+    },
+    "tube_coral": {
+      "blockType": 197,
+      "blockName": "Tube Coral",
+      "textures": {
+        "all": "tube_coral.png"
+      }
+    },
+    "tube_coral_block": {
+      "blockType": 198,
+      "blockName": "Tube Coral Block",
+      "textures": {
+        "all": "tube_coral_block.png"
+      }
+    },
+    "tube_coral_fan": {
+      "blockType": 199,
+      "blockName": "Tube Coral Fan",
+      "textures": {
+        "all": "tube_coral_fan.png"
+      }
+    },
+    "tuff": {
+      "blockType": 200,
+      "blockName": "Tuff",
+      "textures": {
+        "all": "tuff.png"
+      }
+    },
+    "tuff_bricks": {
+      "blockType": 201,
+      "blockName": "Tuff Bricks",
+      "textures": {
+        "all": "tuff_bricks.png"
+      }
+    },
+    "twisting_vines": {
+      "blockType": 202,
+      "blockName": "Twisting Vines",
+      "textures": {
+        "all": "twisting_vines.png"
+      }
+    },
+    "twisting_vines_plant": {
+      "blockType": 203,
+      "blockName": "Twisting Vines Plant",
+      "textures": {
+        "all": "twisting_vines_plant.png"
+      }
+    },
+    "water_flow": {
+      "blockType": 204,
+      "blockName": "Water Flow",
+      "textures": {
+        "all": "water_flow.png"
+      }
+    },
+    "water_still": {
+      "blockType": 205,
+      "blockName": "Water Still",
+      "textures": {
+        "all": "water_still.png"
+      }
+    },
+    "wheat_stage0": {
+      "blockType": 206,
+      "blockName": "Wheat Stage 0",
+      "textures": {
+        "all": "wheat_stage0.png"
+      }
+    },
+    "wheat_stage1": {
+      "blockType": 207,
+      "blockName": "Wheat Stage 1",
+      "textures": {
+        "all": "wheat_stage1.png"
+      }
+    },
+    "wheat_stage_2": {
+      "blockType": 208,
+      "blockName": "Wheat Stage 2",
+      "textures": {
+        "all": "wheat_stage2.png"
+      }
+    },
+    "wheat_stage_3": {
+      "blockType": 209,
+      "blockName": "Wheat Stage 3",
+      "textures": {
+        "all": "wheat_stage3.png"
+      }
+    },
+    "wheat_stage_4": {
+      "blockType": 210,
+      "blockName": "Wheat Stage 4",
+      "textures": {
+        "all": "wheat_stage4.png"
+      }
+    },
+    "wheat_stage_5": {
+      "blockType": 211,
+      "blockName": "Wheat Stage 5",
+      "textures": {
+        "all": "wheat_stage5.png"
+      }
+    },
+    "wheat_stage_6": {
+      "blockType": 212,
+      "blockName": "Wheat Stage 6",
+      "textures": {
+        "all": "wheat_stage6.png"
+      }
+    },
+    "wheat_stage_7": {
+      "blockType": 213,
+      "blockName": "Wheat Stage 7",
+      "textures": {
+        "all": "wheat_stage7.png"
+      }
+    },
+    "white_candle": {
+      "blockType": 214,
+      "blockName": "White Candle",
+      "textures": {
+        "all": "white_candle.png"
+      }
+    },
+    "white_candle_lit": {
+      "blockType": 215,
+      "blockName": "White Candle Lit",
+      "textures": {
+        "all": "white_candle_lit.png"
+      }
+    },
+    "yellow_candle": {
+      "blockType": 216,
+      "blockName": "Yellow Candle",
+      "textures": {
+        "all": "yellow_candle.png"
+      }
+    },
+    "yellow_candle_lit": {
+      "blockType": 217,
+      "blockName": "Yellow Candle Lit",
+      "textures": {
+        "all": "yellow_candle_lit.png"
+      }
+    },
+    "yellow_stained_glass": {
+      "blockType": 218,
+      "blockName": "Yellow Stained Glass",
+      "textures": {
+        "all": "yellow_stained_glass.png"
+      }
+    },
+    "yellow_terracotta": {
+      "blockType": 219,
+      "blockName": "Yellow Terracotta",
+      "textures": {
+        "all": "yellow_terracotta.png"
+      }
+    },
+    "yellow_wool": {
+      "blockType": 220,
+      "blockName": "Yellow Wool",
+      "textures": {
+        "all": "yellow_wool.png"
+      }
+    }
+  },
+  "metadata": {
+    "total_blocks": 216,
+    "id_range": "4-220",
+    "description": "Single-texture blocks from CSV"
+  }
+}

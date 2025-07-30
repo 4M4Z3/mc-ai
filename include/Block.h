@@ -1,13 +1,6 @@
 #pragma once
 
-#include <cstdint>
-
-enum class BlockType : uint16_t {
-    AIR = 0,
-    STONE = 1,
-    DIRT = 2,
-    GRASS = 3
-};
+#include "BlockTypes.h"
 
 class Block {
 public:

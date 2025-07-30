@@ -194,6 +194,19 @@ void World::Generate() {
     GenerateAllMeshes();
 }
 
+void World::GenerateWithBlockManager(const BlockManager* blockManager) {
+    for (int x = 0; x < WORLD_SIZE; ++x) {
+        for (int z = 0; z < WORLD_SIZE; ++z) {
+            if (m_chunks[x][z]) {
+                m_chunks[x][z]->Generate(m_seed, blockManager);
+            }
+        }
+    }
+    
+    // Generate meshes after all chunks are generated
+    GenerateAllMeshes();
+}
+
 void World::RegenerateWithSeed(int newSeed) {
     m_seed = newSeed;
     m_randomGenerator.seed(m_seed);
@@ -201,6 +214,15 @@ void World::RegenerateWithSeed(int newSeed) {
     Generate();
     
     std::cout << "World regenerated with seed: " << m_seed << std::endl;
+}
+
+void World::RegenerateWithSeed(int newSeed, const BlockManager* blockManager) {
+    m_seed = newSeed;
+    m_randomGenerator.seed(m_seed);
+    
+    GenerateWithBlockManager(blockManager);
+    
+    std::cout << "World regenerated with colorful blocks using seed: " << m_seed << std::endl;
 }
 
 void World::GenerateAllMeshes() {

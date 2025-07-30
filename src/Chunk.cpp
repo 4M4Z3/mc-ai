@@ -462,9 +462,59 @@ void Chunk::AddFaceToMesh(std::vector<float>& vertices, int x, int y, int z, int
     }
 }
 
-void Chunk::Generate(int seed) {
+void Chunk::Generate(int seed, const BlockManager* blockManager) {
     // Fill all blocks with air first
     Clear();
+    
+    // Set up random number generator for block selection
+    std::mt19937 rng(seed + m_chunkX * 1000 + m_chunkZ);
+    
+    // Get available surface blocks (only blocks that have textures)
+    std::vector<BlockType> surfaceBlocks;
+    
+    if (blockManager) {
+        // Get all available block types
+        std::vector<BlockType> allBlocks = blockManager->GetAllBlockTypes();
+        
+        // Add specific blocks that we know have good textures
+        std::vector<BlockType> knownGoodBlocks = {
+            BlockType::STONE, BlockType::DIRT, BlockType::GRASS,
+            static_cast<BlockType>(4),  // ACACIA_LEAVES  
+            static_cast<BlockType>(5),  // ACACIA_PLANKS
+            static_cast<BlockType>(6),  // ACACIA_SAPLING
+            static_cast<BlockType>(7),  // ALLIUM
+            static_cast<BlockType>(8),  // AMETHYST_BLOCK
+            static_cast<BlockType>(9),  // AMETHYST_CLUSTER
+            static_cast<BlockType>(10), // ANDESITE
+            static_cast<BlockType>(11), // AZALEA_LEAVES
+            static_cast<BlockType>(12), // AZALEA_PLANT
+            static_cast<BlockType>(13), // AZURE_BLUET
+            static_cast<BlockType>(14), // BEACON
+            static_cast<BlockType>(15), // BEDROCK
+            static_cast<BlockType>(16), // BIRCH_LEAVES
+            static_cast<BlockType>(17), // BIRCH_PLANKS
+            static_cast<BlockType>(18), // BIRCH_SAPLING
+            static_cast<BlockType>(26), // BRICKS  
+            static_cast<BlockType>(44), // COPPER_BLOCK
+            static_cast<BlockType>(68), // EMERALD_BLOCK
+            static_cast<BlockType>(73), // GOLD_BLOCK
+            static_cast<BlockType>(96), // IRON_BLOCK
+        };
+        
+        // Add the known good blocks
+        for (BlockType blockType : knownGoodBlocks) {
+            surfaceBlocks.push_back(blockType);
+        }
+        
+        // Debug output to see what we found
+        // std::cout << "[CHUNK DEBUG] Found " << surfaceBlocks.size() << " surface blocks for chunk (" 
+        //           << m_chunkX << "," << m_chunkZ << ")" << std::endl;
+    }
+    
+    // Fallback to classic blocks if BlockManager is not available or no suitable blocks found
+    if (surfaceBlocks.empty()) {
+        surfaceBlocks = {BlockType::GRASS, BlockType::STONE, BlockType::DIRT};
+    }
     
     // Generate terrain using Perlin noise
     for (int x = 0; x < CHUNK_WIDTH; ++x) {
@@ -483,11 +533,67 @@ void Chunk::Generate(int seed) {
             // Clamp height to valid range
             terrainHeight = std::max(0, std::min(terrainHeight, CHUNK_HEIGHT - 1));
             
+            // Create biome-based generation using a different noise for variety
+            double biomeNoise = Perlin(worldX * 0.01, worldZ * 0.01, seed + 1000);
+            int biomeType = static_cast<int>((biomeNoise + 1.0) * 0.5 * 4); // 4 biome types
+            
             // Fill blocks from bottom up to terrain height
             for (int y = 0; y <= terrainHeight; ++y) {
                 if (y == terrainHeight) {
-                    // Top layer: grass surface
-                    m_blocks[x][y][z].SetType(BlockType::GRASS);
+                    // Top layer: random colorful blocks based on biome
+                    BlockType surfaceBlock;
+                    
+                    if (biomeType == 0) {
+                        // "Forest" biome - prefer natural blocks
+                        std::vector<BlockType> forestBlocks;
+                        for (BlockType block : surfaceBlocks) {
+                            if (block == BlockType::GRASS || 
+                                (blockManager && blockManager->GetBlockNameByType(block).find("Leaves") != std::string::npos) ||
+                                (blockManager && blockManager->GetBlockNameByType(block).find("Planks") != std::string::npos) ||
+                                (blockManager && blockManager->GetBlockNameByType(block).find("Sapling") != std::string::npos)) {
+                                forestBlocks.push_back(block);
+                            }
+                        }
+                        if (!forestBlocks.empty()) {
+                            surfaceBlock = forestBlocks[rng() % forestBlocks.size()];
+                        } else {
+                            surfaceBlock = surfaceBlocks[rng() % surfaceBlocks.size()];
+                        }
+                    } else if (biomeType == 1) {
+                        // "Colorful" biome - prefer wool and colorful blocks
+                        std::vector<BlockType> colorfulBlocks;
+                        for (BlockType block : surfaceBlocks) {
+                            if (blockManager && (blockManager->GetBlockNameByType(block).find("Wool") != std::string::npos ||
+                                                blockManager->GetBlockNameByType(block).find("Terracotta") != std::string::npos ||
+                                                blockManager->GetBlockNameByType(block).find("Concrete") != std::string::npos)) {
+                                colorfulBlocks.push_back(block);
+                            }
+                        }
+                        if (!colorfulBlocks.empty()) {
+                            surfaceBlock = colorfulBlocks[rng() % colorfulBlocks.size()];
+                        } else {
+                            surfaceBlock = surfaceBlocks[rng() % surfaceBlocks.size()];
+                        }
+                    } else if (biomeType == 2) {
+                        // "Mineral" biome - prefer ores and blocks
+                        std::vector<BlockType> mineralBlocks;
+                        for (BlockType block : surfaceBlocks) {
+                            if (blockManager && (blockManager->GetBlockNameByType(block).find("Block") != std::string::npos ||
+                                                blockManager->GetBlockNameByType(block).find("Ore") != std::string::npos)) {
+                                mineralBlocks.push_back(block);
+                            }
+                        }
+                        if (!mineralBlocks.empty()) {
+                            surfaceBlock = mineralBlocks[rng() % mineralBlocks.size()];
+                        } else {
+                            surfaceBlock = surfaceBlocks[rng() % surfaceBlocks.size()];
+                        }
+                    } else {
+                        // "Random" biome - completely random
+                        surfaceBlock = surfaceBlocks[rng() % surfaceBlocks.size()];
+                    }
+                    
+                    m_blocks[x][y][z].SetType(surfaceBlock);
                 } else if (y >= terrainHeight - 3) {
                     // Dirt layer (3 blocks deep)
                     m_blocks[x][y][z].SetType(BlockType::DIRT);

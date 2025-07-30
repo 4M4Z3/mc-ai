@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Block.h"
+#include "BlockManager.h"
 #include <array>
 #include <random>
 #include <vector>
@@ -49,7 +50,7 @@ public:
     void Clear();
     
     // Generation
-    void Generate(int seed);
+    void Generate(int seed, const BlockManager* blockManager = nullptr);
     
     // Mesh generation and rendering
     void GenerateMesh(const World* world);

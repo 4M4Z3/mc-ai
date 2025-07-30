@@ -255,7 +255,8 @@ void Renderer::Shutdown() {
     m_playerModel.Shutdown();
     
     // Clean up textures
-    for (unsigned int texture : m_blockTextures) {
+    for (const auto& pair : m_blockTextures) {
+        unsigned int texture = pair.second;
         if (texture != 0) {
             glDeleteTextures(1, &texture);
         }
@@ -344,8 +345,8 @@ void Renderer::RenderChunks(const World& world) {
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(m_textureLoc, 0);
     
-    // Define the block types we want to render in order
-    std::vector<BlockType> blockTypesToRender = {BlockType::STONE, BlockType::DIRT, BlockType::GRASS};
+    // Get all available block types from the block manager
+    std::vector<BlockType> blockTypesToRender = m_blockManager.GetAllBlockTypes();
     
     // Render each block type separately with its texture
     for (BlockType blockType : blockTypesToRender) {
@@ -417,8 +418,10 @@ void Renderer::RenderChunks(const World& world) {
         } else {
             // Bind the appropriate texture for this block type (no tint)
             glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
-            if (static_cast<size_t>(blockType) < m_blockTextures.size() && m_blockTextures[static_cast<int>(blockType)] != 0) {
-                glBindTexture(GL_TEXTURE_2D, m_blockTextures[static_cast<int>(blockType)]);
+            
+            auto textureIt = m_blockTextures.find(blockType);
+            if (textureIt != m_blockTextures.end() && textureIt->second != 0) {
+                glBindTexture(GL_TEXTURE_2D, textureIt->second);
                 
                 // Render all chunks for this block type
                 for (int x = 0; x < WORLD_SIZE; ++x) {
@@ -951,28 +954,58 @@ unsigned int Renderer::LoadTextureWithAlpha(const std::string& filepath) {
 }
 
 bool Renderer::LoadBlockTextures() {
-    // Initialize texture array with size for our block types
-    m_blockTextures.resize(4); // AIR, STONE, DIRT, GRASS
+    // Load block definitions from JSON
+    if (!m_blockManager.LoadBlockDefinitions("blocks_config.json")) {
+        std::cerr << "Failed to load block definitions from JSON" << std::endl;
+        return false;
+    }
     
-    // Load stone texture (BlockType::STONE = 1)
-    m_blockTextures[1] = LoadTexture("assets/block/stone.png");
+    // Load textures for all block types
+    std::vector<BlockType> allBlockTypes = m_blockManager.GetAllBlockTypes();
     
-    // Load dirt texture (BlockType::DIRT = 2)  
-    m_blockTextures[2] = LoadTexture("assets/block/dirt.png");
+    for (BlockType blockType : allBlockTypes) {
+        const BlockTextureInfo& textureInfo = m_blockManager.GetTextureInfo(blockType);
+        
+        // Skip AIR blocks
+        if (blockType == BlockType::AIR) {
+            m_blockTextures[blockType] = 0;
+            continue;
+        }
+        
+        // Handle blocks with special texture requirements (like grass)
+        if (blockType == BlockType::GRASS) {
+            // Load grass textures (already handled by default blocks)
+            m_grassTopTexture = LoadTexture("assets/block/" + textureInfo.top);
+            m_grassSideTexture = LoadTexture("assets/block/" + textureInfo.sides);
+            m_grassSideOverlayTexture = LoadTextureWithAlpha("assets/block/" + textureInfo.overlay);
+            m_grassBottomTexture = LoadTexture("assets/block/" + textureInfo.bottom);
+            m_blockTextures[blockType] = m_grassSideTexture;
+        }
+        // Handle blocks with a single texture for all faces
+        else if (!textureInfo.all.empty()) {
+            unsigned int textureID = LoadTexture("assets/block/" + textureInfo.all);
+            m_blockTextures[blockType] = textureID;
+            
+            if (textureID == 0) {
+                std::cerr << "Failed to load texture for block type " << static_cast<int>(blockType) 
+                          << " (" << m_blockManager.GetBlockNameByType(blockType) << ")" << std::endl;
+            }
+        }
+        // Handle blocks with separate textures for different faces (future enhancement)
+        else if (!textureInfo.sides.empty()) {
+            // For now, just use the sides texture for all faces
+            unsigned int textureID = LoadTexture("assets/block/" + textureInfo.sides);
+            m_blockTextures[blockType] = textureID;
+        }
+        else {
+            // No texture specified, use a default or skip
+            std::cout << "Warning: No texture specified for block " 
+                      << m_blockManager.GetBlockNameByType(blockType) << std::endl;
+            m_blockTextures[blockType] = 0;
+        }
+    }
     
-    // Load grass textures (BlockType::GRASS = 3)
-    m_grassTopTexture = LoadTexture("assets/block/grass_block_top.png");
-    m_grassSideTexture = LoadTexture("assets/block/grass_block_side.png");
-    // Force overlay texture to load as RGBA for proper alpha handling
-    m_grassSideOverlayTexture = LoadTextureWithAlpha("assets/block/grass_block_side_overlay.png");
-    m_grassBottomTexture = LoadTexture("assets/block/dirt.png"); // Use dirt texture for grass bottom
-    
-    // For now, set grass block texture to side texture (will be overridden per face)
-    m_blockTextures[3] = m_grassSideTexture;
-    
-    // AIR doesn't need a texture (index 0 can remain 0)
-    m_blockTextures[0] = 0;
-    
+    std::cout << "Loaded textures for " << m_blockTextures.size() << " block types" << std::endl;
     return true;
 }
 

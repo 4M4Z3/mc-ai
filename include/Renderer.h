@@ -13,6 +13,7 @@
 #include "Player.h"
 #include "Server.h" // For PlayerPosition
 #include "Block.h"
+#include "BlockManager.h"
 #include "PlayerModel.h"
 
 class World;
@@ -63,8 +64,14 @@ private:
     unsigned int m_playerShaderProgram;
     int m_playerModelLoc, m_playerViewLoc, m_playerProjLoc;
     
+public:
+    // Block management (public for world generation access)
+    BlockManager m_blockManager;
+    
+private:
+    
     // Texture management
-    std::vector<unsigned int> m_blockTextures;
+    std::unordered_map<BlockType, unsigned int> m_blockTextures;
     
     // Special grass block textures (different per face)
     unsigned int m_grassTopTexture;

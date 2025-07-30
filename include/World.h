@@ -2,6 +2,7 @@
 
 #include "Chunk.h"
 #include "Block.h"
+#include "BlockManager.h"
 #include <array>
 #include <memory>
 #include <random>
@@ -34,7 +35,9 @@ public:
     
     // Generation
     void Generate();
+    void GenerateWithBlockManager(const BlockManager* blockManager);
     void RegenerateWithSeed(int newSeed);
+    void RegenerateWithSeed(int newSeed, const BlockManager* blockManager);
     
     // Mesh generation
     void GenerateAllMeshes();

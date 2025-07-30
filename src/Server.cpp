@@ -25,7 +25,7 @@ Server::Server()
     m_worldSeed = static_cast<int32_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     std::cout << "Server generated world seed: " << m_worldSeed << std::endl;
     
-    // Create world for spawn calculations
+    // Create world for spawn calculations (server uses classic generation for simplicity)
     m_world = std::make_unique<World>(m_worldSeed);
     std::cout << "Server world generated for spawn calculations" << std::endl;
     

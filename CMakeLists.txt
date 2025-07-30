@@ -97,6 +97,7 @@ set(SOURCES
     src/Game.cpp
     src/Renderer.cpp
     src/Block.cpp
+    src/BlockManager.cpp
     src/Chunk.cpp
     src/World.cpp
     src/Player.cpp

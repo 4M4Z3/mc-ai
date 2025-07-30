@@ -308,9 +308,13 @@ void Game::UpdateMainMenu() {
         std::cout << "Creating world with seed " << m_worldSeed << " in main thread..." << std::endl;
         
         try {
-            // Create world with server-provided seed (will be overwritten by server data)
+            // Create world with server-provided seed and regenerate with colorful blocks
             m_world = std::make_unique<World>(m_worldSeed);
-            std::cout << "World created successfully!" << std::endl;
+            
+            // Regenerate with colorful blocks using renderer's BlockManager
+            // Access BlockManager from renderer to generate colorful world
+            m_world->RegenerateWithSeed(m_worldSeed, &(m_renderer.m_blockManager));
+            std::cout << "World created with colorful blocks!" << std::endl;
             
             // Create player immediately after world creation
             if (!m_player) {
