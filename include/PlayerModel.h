@@ -7,6 +7,8 @@
     #include <epoxy/gl.h>
 #endif
 #include <vector>
+#include <string>
+#include <random>
 #include "Player.h"
 
 class PlayerModel {
@@ -22,7 +24,12 @@ public:
     void UseShaderProgram(unsigned int shaderProgram);
     
     // Set uniform locations
-    void SetUniformLocations(int modelLoc, int viewLoc, int projLoc);
+    void SetUniformLocations(int modelLoc, int viewLoc, int projLoc, int skinTextureLoc);
+    
+    // Skin management
+    bool LoadSkins();
+    void AssignRandomSkin();
+    void SetSkin(const std::string& skinName);
 
 private:
     // OpenGL objects
@@ -35,17 +42,35 @@ private:
     
     // Shader uniforms (set by Renderer)
     unsigned int m_shaderProgram;
-    int m_modelLoc, m_viewLoc, m_projLoc;
+    int m_modelLoc, m_viewLoc, m_projLoc, m_skinTextureLoc;
+    
+    // Skin management
+    std::vector<std::string> m_availableSkins;
+    std::vector<unsigned int> m_skinTextures;
+    unsigned int m_currentSkinTexture;
+    std::mt19937 m_randomGenerator;
     
     // Geometry generation
     void CreateHeadGeometry();
     void CreateTorsoGeometry();
-    void CreateArmGeometry(unsigned int& vao, unsigned int& vbo);
-    void CreateLegGeometry(unsigned int& vao, unsigned int& vbo);
+    void CreateArmGeometry(unsigned int& vao, unsigned int& vbo, const std::vector<std::vector<float>>& uvMapping);
+    void CreateLegGeometry(unsigned int& vao, unsigned int& vbo, const std::vector<std::vector<float>>& uvMapping);
     
-    // Helper function to create cube geometry with specific dimensions
-    std::vector<float> CreateCubeVertices(float width, float height, float depth, 
-                                          float offsetX = 0.0f, float offsetY = 0.0f, float offsetZ = 0.0f);
+    // Helper function to create cube geometry with specific dimensions and UV coordinates
+    std::vector<float> CreateCubeVerticesWithUV(float width, float height, float depth, 
+                                                float offsetX = 0.0f, float offsetY = 0.0f, float offsetZ = 0.0f,
+                                                const std::vector<std::vector<float>>& faceUVs = {});
+    
+    // UV mapping for Minecraft skin format
+    std::vector<std::vector<float>> GetHeadUVMapping();
+    std::vector<std::vector<float>> GetTorsoUVMapping();
+    std::vector<std::vector<float>> GetRightArmUVMapping();
+    std::vector<std::vector<float>> GetLeftArmUVMapping();
+    std::vector<std::vector<float>> GetRightLegUVMapping();
+    std::vector<std::vector<float>> GetLeftLegUVMapping();
+    
+    // Utility functions
+    unsigned int LoadSkinTexture(const std::string& skinPath);
     
     // Matrix operations
     Mat4 CreateScaleMatrix(float sx, float sy, float sz);

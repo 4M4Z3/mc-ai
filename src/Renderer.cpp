@@ -122,9 +122,12 @@ bool Renderer::Initialize() {
         return false;
     }
     
+    // Get skin texture uniform location
+    int playerSkinTextureLoc = glGetUniformLocation(m_playerShaderProgram, "skinTexture");
+    
     // Set up player model with shader program and uniform locations
     m_playerModel.UseShaderProgram(m_playerShaderProgram);
-    m_playerModel.SetUniformLocations(m_playerModelLoc, m_playerViewLoc, m_playerProjLoc);
+    m_playerModel.SetUniformLocations(m_playerModelLoc, m_playerViewLoc, m_playerProjLoc, playerSkinTextureLoc);
     
     // Set initial viewport and projection
     SetViewport(m_viewportWidth, m_viewportHeight);

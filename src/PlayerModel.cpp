@@ -1,6 +1,10 @@
 #include "PlayerModel.h"
 #include <iostream>
 #include <cmath>  // For M_PI and fmod
+#include <filesystem>
+#include <random>
+#include <chrono>
+#include "../third_party/stb_image.h"
 
 PlayerModel::PlayerModel() : 
     m_headVAO(0), m_headVBO(0),
@@ -10,7 +14,9 @@ PlayerModel::PlayerModel() :
     m_leftLegVAO(0), m_leftLegVBO(0),
     m_rightLegVAO(0), m_rightLegVBO(0),
     m_shaderProgram(0),
-    m_modelLoc(-1), m_viewLoc(-1), m_projLoc(-1) {
+    m_modelLoc(-1), m_viewLoc(-1), m_projLoc(-1), m_skinTextureLoc(-1),
+    m_currentSkinTexture(0),
+    m_randomGenerator(std::chrono::steady_clock::now().time_since_epoch().count()) {
 }
 
 PlayerModel::~PlayerModel() {
@@ -18,12 +24,21 @@ PlayerModel::~PlayerModel() {
 }
 
 bool PlayerModel::Initialize() {
+    // Load available skins
+    if (!LoadSkins()) {
+        std::cerr << "Failed to load skins" << std::endl;
+        return false;
+    }
+    
+    // Assign random skin
+    AssignRandomSkin();
+    
     CreateHeadGeometry();
     CreateTorsoGeometry();
-    CreateArmGeometry(m_leftArmVAO, m_leftArmVBO);
-    CreateArmGeometry(m_rightArmVAO, m_rightArmVBO);
-    CreateLegGeometry(m_leftLegVAO, m_leftLegVBO);
-    CreateLegGeometry(m_rightLegVAO, m_rightLegVBO);
+    CreateArmGeometry(m_leftArmVAO, m_leftArmVBO, GetLeftArmUVMapping());
+    CreateArmGeometry(m_rightArmVAO, m_rightArmVBO, GetRightArmUVMapping());
+    CreateLegGeometry(m_leftLegVAO, m_leftLegVBO, GetLeftLegUVMapping());
+    CreateLegGeometry(m_rightLegVAO, m_rightLegVBO, GetRightLegUVMapping());
     
     return true;
 }
@@ -42,16 +57,25 @@ void PlayerModel::Shutdown() {
     if (m_leftLegVBO) { glDeleteBuffers(1, &m_leftLegVBO); m_leftLegVBO = 0; }
     if (m_rightLegVAO) { glDeleteVertexArrays(1, &m_rightLegVAO); m_rightLegVAO = 0; }
     if (m_rightLegVBO) { glDeleteBuffers(1, &m_rightLegVBO); m_rightLegVBO = 0; }
+    
+    // Clean up skin textures
+    for (unsigned int texture : m_skinTextures) {
+        if (texture != 0) {
+            glDeleteTextures(1, &texture);
+        }
+    }
+    m_skinTextures.clear();
 }
 
 void PlayerModel::UseShaderProgram(unsigned int shaderProgram) {
     m_shaderProgram = shaderProgram;
 }
 
-void PlayerModel::SetUniformLocations(int modelLoc, int viewLoc, int projLoc) {
+void PlayerModel::SetUniformLocations(int modelLoc, int viewLoc, int projLoc, int skinTextureLoc) {
     m_modelLoc = modelLoc;
     m_viewLoc = viewLoc;
     m_projLoc = projLoc;
+    m_skinTextureLoc = skinTextureLoc;
 }
 
 void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
@@ -59,6 +83,13 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     
     // Don't switch shader programs - use the one set by Renderer
     // glUseProgram(m_shaderProgram);
+    
+    // Bind the current skin texture
+    if (m_currentSkinTexture != 0 && m_skinTextureLoc != -1) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_currentSkinTexture);
+        glUniform1i(m_skinTextureLoc, 0);
+    }
     
     // Normalize yaw to prevent accumulation issues
     float normalizedYaw = fmod(yaw, 360.0f);
@@ -143,7 +174,7 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
 
 void PlayerModel::CreateHeadGeometry() {
     // Head: 0.5x0.45x0.5 blocks (slightly shorter cube)
-    std::vector<float> vertices = CreateCubeVertices(0.5f, 0.45f, 0.5f);
+    std::vector<float> vertices = CreateCubeVerticesWithUV(0.5f, 0.45f, 0.5f, 0.0f, 0.0f, 0.0f, GetHeadUVMapping());
     
     glGenVertexArrays(1, &m_headVAO);
     glBindVertexArray(m_headVAO);
@@ -152,9 +183,13 @@ void PlayerModel::CreateHeadGeometry() {
     glBindBuffer(GL_ARRAY_BUFFER, m_headVBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
     
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Position attribute (location 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    
+    // Texture coordinate attribute (location 1)
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -162,7 +197,7 @@ void PlayerModel::CreateHeadGeometry() {
 
 void PlayerModel::CreateTorsoGeometry() {
     // Torso: 0.5x0.675x0.25 blocks
-    std::vector<float> vertices = CreateCubeVertices(0.5f, 0.675f, 0.25f);
+    std::vector<float> vertices = CreateCubeVerticesWithUV(0.5f, 0.675f, 0.25f, 0.0f, 0.0f, 0.0f, GetTorsoUVMapping());
     
     glGenVertexArrays(1, &m_torsoVAO);
     glBindVertexArray(m_torsoVAO);
@@ -171,17 +206,21 @@ void PlayerModel::CreateTorsoGeometry() {
     glBindBuffer(GL_ARRAY_BUFFER, m_torsoVBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
     
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Position attribute (location 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    
+    // Texture coordinate attribute (location 1)
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
 
-void PlayerModel::CreateArmGeometry(unsigned int& vao, unsigned int& vbo) {
+void PlayerModel::CreateArmGeometry(unsigned int& vao, unsigned int& vbo, const std::vector<std::vector<float>>& uvMapping) {
     // Arms: 0.25x0.675x0.25 blocks
-    std::vector<float> vertices = CreateCubeVertices(0.25f, 0.675f, 0.25f);
+    std::vector<float> vertices = CreateCubeVerticesWithUV(0.25f, 0.675f, 0.25f, 0.0f, 0.0f, 0.0f, uvMapping);
     
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -190,17 +229,21 @@ void PlayerModel::CreateArmGeometry(unsigned int& vao, unsigned int& vbo) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
     
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Position attribute (location 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    
+    // Texture coordinate attribute (location 1)
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
 
-void PlayerModel::CreateLegGeometry(unsigned int& vao, unsigned int& vbo) {
+void PlayerModel::CreateLegGeometry(unsigned int& vao, unsigned int& vbo, const std::vector<std::vector<float>>& uvMapping) {
     // Legs: 0.25x0.675x0.25 blocks
-    std::vector<float> vertices = CreateCubeVertices(0.25f, 0.675f, 0.25f);
+    std::vector<float> vertices = CreateCubeVerticesWithUV(0.25f, 0.675f, 0.25f, 0.0f, 0.0f, 0.0f, uvMapping);
     
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
@@ -209,70 +252,90 @@ void PlayerModel::CreateLegGeometry(unsigned int& vao, unsigned int& vbo) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
     
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Position attribute (location 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    
+    // Texture coordinate attribute (location 1)
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
     
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 }
 
-std::vector<float> PlayerModel::CreateCubeVertices(float width, float height, float depth, 
-                                                   float offsetX, float offsetY, float offsetZ) {
+
+
+// Helper function to create cube geometry with UV coordinates
+std::vector<float> PlayerModel::CreateCubeVerticesWithUV(float width, float height, float depth, 
+                                                          float offsetX, float offsetY, float offsetZ,
+                                                          const std::vector<std::vector<float>>& faceUVs) {
     float hw = width * 0.5f;   // half width
     float hh = height * 0.5f;  // half height
     float hd = depth * 0.5f;   // half depth
     
-    // Cube vertices (6 faces, 2 triangles per face, 3 vertices per triangle)
-    // All faces wound counter-clockwise when viewed from outside the cube
+    // Default UV coordinates if none provided (maps to full texture)
+    std::vector<std::vector<float>> defaultUVs = {
+        {0.0f, 0.0f,  1.0f, 0.0f,  1.0f, 1.0f,  1.0f, 1.0f,  0.0f, 1.0f,  0.0f, 0.0f}, // Front
+        {0.0f, 0.0f,  1.0f, 0.0f,  1.0f, 1.0f,  1.0f, 1.0f,  0.0f, 1.0f,  0.0f, 0.0f}, // Back
+        {0.0f, 0.0f,  1.0f, 0.0f,  1.0f, 1.0f,  1.0f, 1.0f,  0.0f, 1.0f,  0.0f, 0.0f}, // Left
+        {0.0f, 0.0f,  1.0f, 0.0f,  1.0f, 1.0f,  1.0f, 1.0f,  0.0f, 1.0f,  0.0f, 0.0f}, // Right
+        {0.0f, 0.0f,  1.0f, 0.0f,  1.0f, 1.0f,  1.0f, 1.0f,  0.0f, 1.0f,  0.0f, 0.0f}, // Bottom
+        {0.0f, 0.0f,  1.0f, 0.0f,  1.0f, 1.0f,  1.0f, 1.0f,  0.0f, 1.0f,  0.0f, 0.0f}  // Top
+    };
+    
+    const auto& uvs = faceUVs.empty() ? defaultUVs : faceUVs;
+    
+    // Cube vertices with UV coordinates (5 floats per vertex: x, y, z, u, v)
+    // Face order: Front, Back, Left, Right, Bottom, Top
     std::vector<float> vertices = {
-        // Front face (+Z) - viewed from positive Z
-        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-left
-         hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-right
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-right
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-right
-        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-left
-        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-left
+        // Front face (+Z)
+        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  uvs[0][0], uvs[0][1],   // bottom-left
+         hw + offsetX, -hh + offsetY,  hd + offsetZ,  uvs[0][2], uvs[0][3],   // bottom-right
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[0][4], uvs[0][5],   // top-right
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[0][6], uvs[0][7],   // top-right
+        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[0][8], uvs[0][9],   // top-left
+        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  uvs[0][10], uvs[0][11], // bottom-left
 
-        // Back face (-Z) - viewed from negative Z (reverse winding)
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-left
-        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-left
-         hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-right
-         hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-right
-         hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-right
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-left
+        // Back face (-Z)
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[1][0], uvs[1][1],
+        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  uvs[1][8], uvs[1][9],
+         hw + offsetX,  hh + offsetY, -hd + offsetZ,  uvs[1][4], uvs[1][5],
+         hw + offsetX,  hh + offsetY, -hd + offsetZ,  uvs[1][6], uvs[1][7],
+         hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[1][2], uvs[1][3],
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[1][10], uvs[1][11],
 
-        // Left face (-X) - viewed from negative X
-        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-front
-        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-back
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-back
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-back
-        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-front
-        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-front
+        // Left face (-X)
+        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[2][8], uvs[2][9],
+        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  uvs[2][4], uvs[2][5],
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[2][2], uvs[2][3],
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[2][6], uvs[2][7],
+        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  uvs[2][0], uvs[2][1],
+        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[2][10], uvs[2][11],
 
-        // Right face (+X) - viewed from positive X
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-front
-         hw + offsetX, -hh + offsetY,  hd + offsetZ,  // bottom-front
-         hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-back
-         hw + offsetX, -hh + offsetY, -hd + offsetZ,  // bottom-back
-         hw + offsetX,  hh + offsetY, -hd + offsetZ,  // top-back
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // top-front
+        // Right face (+X)
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[3][8], uvs[3][9],
+         hw + offsetX, -hh + offsetY,  hd + offsetZ,  uvs[3][0], uvs[3][1],
+         hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[3][2], uvs[3][3],
+         hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[3][6], uvs[3][7],
+         hw + offsetX,  hh + offsetY, -hd + offsetZ,  uvs[3][4], uvs[3][5],
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[3][10], uvs[3][11],
 
-        // Bottom face (-Y) - viewed from negative Y
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // back-left
-         hw + offsetX, -hh + offsetY, -hd + offsetZ,  // back-right
-         hw + offsetX, -hh + offsetY,  hd + offsetZ,  // front-right
-         hw + offsetX, -hh + offsetY,  hd + offsetZ,  // front-right
-        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  // front-left
-        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  // back-left
+        // Bottom face (-Y)
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[4][0], uvs[4][1],
+         hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[4][2], uvs[4][3],
+         hw + offsetX, -hh + offsetY,  hd + offsetZ,  uvs[4][4], uvs[4][5],
+         hw + offsetX, -hh + offsetY,  hd + offsetZ,  uvs[4][6], uvs[4][7],
+        -hw + offsetX, -hh + offsetY,  hd + offsetZ,  uvs[4][8], uvs[4][9],
+        -hw + offsetX, -hh + offsetY, -hd + offsetZ,  uvs[4][10], uvs[4][11],
 
-        // Top face (+Y) - viewed from positive Y
-        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  // back-left
-        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  // front-left
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // front-right
-         hw + offsetX,  hh + offsetY,  hd + offsetZ,  // front-right
-         hw + offsetX,  hh + offsetY, -hd + offsetZ,  // back-right
-        -hw + offsetX,  hh + offsetY, -hd + offsetZ   // back-left
+        // Top face (+Y)
+        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  uvs[5][0], uvs[5][1],
+        -hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[5][8], uvs[5][9],
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[5][4], uvs[5][5],
+         hw + offsetX,  hh + offsetY,  hd + offsetZ,  uvs[5][6], uvs[5][7],
+         hw + offsetX,  hh + offsetY, -hd + offsetZ,  uvs[5][2], uvs[5][3],
+        -hw + offsetX,  hh + offsetY, -hd + offsetZ,  uvs[5][10], uvs[5][11]
     };
     
     return vertices;
@@ -320,4 +383,204 @@ Mat4 PlayerModel::MultiplyMatrices(const Mat4& a, const Mat4& b) {
     }
     
     return result;
+}
+
+// Skin management methods
+bool PlayerModel::LoadSkins() {
+    std::string skinsPath = "assets/skins";
+    
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(skinsPath)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".png") {
+                std::string skinName = entry.path().stem().string();
+                std::string skinPath = entry.path().string();
+                
+                unsigned int textureID = LoadSkinTexture(skinPath);
+                if (textureID != 0) {
+                    m_availableSkins.push_back(skinName);
+                    m_skinTextures.push_back(textureID);
+                    std::cout << "Loaded skin: " << skinName << std::endl;
+                }
+            }
+        }
+    } catch (const std::filesystem::filesystem_error& e) {
+        std::cerr << "Error accessing skins directory: " << e.what() << std::endl;
+        return false;
+    }
+    
+    if (m_availableSkins.empty()) {
+        std::cerr << "No valid skins found in " << skinsPath << std::endl;
+        return false;
+    }
+    
+    std::cout << "Loaded " << m_availableSkins.size() << " skins" << std::endl;
+    return true;
+}
+
+void PlayerModel::AssignRandomSkin() {
+    if (m_availableSkins.empty()) return;
+    
+    std::uniform_int_distribution<size_t> dist(0, m_availableSkins.size() - 1);
+    size_t randomIndex = dist(m_randomGenerator);
+    
+    m_currentSkinTexture = m_skinTextures[randomIndex];
+    std::cout << "Assigned random skin: " << m_availableSkins[randomIndex] << std::endl;
+}
+
+void PlayerModel::SetSkin(const std::string& skinName) {
+    for (size_t i = 0; i < m_availableSkins.size(); ++i) {
+        if (m_availableSkins[i] == skinName) {
+            m_currentSkinTexture = m_skinTextures[i];
+            std::cout << "Set skin to: " << skinName << std::endl;
+            return;
+        }
+    }
+    std::cerr << "Skin not found: " << skinName << std::endl;
+}
+
+unsigned int PlayerModel::LoadSkinTexture(const std::string& skinPath) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    
+    // Set texture parameters for pixel art
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    
+    // Load image
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(skinPath.c_str(), &width, &height, &nrChannels, 4); // Force RGBA
+    
+    if (data) {
+        if (width != 128 || height != 128) {
+            std::cerr << "Warning: Skin " << skinPath << " is not 128x128 pixels (" << width << "x" << height << ")" << std::endl;
+        }
+        
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        
+        std::cout << "Loaded skin texture: " << skinPath << " (" << width << "x" << height << ")" << std::endl;
+    } else {
+        std::cerr << "Failed to load skin texture: " << skinPath << std::endl;
+        std::cerr << "STB Error: " << stbi_failure_reason() << std::endl;
+        glDeleteTextures(1, &textureID);
+        textureID = 0;
+    }
+    
+    stbi_image_free(data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    return textureID;
+} 
+
+// UV mapping for Minecraft skin format (128x128, each section is 16x16 pixels = 0.125 texture units)
+std::vector<std::vector<float>> PlayerModel::GetHeadUVMapping() {
+    // Head mapping: front, back, left, right, bottom, top
+    // Each section is 16x16 pixels on a 128x128 texture (0.125 units)
+    return {
+        // Front face (head front) - column 2, row 1
+        {0.25f, 0.125f,  0.375f, 0.125f,  0.375f, 0.25f,  0.375f, 0.25f,  0.25f, 0.25f,  0.25f, 0.125f},
+        // Back face (head back) - column 3, row 1
+        {0.375f, 0.125f,  0.5f, 0.125f,  0.5f, 0.25f,  0.5f, 0.25f,  0.375f, 0.25f,  0.375f, 0.125f},
+        // Left face (head left) - column 0, row 1
+        {0.0f, 0.125f,  0.125f, 0.125f,  0.125f, 0.25f,  0.125f, 0.25f,  0.0f, 0.25f,  0.0f, 0.125f},
+        // Right face (head right) - column 1, row 1
+        {0.125f, 0.125f,  0.25f, 0.125f,  0.25f, 0.25f,  0.25f, 0.25f,  0.125f, 0.25f,  0.125f, 0.125f},
+        // Bottom face (head bottom) - column 1, row 2
+        {0.125f, 0.25f,  0.25f, 0.25f,  0.25f, 0.375f,  0.25f, 0.375f,  0.125f, 0.375f,  0.125f, 0.25f},
+        // Top face (head top) - column 1, row 0
+        {0.125f, 0.0f,  0.25f, 0.0f,  0.25f, 0.125f,  0.25f, 0.125f,  0.125f, 0.125f,  0.125f, 0.0f}
+    };
+}
+
+std::vector<std::vector<float>> PlayerModel::GetTorsoUVMapping() {
+    // Torso mapping: front, back, left, right, bottom, top
+    return {
+        // Front face (body front) - column 1, row 2
+        {0.125f, 0.25f,  0.25f, 0.25f,  0.25f, 0.5f,  0.25f, 0.5f,  0.125f, 0.5f,  0.125f, 0.25f},
+        // Back face (body back) - column 3, row 2
+        {0.375f, 0.25f,  0.5f, 0.25f,  0.5f, 0.5f,  0.5f, 0.5f,  0.375f, 0.5f,  0.375f, 0.25f},
+        // Left face (body left) - column 2, row 2
+        {0.25f, 0.25f,  0.375f, 0.25f,  0.375f, 0.5f,  0.375f, 0.5f,  0.25f, 0.5f,  0.25f, 0.25f},
+        // Right face (body right) - column 0, row 2
+        {0.0f, 0.25f,  0.125f, 0.25f,  0.125f, 0.5f,  0.125f, 0.5f,  0.0f, 0.5f,  0.0f, 0.25f},
+        // Bottom face (body bottom) - column 1, row 3 
+        {0.125f, 0.5f,  0.25f, 0.5f,  0.25f, 0.625f,  0.25f, 0.625f,  0.125f, 0.625f,  0.125f, 0.5f},
+        // Top face (body top) - column 1, row 1
+        {0.125f, 0.125f,  0.25f, 0.125f,  0.25f, 0.25f,  0.25f, 0.25f,  0.125f, 0.25f,  0.125f, 0.125f}
+    };
+}
+
+std::vector<std::vector<float>> PlayerModel::GetRightArmUVMapping() {
+    // Right arm mapping: front, back, left, right, bottom, top
+    return {
+        // Front face (right arm front) - column 1, row 4
+        {0.625f, 0.25f,  0.75f, 0.25f,  0.75f, 0.5f,  0.75f, 0.5f,  0.625f, 0.5f,  0.625f, 0.25f},
+        // Back face (right arm back) - column 3, row 4
+        {0.875f, 0.25f,  1.0f, 0.25f,  1.0f, 0.5f,  1.0f, 0.5f,  0.875f, 0.5f,  0.875f, 0.25f},
+        // Left face (right arm left) - column 2, row 4
+        {0.75f, 0.25f,  0.875f, 0.25f,  0.875f, 0.5f,  0.875f, 0.5f,  0.75f, 0.5f,  0.75f, 0.25f},
+        // Right face (right arm right) - column 0, row 4
+        {0.5f, 0.25f,  0.625f, 0.25f,  0.625f, 0.5f,  0.625f, 0.5f,  0.5f, 0.5f,  0.5f, 0.25f},
+        // Bottom face (right arm bottom) - column 1, row 5
+        {0.625f, 0.5f,  0.75f, 0.5f,  0.75f, 0.625f,  0.75f, 0.625f,  0.625f, 0.625f,  0.625f, 0.5f},
+        // Top face (right arm top) - column 1, row 3
+        {0.625f, 0.125f,  0.75f, 0.125f,  0.75f, 0.25f,  0.75f, 0.25f,  0.625f, 0.25f,  0.625f, 0.125f}
+    };
+}
+
+std::vector<std::vector<float>> PlayerModel::GetLeftArmUVMapping() {
+    // Left arm mapping: front, back, left, right, bottom, top  
+    return {
+        // Front face (left arm front) - column 5, row 4
+        {0.625f, 0.5f,  0.75f, 0.5f,  0.75f, 0.75f,  0.75f, 0.75f,  0.625f, 0.75f,  0.625f, 0.5f},
+        // Back face (left arm back) - column 7, row 4
+        {0.875f, 0.5f,  1.0f, 0.5f,  1.0f, 0.75f,  1.0f, 0.75f,  0.875f, 0.75f,  0.875f, 0.5f},
+        // Left face (left arm left) - column 6, row 4
+        {0.75f, 0.5f,  0.875f, 0.5f,  0.875f, 0.75f,  0.875f, 0.75f,  0.75f, 0.75f,  0.75f, 0.5f},
+        // Right face (left arm right) - column 4, row 4
+        {0.5f, 0.5f,  0.625f, 0.5f,  0.625f, 0.75f,  0.625f, 0.75f,  0.5f, 0.75f,  0.5f, 0.5f},
+        // Bottom face (left arm bottom) - column 5, row 5
+        {0.625f, 0.75f,  0.75f, 0.75f,  0.75f, 0.875f,  0.75f, 0.875f,  0.625f, 0.875f,  0.625f, 0.75f},
+        // Top face (left arm top) - column 5, row 3
+        {0.625f, 0.375f,  0.75f, 0.375f,  0.75f, 0.5f,  0.75f, 0.5f,  0.625f, 0.5f,  0.625f, 0.375f}
+    };
+}
+
+std::vector<std::vector<float>> PlayerModel::GetRightLegUVMapping() {
+    // Right leg mapping: front, back, left, right, bottom, top
+    return {
+        // Front face (right leg front) - column 1, row 6
+        {0.125f, 0.75f,  0.25f, 0.75f,  0.25f, 1.0f,  0.25f, 1.0f,  0.125f, 1.0f,  0.125f, 0.75f},
+        // Back face (right leg back) - column 3, row 6
+        {0.375f, 0.75f,  0.5f, 0.75f,  0.5f, 1.0f,  0.5f, 1.0f,  0.375f, 1.0f,  0.375f, 0.75f},
+        // Left face (right leg left) - column 2, row 6
+        {0.25f, 0.75f,  0.375f, 0.75f,  0.375f, 1.0f,  0.375f, 1.0f,  0.25f, 1.0f,  0.25f, 0.75f},
+        // Right face (right leg right) - column 0, row 6
+        {0.0f, 0.75f,  0.125f, 0.75f,  0.125f, 1.0f,  0.125f, 1.0f,  0.0f, 1.0f,  0.0f, 0.75f},
+        // Bottom face (right leg bottom) - column 1, row 7
+        {0.125f, 1.0f,  0.25f, 1.0f,  0.25f, 1.125f,  0.25f, 1.125f,  0.125f, 1.125f,  0.125f, 1.0f},
+        // Top face (right leg top) - column 1, row 5
+        {0.125f, 0.625f,  0.25f, 0.625f,  0.25f, 0.75f,  0.25f, 0.75f,  0.125f, 0.75f,  0.125f, 0.625f}
+    };
+}
+
+std::vector<std::vector<float>> PlayerModel::GetLeftLegUVMapping() {
+    // Left leg mapping: front, back, left, right, bottom, top
+    return {
+        // Front face (left leg front) - column 5, row 6
+        {0.625f, 0.75f,  0.75f, 0.75f,  0.75f, 1.0f,  0.75f, 1.0f,  0.625f, 1.0f,  0.625f, 0.75f},
+        // Back face (left leg back) - column 7, row 6
+        {0.875f, 0.75f,  1.0f, 0.75f,  1.0f, 1.0f,  1.0f, 1.0f,  0.875f, 1.0f,  0.875f, 0.75f},
+        // Left face (left leg left) - column 6, row 6
+        {0.75f, 0.75f,  0.875f, 0.75f,  0.875f, 1.0f,  0.875f, 1.0f,  0.75f, 1.0f,  0.75f, 0.75f},
+        // Right face (left leg right) - column 4, row 6
+        {0.5f, 0.75f,  0.625f, 0.75f,  0.625f, 1.0f,  0.625f, 1.0f,  0.5f, 1.0f,  0.5f, 0.75f},
+        // Bottom face (left leg bottom) - column 5, row 7
+        {0.625f, 1.0f,  0.75f, 1.0f,  0.75f, 1.125f,  0.75f, 1.125f,  0.625f, 1.125f,  0.625f, 1.0f},
+        // Top face (left leg top) - column 5, row 5
+        {0.625f, 0.625f,  0.75f, 0.625f,  0.75f, 0.75f,  0.75f, 0.75f,  0.625f, 0.75f,  0.625f, 0.625f}
+    };
 } 
