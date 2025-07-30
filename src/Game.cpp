@@ -82,6 +82,9 @@ bool Game::Initialize(int windowWidth, int windowHeight) {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     
+    // Enable antialiasing with 4x MSAA to reduce shimmering
+    glfwWindowHint(GLFW_SAMPLES, 4);
+    
 #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif

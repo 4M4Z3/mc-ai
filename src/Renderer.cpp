@@ -97,6 +97,9 @@ bool Renderer::Initialize() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     
+    // Enable multisampling for antialiasing (reduce shimmering)
+    glEnable(GL_MULTISAMPLE);
+    
     // Enable backface culling to hide faces facing away from camera
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
