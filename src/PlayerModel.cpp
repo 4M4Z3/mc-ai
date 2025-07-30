@@ -98,16 +98,15 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Base transformation matrix for the entire player
     // Player position represents center at ground level (feet)
     // Total player height is 1.8 blocks
-    // Apply translation first, then rotation, so player rotates around their own center
+    // Apply translation first, then rotation, so player rotates around their center
     Mat4 translation = CreateTranslationMatrix(position.x, position.y, position.z);
     Mat4 yawRotation = CreateRotationYMatrix(normalizedYaw * M_PI / 180.0f);
-    Mat4 playerTransform = MultiplyMatrices(yawRotation, translation);
     
     // Render Head (0.5x0.45x0.5 blocks) - top of player
     // Position: y + 1.575 (center of head at 1.575 blocks above feet)
     {
         Mat4 headTransform = CreateTranslationMatrix(0.0f, 1.575f, 0.0f);
-        Mat4 modelMatrix = MultiplyMatrices(playerTransform, headTransform);
+        Mat4 modelMatrix = MultiplyMatrices(translation, MultiplyMatrices(yawRotation, headTransform));
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_headVAO);
@@ -118,7 +117,7 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Position: y + 1.0125 (center of torso at 1.0125 blocks above feet)
     {
         Mat4 torsoTransform = CreateTranslationMatrix(0.0f, 1.0125f, 0.0f);
-        Mat4 modelMatrix = MultiplyMatrices(playerTransform, torsoTransform);
+        Mat4 modelMatrix = MultiplyMatrices(translation, MultiplyMatrices(yawRotation, torsoTransform));
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_torsoVAO);
@@ -129,7 +128,7 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Position: align with torso center at y + 1.0125
     {
         Mat4 armTransform = CreateTranslationMatrix(-0.375f, 1.0125f, 0.0f); // -0.25 (torso half width) - 0.125 (arm half width)
-        Mat4 modelMatrix = MultiplyMatrices(playerTransform, armTransform);
+        Mat4 modelMatrix = MultiplyMatrices(translation, MultiplyMatrices(yawRotation, armTransform));
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_leftArmVAO);
@@ -140,7 +139,7 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Position: align with torso center at y + 1.0125
     {
         Mat4 armTransform = CreateTranslationMatrix(0.375f, 1.0125f, 0.0f); // 0.25 (torso half width) + 0.125 (arm half width)
-        Mat4 modelMatrix = MultiplyMatrices(playerTransform, armTransform);
+        Mat4 modelMatrix = MultiplyMatrices(translation, MultiplyMatrices(yawRotation, armTransform));
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_rightArmVAO);
@@ -151,7 +150,7 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Position: y + 0.3375 (center of leg at 0.3375 blocks above feet)
     {
         Mat4 legTransform = CreateTranslationMatrix(-0.125f, 0.3375f, 0.0f); // -0.125 (quarter torso width)
-        Mat4 modelMatrix = MultiplyMatrices(playerTransform, legTransform);
+        Mat4 modelMatrix = MultiplyMatrices(translation, MultiplyMatrices(yawRotation, legTransform));
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_leftLegVAO);
@@ -162,7 +161,7 @@ void PlayerModel::Render(const Vec3& position, float yaw, float pitch) {
     // Position: y + 0.3375 (center of leg at 0.3375 blocks above feet)
     {
         Mat4 legTransform = CreateTranslationMatrix(0.125f, 0.3375f, 0.0f); // 0.125 (quarter torso width)
-        Mat4 modelMatrix = MultiplyMatrices(playerTransform, legTransform);
+        Mat4 modelMatrix = MultiplyMatrices(translation, MultiplyMatrices(yawRotation, legTransform));
         glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
         
         glBindVertexArray(m_rightLegVAO);
