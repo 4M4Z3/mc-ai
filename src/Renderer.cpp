@@ -15,7 +15,7 @@ Renderer::Renderer() : m_cubeVAO(0), m_cubeVBO(0), m_shaderProgram(0),
                        m_triangleVAO(0), m_triangleVBO(0),
                        m_playerShaderProgram(0),
                        m_playerModelLoc(-1), m_playerViewLoc(-1), m_playerProjLoc(-1),
-                       m_viewportWidth(1280), m_viewportHeight(720), m_renderMode(RenderMode::WHITE_ONLY), m_fadeFactor(0.0f) {
+                       m_viewportWidth(1280), m_viewportHeight(720), m_renderMode(RenderMode::WHITE_ONLY), m_fadeFactor(0.0f), m_enablePurpleTint(false) {
 }
 
 Renderer::~Renderer() {
@@ -346,8 +346,12 @@ void Renderer::RenderChunks(const World& world) {
                     chunk->RenderGrassFace(Chunk::GRASS_BOTTOM);
                 } else {
                     // Full render: normal grass rendering with textures and AO
-                    // Render grass top faces with purple tint
-                    glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint
+                    // Render grass top faces with conditional purple tint
+                    if (m_enablePurpleTint) {
+                        glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint
+                    } else {
+                        glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // No tint (regular grass)
+                    }
                     glBindTexture(GL_TEXTURE_2D, m_grassTopTexture);
                     chunk->RenderGrassFace(Chunk::GRASS_TOP);
                     
@@ -359,7 +363,11 @@ void Renderer::RenderChunks(const World& world) {
                     // Render grass side overlay on top using polygon offset to avoid z-fighting
                     glEnable(GL_POLYGON_OFFSET_FILL);
                     glPolygonOffset(-1.0f, -1.0f); // Pull overlay slightly toward camera
-                    glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint for overlay
+                    if (m_enablePurpleTint) {
+                        glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint for overlay
+                    } else {
+                        glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // No tint (regular grey overlay)
+                    }
                     glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
                     chunk->RenderGrassFace(Chunk::GRASS_SIDE);
                     glDisable(GL_POLYGON_OFFSET_FILL);

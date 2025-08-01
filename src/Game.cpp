@@ -34,7 +34,7 @@ Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_should
                m_isHost(false), m_worldSeed(0), m_worldSeedReceived(false),
                m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
                m_deltaTime(0.0f), m_lastFrame(0.0f), m_renderProgressionTimer(0.0f), m_currentRenderMode(0),
-               m_showPauseMenu(false) {
+               m_purpleTintTimer(0.0f), m_showPauseMenu(false) {
     s_instance = this;
 }
 
@@ -303,6 +303,11 @@ void Game::UpdateGame() {
     // Update render progression timer
     m_renderProgressionTimer += m_deltaTime;
     
+    // Update purple tint timer (starts counting when we reach FULL_RENDER mode)
+    if (m_currentRenderMode == 2) { // FULL_RENDER mode
+        m_purpleTintTimer += m_deltaTime;
+    }
+    
     // Calculate smooth transitions with fade periods
     int newRenderMode = 0;
     float fadeFactor = 0.0f;
@@ -321,8 +326,12 @@ void Game::UpdateGame() {
         // Pure AO_ONLY phase (5-9 seconds)
         newRenderMode = 1;
         fadeFactor = 0.0f;
+    } else if (m_renderProgressionTimer <= 10.0f) {
+        // Fading from AO_ONLY to FULL_RENDER (9-10 seconds)
+        newRenderMode = 1; // Still in AO_ONLY mode for shader logic
+        fadeFactor = (m_renderProgressionTimer - 9.0f) / fadeTime; // 0.0 to 1.0
     } else {
-        // Jump directly to FULL_RENDER phase (9+ seconds) - no fade
+        // Pure FULL_RENDER phase (10+ seconds)
         newRenderMode = 2;
         fadeFactor = 0.0f;
     }
@@ -339,6 +348,10 @@ void Game::UpdateGame() {
     
     // Always update fade factor for smooth transitions
     m_renderer.SetFadeFactor(fadeFactor);
+    
+    // Enable purple tint after 2 seconds in FULL_RENDER mode
+    bool enablePurpleTint = (m_currentRenderMode == 2 && m_purpleTintTimer >= 2.0f);
+    m_renderer.SetEnablePurpleTint(enablePurpleTint);
     
     // Send player position updates to server
     static float lastPositionSend = 0.0f;

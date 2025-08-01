@@ -117,6 +117,9 @@ private:
     float m_renderProgressionTimer;
     int m_currentRenderMode; // 0=white, 1=AO only, 2=full textures
     
+    // Purple tint timing
+    float m_purpleTintTimer;
+    
     // Pause menu
     bool m_showPauseMenu;
 

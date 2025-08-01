@@ -44,6 +44,7 @@ public:
     // Render mode control
     void SetRenderMode(RenderMode mode) { m_renderMode = mode; }
     void SetFadeFactor(float fadeFactor) { m_fadeFactor = fadeFactor; }
+    void SetEnablePurpleTint(bool enable) { m_enablePurpleTint = enable; }
     
     // Legacy triangle rendering (for debugging)
     void RenderTriangle();
@@ -92,6 +93,7 @@ private:
     // Render mode
     RenderMode m_renderMode;
     float m_fadeFactor;
+    bool m_enablePurpleTint;
 
     // Shader management
     bool CreateShaders();
