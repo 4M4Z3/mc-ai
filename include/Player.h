@@ -100,6 +100,11 @@ public:
     
     // Jumping
     void Jump();
+    
+    // Static camera mode
+    bool IsStaticCameraMode() const { return m_isStaticCameraMode; }
+    void SetStaticCameraMode(bool enabled) { m_isStaticCameraMode = enabled; }
+    void ToggleStaticCameraMode() { m_isStaticCameraMode = !m_isStaticCameraMode; }
 
 private:
     Vec3 m_position;  // Player position at CENTER of feet level (ground level)
@@ -113,6 +118,9 @@ private:
     bool m_isSurvivalMode;
     float m_verticalVelocity;  // For gravity
     bool m_isOnGround;
+    
+    // Static camera mode
+    bool m_isStaticCameraMode;
     
     // Physics constants
     static constexpr float GRAVITY = 20.48f;        // blocks per second squared (moderately reduced for slower jump)

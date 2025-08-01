@@ -443,8 +443,8 @@ void Chunk::Generate(int seed) {
             // Fill blocks from bottom up to terrain height
             for (int y = 0; y <= terrainHeight; ++y) {
                 if (y == terrainHeight) {
-                    // Top layer: grass surface
-                    m_blocks[x][y][z].SetType(BlockType::GRASS);
+                    // Top layer: dirt surface
+                    m_blocks[x][y][z].SetType(BlockType::DIRT);
                 } else if (y >= terrainHeight - 3) {
                     // Dirt layer (3 blocks deep)
                     m_blocks[x][y][z].SetType(BlockType::DIRT);

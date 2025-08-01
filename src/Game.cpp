@@ -33,7 +33,8 @@ Game* Game::s_instance = nullptr;
 Game::Game() : m_window(nullptr), m_currentState(GameState::MAIN_MENU), m_shouldClose(false),
                m_isHost(false), m_worldSeed(0), m_worldSeedReceived(false),
                m_firstMouse(true), m_lastX(640.0), m_lastY(360.0), 
-               m_deltaTime(0.0f), m_lastFrame(0.0f), m_showPauseMenu(false) {
+               m_deltaTime(0.0f), m_lastFrame(0.0f), m_renderProgressionTimer(0.0f), m_currentRenderMode(0),
+               m_showPauseMenu(false) {
     s_instance = this;
 }
 
@@ -299,6 +300,46 @@ void Game::UpdateGame() {
         m_player->Update(m_deltaTime, m_world.get());
     }
     
+    // Update render progression timer
+    m_renderProgressionTimer += m_deltaTime;
+    
+    // Calculate smooth transitions with fade periods
+    int newRenderMode = 0;
+    float fadeFactor = 0.0f;
+    
+    const float fadeTime = 1.0f; // 1 second fade between modes
+    
+    if (m_renderProgressionTimer <= 4.0f) {
+        // Pure WHITE_ONLY phase (0-4 seconds)
+        newRenderMode = 0;
+        fadeFactor = 0.0f;
+    } else if (m_renderProgressionTimer <= 5.0f) {
+        // Fading from WHITE_ONLY to AO_ONLY (4-5 seconds)
+        newRenderMode = 0; // Still in WHITE_ONLY mode for shader logic
+        fadeFactor = (m_renderProgressionTimer - 4.0f) / fadeTime; // 0.0 to 1.0
+    } else if (m_renderProgressionTimer <= 9.0f) {
+        // Pure AO_ONLY phase (5-9 seconds)
+        newRenderMode = 1;
+        fadeFactor = 0.0f;
+    } else {
+        // Jump directly to FULL_RENDER phase (9+ seconds) - no fade
+        newRenderMode = 2;
+        fadeFactor = 0.0f;
+    }
+    
+    // Update renderer if mode changed
+    if (newRenderMode != m_currentRenderMode) {
+        m_currentRenderMode = newRenderMode;
+        m_renderer.SetRenderMode(static_cast<RenderMode>(m_currentRenderMode));
+        
+        // Log the mode change
+        const char* modeNames[] = {"WHITE_ONLY", "AO_ONLY", "FULL_RENDER"};
+        std::cout << "Render mode changed to: " << modeNames[m_currentRenderMode] << std::endl;
+    }
+    
+    // Always update fade factor for smooth transitions
+    m_renderer.SetFadeFactor(fadeFactor);
+    
     // Send player position updates to server
     static float lastPositionSend = 0.0f;
     const float positionSendInterval = 1.0f / 20.0f; // Send 20 times per second
@@ -421,6 +462,8 @@ void Game::RenderGame() {
         return; // Don't show game UI when paused
     }
     
+    // Debug UI disabled for clean rendering demonstration
+    /*
     // Show game UI
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_Always);
@@ -462,7 +505,8 @@ void Game::RenderGame() {
             SetState(GameState::MAIN_MENU);
         }
     }
-    ImGui::End();
+    */
+    // ImGui::End(); // Commented out since ImGui::Begin is also commented out
 }
 
 void Game::RenderPauseMenu() {
@@ -548,6 +592,14 @@ void Game::KeyCallback(GLFWwindow* window, int key, int scancode, int action, in
             if (s_instance->m_currentState == GameState::GAME && s_instance->m_player && s_instance->m_world) {
                 s_instance->m_player->ToggleSurvivalMode(s_instance->m_world.get());
                 std::cout << "Survival mode: " << (s_instance->m_player->IsSurvivalMode() ? "ON" : "OFF") << std::endl;
+            }
+        }
+        
+        // Toggle static camera mode with C key
+        if (key == GLFW_KEY_C && action == GLFW_PRESS) {
+            if (s_instance->m_currentState == GameState::GAME && s_instance->m_player) {
+                s_instance->m_player->ToggleStaticCameraMode();
+                std::cout << "Static camera mode: " << (s_instance->m_player->IsStaticCameraMode() ? "ON" : "OFF") << std::endl;
             }
         }
     }

@@ -6,12 +6,12 @@
 #include <vector> // Added for std::vector
 
 Player::Player() : m_position(0.0f, 64.0f, 0.0f), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
-                   m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false) {
+                   m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_isStaticCameraMode(true) {
     UpdateVectors();
 }
 
 Player::Player(float x, float y, float z) : m_position(x, y, z), m_yaw(-90.0f), m_pitch(0.0f), m_movementSpeed(5.0f),
-                                            m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false) {
+                                            m_isSurvivalMode(false), m_verticalVelocity(0.0f), m_isOnGround(false), m_isStaticCameraMode(true) {
     UpdateVectors();
 }
 
@@ -286,6 +286,11 @@ void Player::Jump() {
 }
 
 void Player::ProcessMouseMovement(float xOffset, float yOffset, float sensitivity) {
+    // Skip mouse processing in static camera mode
+    if (m_isStaticCameraMode) {
+        return;
+    }
+    
     xOffset *= sensitivity;
     yOffset *= sensitivity;
     
@@ -300,6 +305,11 @@ void Player::ProcessMouseMovement(float xOffset, float yOffset, float sensitivit
 }
 
 void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world) {
+    // Skip input processing in static camera mode
+    if (m_isStaticCameraMode) {
+        return;
+    }
+    
     float velocity = m_movementSpeed * deltaTime;
     Vec3 intendedPosition = m_position;
     
@@ -378,10 +388,51 @@ void Player::ProcessInput(GLFWwindow* window, float deltaTime, World* world) {
 Mat4 Player::GetViewMatrix() const {
     Mat4 view;
     
-    // Get camera position at eye level (1.62 blocks above feet)
+    // Get camera position 
     Vec3 cameraPos = GetCameraPosition();
     
-    // Create look-at matrix manually
+    if (m_isStaticCameraMode) {
+        // Static camera: look at the center of chunk (0,0) from diagonal position
+        // Target is the center of the chunk at typical terrain height (adjusted for closer view)
+        Vec3 target = Vec3(7.5f, 28.0f, 7.5f); // Look at terrain level (slightly lower for better angle)
+        Vec3 up = Vec3(0.0f, 1.0f, 0.0f); // Standard world up vector
+        
+        // Calculate camera coordinate system for top-down view
+        Vec3 f = Vec3(target.x - cameraPos.x, target.y - cameraPos.y, target.z - cameraPos.z);
+        float f_len = sqrt(f.x*f.x + f.y*f.y + f.z*f.z);
+        f.x /= f_len; f.y /= f_len; f.z /= f_len;
+        
+        Vec3 s = Vec3(f.y*up.z - f.z*up.y, f.z*up.x - f.x*up.z, f.x*up.y - f.y*up.x);
+        float s_len = sqrt(s.x*s.x + s.y*s.y + s.z*s.z);
+        s.x /= s_len; s.y /= s_len; s.z /= s_len;
+        
+        Vec3 u = Vec3(s.y*f.z - s.z*f.y, s.z*f.x - s.x*f.z, s.x*f.y - s.y*f.x);
+        
+        // Build view matrix for static camera
+        view.m[0] = s.x;
+        view.m[4] = s.y;
+        view.m[8] = s.z;
+        view.m[12] = -(s.x * cameraPos.x + s.y * cameraPos.y + s.z * cameraPos.z);
+        
+        view.m[1] = u.x;
+        view.m[5] = u.y;
+        view.m[9] = u.z;
+        view.m[13] = -(u.x * cameraPos.x + u.y * cameraPos.y + u.z * cameraPos.z);
+        
+        view.m[2] = -f.x;
+        view.m[6] = -f.y;
+        view.m[10] = -f.z;
+        view.m[14] = f.x * cameraPos.x + f.y * cameraPos.y + f.z * cameraPos.z;
+        
+        view.m[3] = 0.0f;
+        view.m[7] = 0.0f;
+        view.m[11] = 0.0f;
+        view.m[15] = 1.0f;
+        
+        return view;
+    }
+    
+    // Normal camera: Create look-at matrix manually
     Vec3 target = cameraPos + m_front;
     Vec3 up = Vec3(0.0f, 1.0f, 0.0f);
     
@@ -433,7 +484,15 @@ Vec3 Player::GetUpVector() const {
 }
 
 Vec3 Player::GetCameraPosition() const {
-    // Camera should be at eye level, which is approximately 1.5 blocks above the feet
+    if (m_isStaticCameraMode) {
+        // Static camera: position diagonally above chunk (0,0) center (elevated view)
+        // Chunk (0,0) spans from 0-15 in both X and Z, so center is at (7.5, ?, 7.5)
+        // Terrain height ranges from 24 to 36 blocks, so position camera higher for better overview
+        // Place camera diagonally northeast of chunk center for good perspective
+        return Vec3(18.0f, 40.0f, 18.0f);
+    }
+    
+    // Normal camera: at eye level, which is approximately 1.5 blocks above the feet
     // Since m_position represents the center bottom of the player (feet level),
     // we add the eye height offset (adjusted to look more natural)
     return Vec3(m_position.x, m_position.y + 1.2f, m_position.z);

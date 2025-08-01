@@ -113,6 +113,10 @@ private:
     float m_deltaTime;
     float m_lastFrame;
     
+    // Rendering progression
+    float m_renderProgressionTimer;
+    int m_currentRenderMode; // 0=white, 1=AO only, 2=full textures
+    
     // Pause menu
     bool m_showPauseMenu;
 

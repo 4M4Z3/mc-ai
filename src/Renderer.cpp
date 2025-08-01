@@ -15,7 +15,7 @@ Renderer::Renderer() : m_cubeVAO(0), m_cubeVBO(0), m_shaderProgram(0),
                        m_triangleVAO(0), m_triangleVBO(0),
                        m_playerShaderProgram(0),
                        m_playerModelLoc(-1), m_playerViewLoc(-1), m_playerProjLoc(-1),
-                       m_viewportWidth(1280), m_viewportHeight(720) {
+                       m_viewportWidth(1280), m_viewportHeight(720), m_renderMode(RenderMode::WHITE_ONLY), m_fadeFactor(0.0f) {
 }
 
 Renderer::~Renderer() {
@@ -89,6 +89,9 @@ bool Renderer::Initialize() {
     // Get texture uniform location after loading textures
     m_textureLoc = glGetUniformLocation(m_shaderProgram, "blockTexture");
     m_colorTintLoc = glGetUniformLocation(m_shaderProgram, "colorTint");
+    m_enableAOLoc = glGetUniformLocation(m_shaderProgram, "enableAO");
+    m_enableTextureLoc = glGetUniformLocation(m_shaderProgram, "enableTexture");
+    m_fadeFactorLoc = glGetUniformLocation(m_shaderProgram, "fadeFactor");
     
     // Initialize player model
     if (!m_playerModel.Initialize()) {
@@ -288,14 +291,32 @@ void Renderer::RenderChunks(const World& world) {
     Mat4 modelMatrix;  // Identity matrix
     glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, modelMatrix.m);
     
-    // Enable texture unit 0
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(m_textureLoc, 0);
+    // Set fade factor uniform for smooth transitions
+    glUniform1f(m_fadeFactorLoc, m_fadeFactor);
+    
+    // Configure rendering based on current mode
+    if (m_renderMode == RenderMode::WHITE_ONLY) {
+        // White only mode: disable textures and AO, render everything pure white
+        glUniform1f(m_enableTextureLoc, 0.0f); // Disable textures
+        glUniform1f(m_enableAOLoc, 0.0f);     // Disable ambient occlusion
+        glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // Pure white
+    } else if (m_renderMode == RenderMode::AO_ONLY) {
+        // AO only mode: disable textures but enable AO
+        glUniform1f(m_enableTextureLoc, 0.0f); // Disable textures
+        glUniform1f(m_enableAOLoc, 1.0f);     // Enable ambient occlusion
+        glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White base color
+    } else {
+        // Full render mode: enable both textures and AO
+        glUniform1f(m_enableTextureLoc, 1.0f); // Enable textures
+        glUniform1f(m_enableAOLoc, 1.0f);     // Enable ambient occlusion
+        glActiveTexture(GL_TEXTURE0);
+        glUniform1i(m_textureLoc, 0);
+    }
     
     // Define the block types we want to render in order
     std::vector<BlockType> blockTypesToRender = {BlockType::STONE, BlockType::DIRT, BlockType::GRASS};
     
-    // Render each block type separately with its texture
+    // Render each block type separately
     for (BlockType blockType : blockTypesToRender) {
         // Skip AIR blocks
         if (blockType == BlockType::AIR) {
@@ -304,81 +325,74 @@ void Renderer::RenderChunks(const World& world) {
         
         // Handle grass blocks specially (different textures per face)
         if (blockType == BlockType::GRASS) {
-            // Render grass top faces with purple tint
-            glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint
-            glBindTexture(GL_TEXTURE_2D, m_grassTopTexture);
-            for (int x = 0; x < WORLD_SIZE; ++x) {
-                for (int z = 0; z < WORLD_SIZE; ++z) {
-                    int chunkX = x - 3;
-                    int chunkZ = z - 3;
-                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                    if (chunk && chunk->HasMesh()) {
-                        chunk->RenderGrassFace(Chunk::GRASS_TOP);
-                    }
-                }
-            }
+            // Render only the center chunk (0,0) for static camera mode
+            int x = 3, z = 3;
+            int chunkX = x - 3; // = 0
+            int chunkZ = z - 3; // = 0
+            const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
             
-            // Render grass side faces with base texture (no tint)
-            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
-            glBindTexture(GL_TEXTURE_2D, m_grassSideTexture);
-            for (int x = 0; x < WORLD_SIZE; ++x) {
-                for (int z = 0; z < WORLD_SIZE; ++z) {
-                    int chunkX = x - 3;
-                    int chunkZ = z - 3;
-                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                    if (chunk && chunk->HasMesh()) {
-                        chunk->RenderGrassFace(Chunk::GRASS_SIDE);
-                    }
-                }
-            }
-            
-            // Render grass side overlay on top using polygon offset to avoid z-fighting
-            glEnable(GL_POLYGON_OFFSET_FILL);
-            glPolygonOffset(-1.0f, -1.0f); // Pull overlay slightly toward camera
-            glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint for overlay
-            glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
-            for (int x = 0; x < WORLD_SIZE; ++x) {
-                for (int z = 0; z < WORLD_SIZE; ++z) {
-                    int chunkX = x - 3;
-                    int chunkZ = z - 3;
-                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                    if (chunk && chunk->HasMesh()) {
-                        chunk->RenderGrassFace(Chunk::GRASS_SIDE);
-                    }
-                }
-            }
-            glDisable(GL_POLYGON_OFFSET_FILL);
-            
-            // Render grass bottom faces (no tint) 
-            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
-            glBindTexture(GL_TEXTURE_2D, m_grassBottomTexture);
-            for (int x = 0; x < WORLD_SIZE; ++x) {
-                for (int z = 0; z < WORLD_SIZE; ++z) {
-                    int chunkX = x - 3;
-                    int chunkZ = z - 3;
-                    const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                    if (chunk && chunk->HasMesh()) {
-                        chunk->RenderGrassFace(Chunk::GRASS_BOTTOM);
-                    }
+            if (chunk && chunk->HasMesh()) {
+                if (m_renderMode == RenderMode::WHITE_ONLY) {
+                    // White only: render all grass faces with white color, no textures
+                    glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f);
+                    chunk->RenderGrassFace(Chunk::GRASS_TOP);
+                    chunk->RenderGrassFace(Chunk::GRASS_SIDE);
+                    chunk->RenderGrassFace(Chunk::GRASS_BOTTOM);
+                } else if (m_renderMode == RenderMode::AO_ONLY) {
+                    // AO only: render with AO but no textures
+                    glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f);
+                    chunk->RenderGrassFace(Chunk::GRASS_TOP);
+                    chunk->RenderGrassFace(Chunk::GRASS_SIDE);
+                    chunk->RenderGrassFace(Chunk::GRASS_BOTTOM);
+                } else {
+                    // Full render: normal grass rendering with textures and AO
+                    // Render grass top faces with purple tint
+                    glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint
+                    glBindTexture(GL_TEXTURE_2D, m_grassTopTexture);
+                    chunk->RenderGrassFace(Chunk::GRASS_TOP);
+                    
+                    // Render grass side faces with base texture (no tint)
+                    glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
+                    glBindTexture(GL_TEXTURE_2D, m_grassSideTexture);
+                    chunk->RenderGrassFace(Chunk::GRASS_SIDE);
+                    
+                    // Render grass side overlay on top using polygon offset to avoid z-fighting
+                    glEnable(GL_POLYGON_OFFSET_FILL);
+                    glPolygonOffset(-1.0f, -1.0f); // Pull overlay slightly toward camera
+                    glUniform3f(m_colorTintLoc, 0.8f, 0.3f, 0.8f); // Purple tint for overlay
+                    glBindTexture(GL_TEXTURE_2D, m_grassSideOverlayTexture);
+                    chunk->RenderGrassFace(Chunk::GRASS_SIDE);
+                    glDisable(GL_POLYGON_OFFSET_FILL);
+                    
+                    // Render grass bottom faces (no tint) 
+                    glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
+                    glBindTexture(GL_TEXTURE_2D, m_grassBottomTexture);
+                    chunk->RenderGrassFace(Chunk::GRASS_BOTTOM);
                 }
             }
         } else {
-            // Bind the appropriate texture for this block type (no tint)
-            glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
-            if (static_cast<size_t>(blockType) < m_blockTextures.size() && m_blockTextures[static_cast<int>(blockType)] != 0) {
-                glBindTexture(GL_TEXTURE_2D, m_blockTextures[static_cast<int>(blockType)]);
-                
-                // Render all chunks for this block type
-                for (int x = 0; x < WORLD_SIZE; ++x) {
-                    for (int z = 0; z < WORLD_SIZE; ++z) {
-                        // Convert array indices to chunk coordinates
-                        // Array indices 0-5 map to chunk coordinates -3 to +2
-                        int chunkX = x - 3;
-                        int chunkZ = z - 3;
-                        const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
-                        if (chunk && chunk->HasMesh()) {
-                            chunk->RenderMeshForBlockType(blockType);
-                        }
+            // Handle non-grass blocks (stone, dirt, etc.)
+            // Render only the center chunk (0,0) for static camera mode
+            int x = 3, z = 3;
+            int chunkX = x - 3; // = 0
+            int chunkZ = z - 3; // = 0
+            const Chunk* chunk = world.GetChunk(chunkX, chunkZ);
+            
+            if (chunk && chunk->HasMesh()) {
+                if (m_renderMode == RenderMode::WHITE_ONLY) {
+                    // White only: render with white color, no textures
+                    glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f);
+                    chunk->RenderMeshForBlockType(blockType);
+                } else if (m_renderMode == RenderMode::AO_ONLY) {
+                    // AO only: render with AO but no textures
+                    glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); 
+                    chunk->RenderMeshForBlockType(blockType);
+                } else {
+                    // Full render: normal texture rendering
+                    glUniform3f(m_colorTintLoc, 1.0f, 1.0f, 1.0f); // White (no tint)
+                    if (static_cast<size_t>(blockType) < m_blockTextures.size() && m_blockTextures[static_cast<int>(blockType)] != 0) {
+                        glBindTexture(GL_TEXTURE_2D, m_blockTextures[static_cast<int>(blockType)]);
+                        chunk->RenderMeshForBlockType(blockType);
                     }
                 }
             }

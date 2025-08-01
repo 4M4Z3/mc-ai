@@ -17,6 +17,12 @@
 
 class World;
 
+enum class RenderMode {
+    WHITE_ONLY = 0,     // Completely white mesh
+    AO_ONLY = 1,        // Ambient occlusion only, no textures
+    FULL_RENDER = 2     // Full textures and AO
+};
+
 class Renderer {
 public:
     Renderer();
@@ -34,6 +40,10 @@ public:
     void RenderCube(float x, float y, float z);  // Legacy individual cube rendering
     void RenderOtherPlayers(const std::unordered_map<uint32_t, PlayerPosition>& otherPlayers);
     void EndFrame();
+    
+    // Render mode control
+    void SetRenderMode(RenderMode mode) { m_renderMode = mode; }
+    void SetFadeFactor(float fadeFactor) { m_fadeFactor = fadeFactor; }
     
     // Legacy triangle rendering (for debugging)
     void RenderTriangle();
@@ -75,6 +85,13 @@ private:
     int m_modelLoc, m_viewLoc, m_projLoc;
     int m_textureLoc;
     int m_colorTintLoc;
+    int m_enableAOLoc;
+    int m_enableTextureLoc;
+    int m_fadeFactorLoc;
+    
+    // Render mode
+    RenderMode m_renderMode;
+    float m_fadeFactor;
 
     // Shader management
     bool CreateShaders();
